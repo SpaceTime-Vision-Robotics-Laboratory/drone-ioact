@@ -1,9 +1,10 @@
 import os
 import numpy as np
 from pathlib import Path
+import sys
 import json
 from datetime import datetime
-from pynput.keyboard import Listener, KeyCode
+from pynput.keyboard import Listener, KeyCode, Key
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Final
@@ -13,8 +14,8 @@ import time
 import cv2
 
 import olympe
-from olympe.messages import camera
-from olympe.messages.ardrone3.Piloting import Landing, TakeOff
+from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
+from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
 
@@ -174,20 +175,33 @@ class DroneFrameReader:
 
 
 class KeyboardController(threading.Thread):
-    def __init__(self, drone: olympe.Drone):
+    def __init__(self, drone: olympe.Drone, logger_dir: str | None = None):
         super().__init__()
+        logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
+        self.logger = LoggerSetup.setup_logger(logger_name=self.__class__.__name__, log_file=logger_dir)
         self.listener = Listener(on_release=self.on_release)
         self.drone = drone
 
-    def on_release(self, key: KeyCode):
+    def on_release(self, key: KeyCode) -> bool | None:
         if key == KeyCode.from_char("T"):
-            print("T pressed. Lifting off.")
-            self.drone(TakeOff()).wait().success()
+            self.logger.info("T pressed. Lifting off.")
+            res = self.drone(TakeOff()).wait().success()
+            if not res: self.logger.info("TakeOff failed")
         elif key == KeyCode.from_char("L"):
-            print("L pressed. Landing.")
-            self.drone(Landing()).wait().success()
+            self.logger.info("L pressed. Landing.")
+            res = self.drone(Landing()).wait().success()
+            if not res: self.logger.info("Landing failed")
+        elif key == Key.esc:
+            self.logger.info("ESC pressed. Stopping Keyboard Controller.")
+            return False
+        elif key == KeyCode.from_char("i"): # forward
+            res = self.drone(
+                moveBy(1, 0, 0, 0)
+                >> FlyingStateChanged(state="hovering", _timeout=3)
+            ).wait()
+            if not res: self.logger.info("Moving forward failed")
         else:
-            print(f"Unused char: {key}")
+            self.logger.debug(f"Unused char: {key}")
 
     def run(self):
         self.listener.start()
@@ -199,10 +213,10 @@ def main():
     frame_reader = DroneFrameReader(drone, logger_dir=Path.cwd() / "logs", metadata_dir=Path.cwd() / "metadata")
     frame_reader.start_streaming()
 
-    kb_controller = KeyboardController(drone=drone)
+    kb_controller = KeyboardController(drone=drone, logger_dir=Path.cwd() / "logs")
     kb_controller.start()
 
-    while frame_reader.is_streaming:
+    while frame_reader.is_streaming and kb_controller.is_alive():
         time.sleep(1)
         rgb = frame_reader.get_current_frame()
         print(f"RGB: {rgb.shape}")
