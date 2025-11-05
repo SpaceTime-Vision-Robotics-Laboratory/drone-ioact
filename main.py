@@ -183,25 +183,31 @@ class KeyboardController(threading.Thread):
         self.drone = drone
 
     def on_release(self, key: KeyCode) -> bool | None:
+        res = True
         if key == KeyCode.from_char("T"):
             self.logger.info("T pressed. Lifting off.")
             res = self.drone(TakeOff()).wait().success()
-            if not res: self.logger.info("TakeOff failed")
         elif key == KeyCode.from_char("L"):
             self.logger.info("L pressed. Landing.")
             res = self.drone(Landing()).wait().success()
-            if not res: self.logger.info("Landing failed")
         elif key == Key.esc:
             self.logger.info("ESC pressed. Stopping Keyboard Controller.")
             return False
         elif key == KeyCode.from_char("i"): # forward
+            self.logger.info("i pressed. Moving forward.")
             res = self.drone(
-                moveBy(1, 0, 0, 0)
+                moveBy(1, 0, 0, 0) # (forward, right, down, rotation)
                 >> FlyingStateChanged(state="hovering", _timeout=3)
             ).wait()
-            if not res: self.logger.info("Moving forward failed")
+        elif key == KeyCode.from_char("k"): # rotate (?)
+            self.logger.info("k pressed. Rotating")
+            res = self.drone(
+                moveBy(0, 0, 0, 0.2) # (forward, right, down, rotation)
+                >> FlyingStateChanged(state="hovering", _timeout=3)
+            ).wait()
         else:
             self.logger.debug(f"Unused char: {key}")
+        if not res: self.logger.info("{key} failed")
 
     def run(self):
         self.listener.start()
@@ -216,12 +222,14 @@ def main():
     kb_controller = KeyboardController(drone=drone, logger_dir=Path.cwd() / "logs")
     kb_controller.start()
 
+    prev_frame = None
     while frame_reader.is_streaming and kb_controller.is_alive():
-        time.sleep(1)
+        time.sleep(0.01)
         rgb = frame_reader.get_current_frame()
-        print(f"RGB: {rgb.shape}")
-        cv2.imshow("img", rgb)
-        cv2.waitKey(1)
+        if prev_frame is None or not np.allclose(prev_frame, rgb):
+            cv2.imshow("img", rgb)
+            cv2.waitKey(1)
+        prev_frame = rgb
     drone.disconnect()
 
 if __name__ == '__main__':
