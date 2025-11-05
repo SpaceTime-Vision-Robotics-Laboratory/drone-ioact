@@ -151,7 +151,7 @@ class DroneFrameReader:
         if self.metadata_dir is None:
             return
         if len(vmeta_data) == 0:
-            self.logger.warning("Received empty metadta")
+            self.logger.warning("Received empty metadata")
             return
 
         self.metadata.append({
