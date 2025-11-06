@@ -1,34 +1,43 @@
 #!/usr/bin/env python3
 import os
 import numpy as np
+from abc import ABC, abstractmethod
 from pathlib import Path
 import json
 from datetime import datetime
 from pynput.keyboard import Listener, KeyCode, Key
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Final
+from loggez import make_logger
 import threading
 import time
 import cv2
-
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
-from loggez import make_logger
 logger = make_logger("DRONE", log_file=Path.cwd() / f"logs/logs-{datetime.now().isoformat()[0:-6]}.txt")
 
-SAVE_EVERY_N_METADATA = 100
+class DroneIn(ABC):
+    @abstractmethod
+    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
+        """gets the data (RGB and maybe others) as a dict of numpy arrays"""
 
-class DroneFrameReader:
+    @abstractmethod
+    def is_streaming(self) -> bool:
+        """checks if the drone is connected and streaming or not"""
+
+    @abstractmethod
+    def stop_streaming(self):
+        """calls the drone to stop sending messages"""
+
+class DroneFrameReader(DroneIn):
     """
     Handler for drone video streams that processes frames and manages metadata.
-
     This class handles the streaming of video from a drone, converting frames to OpenCV
     format, and optionally saving metadata associated with the stream.
     """
+    SAVE_EVERY_N_METADATA = 100
 
     def __init__(self, drone: olympe.Drone, 
                  logger_dir: str | Path | None = None, metadata_dir: str | Path | None = None):
@@ -36,26 +45,12 @@ class DroneFrameReader:
         assert drone.streaming is not None, f"{drone} drone.streaming is None"
         self.drone = drone
         logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
-        self.metadata = []
         self.metadata_dir = Path(metadata_dir) / "metadata.json" if metadata_dir is not None else None
+
+        self._metadata = []
         self._current_frame: np.ndarray | None = None
         self._current_frame_lock = threading.Lock()
 
-    def get_current_frame(self, timeout_s: int = 10) -> np.ndarray:
-        """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
-        assert self.drone.connected, f"{self.drone} is not connected"
-        n_tries, sleep_duration = 0, 1
-        while self._current_frame is None:
-            if n_tries * sleep_duration > timeout_s:
-                raise ValueError(f"Waited for {timeout_s} and no frame was produced")
-            logger.info("No frame yet... blocking")
-            time.sleep(1)
-            n_tries += 1
-        with self._current_frame_lock:
-            return self._current_frame
-
-    def start_streaming(self):
-        """Setup callback functions for live config processing and starts the config streaming."""
         self.drone.streaming.set_callbacks(
             raw_cb=self._yuv_frame_cb,
             start_cb=(lambda _: logger.info("Video stream started.")),
@@ -64,10 +59,28 @@ class DroneFrameReader:
         )
         logger.info("Starting streaming...")
         self.drone.streaming.start()
-        self.is_streaming = True
+        self._is_streaming = True
+
+    def get_current_data(self, timeout_s: int = 10) -> np.ndarray:
+        """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
+        assert self.is_streaming(), f"{self.drone} is not streaming"
+        n_tries, sleep_duration = 0, 1
+        while self._current_frame is None:
+            if n_tries * sleep_duration > timeout_s:
+                raise ValueError(f"Waited for {timeout_s} and no frame was produced")
+            logger.info("No frame yet... blocking")
+            time.sleep(1)
+            n_tries += 1
+        with self._current_frame_lock:
+            return {"rgb": self._current_frame}
+
+    def is_streaming(self) -> bool:
+        connected = self.drone.connected
+        streaming = self.drone.streaming is not None
+        logger.debug(f"Connected: {connected}. Streaming: {streaming}")
+        return connected and streaming
 
     def stop_streaming(self):
-        """Properly stop the config stream and disconnect."""
         logger.info("Stopping streaming...")
         try:
             self.drone.streaming.stop()
@@ -105,24 +118,25 @@ class DroneFrameReader:
             logger.debug(f"Received empty metadata (len: {len(vmeta_data)} or dir is empty.")
             return
 
-        self.metadata.append({
+        self._metadata.append({
             "time": datetime.now().isoformat(),
             "drone": vmeta_data["drone"],
             "camera": vmeta_data["camera"],
         })
-        if len(self.metadata) == SAVE_EVERY_N_METADATA:
+        if len(self._metadata) >= DroneFrameReader.SAVE_EVERY_N_METADATA:
             self._save_metadata()
 
     def _save_metadata(self) -> None:
         """Save the current metadata to disk and clear the in-memory list."""
-        if self.metadata_dir is None or len(self.metadata) == 0:
+        if self.metadata_dir is None or len(self._metadata) == 0:
             logger.debug("No metadata to save or path non existent.")
             return
 
-        logger.info(f"Saving {len(self.metadata)} metadata entries...")
+        logger.debug2(f"Saving {len(self._metadata)} metadata entries...")
         Path(self.metadata_save_path).parent.mkdir(parents=True, exist_ok=True)
         with open(self.metadata_save_path, "a") as fp:
-            fp.write(json.dumps(self.medata, indent=4))
+            fp.write(json.dumps(self._metadata, indent=4))
+        self._metadata = []
 
     def __del__(self):
         self._save_metadata()
@@ -133,6 +147,7 @@ class KeyboardController(threading.Thread):
         logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
         self.listener = Listener(on_release=self.on_release)
         self.drone = drone
+        self.start()
 
     def on_release(self, key: KeyCode) -> bool | None:
         res = True
@@ -169,15 +184,16 @@ def main():
     drone = olympe.Drone(ip := os.getenv("DRONE_IP"))
     assert drone.connect(), f"could not connect to '{ip}'"
     frame_reader = DroneFrameReader(drone, metadata_dir=Path.cwd() / "metadata")
-    frame_reader.start_streaming()
 
     kb_controller = KeyboardController(drone=drone)
-    kb_controller.start()
 
     prev_frame = None
-    while frame_reader.is_streaming and kb_controller.is_alive():
+    while True:
+        if not (fr := frame_reader.is_streaming()) or not (kbc := kb_controller.is_alive()):
+            logger.info(f"Frame reader={fr}. Keyboard controller={kbc}")
+            break
         time.sleep(0.01)
-        rgb = frame_reader.get_current_frame()
+        rgb = frame_reader.get_current_data()["rgb"]
         if prev_frame is None or not np.allclose(prev_frame, rgb):
             cv2.imshow("img", rgb)
             cv2.waitKey(1)
