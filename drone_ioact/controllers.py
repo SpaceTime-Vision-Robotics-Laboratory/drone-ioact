@@ -5,8 +5,9 @@ import numpy as np
 from pynput.keyboard import Listener, KeyCode, Key
 import cv2
 
-from drone_in import DroneIn
-from utils import logger, Action
+from .drone_in import DroneIn
+from .utils import logger
+from .actions import Action
 
 class ScreenDisplayer(threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""

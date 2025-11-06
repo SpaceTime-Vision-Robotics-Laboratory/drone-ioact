@@ -4,9 +4,9 @@ from pathlib import Path
 from multiprocessing import Queue
 
 import olympe
-from olympe_io import OlympeFrameReader, OlympleActionsMaker
-from controllers import KeyboardController, ScreenDisplayer
-from utils import logger
+from drone_ioact.olympe_io import OlympeFrameReader, OlympleActionsMaker
+from drone_ioact.controllers import KeyboardController, ScreenDisplayer
+from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
 
@@ -15,14 +15,15 @@ def main():
     drone = olympe.Drone(ip := os.getenv("DRONE_IP"))
     assert drone.connect(), f"could not connect to '{ip}'"
 
-    # data producer threads
+    # data producer threads (just 1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
-    # data consumer threads
+    # data consumer threads (data/RGB in -> I/O out)
     screen_displayer = ScreenDisplayer(drone_in=olympe_frame_reader)
-    queue = Queue(maxsize=QUEUE_MAX_SIZE)
-    # data consumer and action producer threads
-    kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=queue)
-    olympe_actions_maker = OlympleActionsMaker(drone=drone, actions_queue=queue)
+    # data consumer and actions producer threads (data/RGB in -> action out)
+    actions_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+    kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue)
+    # actions consumer threads (just 1) (action in -> drone I/O out)
+    olympe_actions_maker = OlympleActionsMaker(drone=drone, actions_queue=actions_queue)
 
     while True:
         threads = {

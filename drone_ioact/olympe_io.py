@@ -12,8 +12,9 @@ import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
-from drone_in import DroneIn
-from utils import Action, logger
+from .drone_in import DroneIn
+from .utils import logger
+from .actions import Action
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
 
