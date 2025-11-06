@@ -40,12 +40,14 @@ class KeyboardController(threading.Thread):
         action = self.key_to_action(key)
         if action is None:
             logger.debug(f"Unused char: {key}")
-        else:
-            logger.info(f"Pressed {key}. Performing: {action.name}")
-            self.actions_queue.put(action, block=True)
-            if action == Action.DISCONNECT:
-                logger.info("Disconnect was requested. Stopping Keyboard Controller.")
-                return False
+            return
+
+        logger.info(f"Pressed {key}. Performing: {action.name}")
+        self.actions_queue.put(action, block=True)
+
+        if action == Action.DISCONNECT:
+            logger.info("Disconnect was requested. Stopping Keyboard Controller.")
+            return False
 
     def run(self):
         self.listener.start()

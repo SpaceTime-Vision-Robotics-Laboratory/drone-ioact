@@ -1,4 +1,5 @@
 """generic actions of any drone"""
+from __future__ import annotations
 from enum import Enum
 
 class Action(Enum):
@@ -10,3 +11,7 @@ class Action(Enum):
     ROTATE = 4
     FORWARD_NOWAIT = 5
     ROTATE_NOWAIT = 6
+
+    def __lt__(self, other: Action) -> bool:
+        """For ties in standard priority queue..."""
+        return self.value < other.value

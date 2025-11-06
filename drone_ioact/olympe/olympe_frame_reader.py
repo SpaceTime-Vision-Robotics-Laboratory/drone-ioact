@@ -40,7 +40,6 @@ class OlympeFrameReader(DroneIn):
         )
         logger.info("Starting streaming...")
         self.drone.streaming.start()
-        self._is_streaming = True
 
     def get_current_data(self, timeout_s: int = 10) -> np.ndarray:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
@@ -58,7 +57,6 @@ class OlympeFrameReader(DroneIn):
     def is_streaming(self) -> bool:
         connected = self.drone.connected
         streaming = self.drone.streaming is not None
-        logger.debug(f"Connected: {connected}. Streaming: {streaming}")
         return connected and streaming
 
     def stop_streaming(self):
@@ -88,8 +86,8 @@ class OlympeFrameReader(DroneIn):
             with self._current_frame_lock:
                 yuv_frame.ref()
                 self._current_frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_colors[yuv_frame.format()])
-                logger.debug(f"Received a new frame at {datetime.now().isoformat()[0:-6]}. "
-                             f"Shape: {self._current_frame.shape}")
+                logger.debug2(f"Received a new frame at {datetime.now().isoformat()[0:-6]}. "
+                              f"Shape: {self._current_frame.shape}")
                 self._prepare_metadata(vmeta_data=yuv_frame.vmeta()[1])
         finally:
             yuv_frame.unref()
