@@ -1,14 +1,13 @@
+#!/usr/bin/env python3
 import os
 import numpy as np
 from pathlib import Path
-import sys
 import json
 from datetime import datetime
 from pynput.keyboard import Listener, KeyCode, Key
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Final
-import logging
 import threading
 import time
 import cv2
@@ -18,56 +17,10 @@ from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
+from loggez import make_logger
+logger = make_logger("DRONE", log_file=Path.cwd() / f"logs/logs-{datetime.now().isoformat()[0:-6]}.txt")
 
-class LoggerSetup:
-    LEVEL_WIDTH: Final[int] = 8
-
-    @staticmethod
-    def setup_logger(
-            logger_name: str,
-            log_file: str | Path | None = None,
-            level: int = logging.DEBUG,
-            console_level: int = logging.INFO,
-            file_level: int = logging.DEBUG
-    ) -> logging.Logger:
-        """
-        Set up a logger with both console and file handlers.
-
-        :param logger_name: Name of the logger.
-        :param log_file: Optional path to log file. If None, only console logging is set.
-        :param level: Overall logging level.
-        :param console_level: Logging level for console output.
-        :param file_level: Logging level for file output.
-        :return: Configured logger instance.
-        """
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(level)
-        logger.handlers.clear()
-
-        console_formatter = logging.Formatter(
-            f'%(asctime)s - [%(levelname)-{LoggerSetup.LEVEL_WIDTH:d}s] - %(name)s - '
-            f'[%(filename)s:%(lineno)d] - %(message)s'
-        )
-        file_formatter = logging.Formatter(
-            f'%(asctime)s - [%(levelname)-{LoggerSetup.LEVEL_WIDTH:d}s] - %(name)s - [%(filename)s:%(lineno)d] - '
-            f'[Thread: %(threadName)s | PID: %(process)d] - %(message)s'
-        )
-
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(console_level)
-        console_handler.setFormatter(console_formatter)
-        logger.addHandler(console_handler)
-
-        if log_file:
-            log_path = Path(log_file)
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-
-            file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=5)
-            file_handler.setLevel(file_level)
-            file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-
-        return logger
+SAVE_EVERY_N_METADATA = 100
 
 class DroneFrameReader:
     """
@@ -83,7 +36,6 @@ class DroneFrameReader:
         assert drone.streaming is not None, f"{drone} drone.streaming is None"
         self.drone = drone
         logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
-        self.logger = LoggerSetup.setup_logger(logger_name=self.__class__.__name__, log_file=logger_dir)
         self.metadata = []
         self.metadata_dir = Path(metadata_dir) / "metadata.json" if metadata_dir is not None else None
         self._current_frame: np.ndarray | None = None
@@ -96,7 +48,7 @@ class DroneFrameReader:
         while self._current_frame is None:
             if n_tries * sleep_duration > timeout_s:
                 raise ValueError(f"Waited for {timeout_s} and no frame was produced")
-            self.logger.info("No frame yet... blocking")
+            logger.info("No frame yet... blocking")
             time.sleep(1)
             n_tries += 1
         with self._current_frame_lock:
@@ -106,52 +58,51 @@ class DroneFrameReader:
         """Setup callback functions for live config processing and starts the config streaming."""
         self.drone.streaming.set_callbacks(
             raw_cb=self._yuv_frame_cb,
-            start_cb=(lambda _: self.logger.info("Video stream started.")),
-            end_cb=(lambda _: self.logger.info("Video stream end.")),
-            flush_raw_cb=(lambda _: self.logger.warning("Flush requested for stream. Resetting queue.")),
+            start_cb=(lambda _: logger.info("Video stream started.")),
+            end_cb=(lambda _: logger.info("Video stream end.")),
+            flush_raw_cb=(lambda _: logger.warning("Flush requested for stream. Resetting queue.")),
         )
-        self.logger.info("Starting streaming...")
+        logger.info("Starting streaming...")
         self.drone.streaming.start()
         self.is_streaming = True
 
     def stop_streaming(self):
         """Properly stop the config stream and disconnect."""
-        self.logger.info("Stopping streaming...")
+        logger.info("Stopping streaming...")
         try:
             self.drone.streaming.stop()
             self._save_metadata()
         except Exception as e:
-            self.logger.error("Unable to properly stop the streaming...")
-            self.logger.critical(e, exc_info=True)
+            logger.error("Unable to properly stop the streaming...")
+            logger.critical(e, exc_info=True)
 
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """
         This function will be called by Olympe for each decoded YUV frame. It transforms the YUV frame into an OpenCV
         frame, and unrefs the frame.
         """
+        if not yuv_frame:
+            logger.warning("Received empty frame")
+            return
+
         cv2_cvt_colors = {
             olympe.VDEF_I420: cv2.COLOR_YUV2BGR_I420,
             olympe.VDEF_NV12: cv2.COLOR_YUV2BGR_NV12,
         }
 
-        if not yuv_frame:
-            self.logger.warning("Received empty frame")
-            return
         try:
             with self._current_frame_lock:
                 yuv_frame.ref()
                 self._current_frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_colors[yuv_frame.format()])
-                self.logger.debug(f"Received a new frame at {datetime.now().isoformat()}. "
-                                  f"Shape: {self._current_frame.shape}")
+                logger.debug(f"Received a new frame at {datetime.now().isoformat()[0:-6]}. "
+                             f"Shape: {self._current_frame.shape}")
                 self._prepare_metadata(vmeta_data=yuv_frame.vmeta()[1])
         finally:
             yuv_frame.unref()
 
     def _prepare_metadata(self, vmeta_data: dict) -> None:
-        if self.metadata_dir is None:
-            return
-        if len(vmeta_data) == 0:
-            self.logger.warning("Received empty metadata")
+        if self.metadata_dir is None or len(vmeta_data) == 0:
+            logger.debug(f"Received empty metadata (len: {len(vmeta_data)} or dir is empty.")
             return
 
         self.metadata.append({
@@ -159,55 +110,56 @@ class DroneFrameReader:
             "drone": vmeta_data["drone"],
             "camera": vmeta_data["camera"],
         })
-        if len(self.metadata) == 100:
+        if len(self.metadata) == SAVE_EVERY_N_METADATA:
             self._save_metadata()
 
     def _save_metadata(self) -> None:
         """Save the current metadata to disk and clear the in-memory list."""
         if self.metadata_dir is None or len(self.metadata) == 0:
-            self.logger.warning("No metadata to save or path non existent.")
+            logger.debug("No metadata to save or path non existent.")
             return
 
-        self.logger.info(f"Saving {len(self.metadata)} metadata entries...")
+        logger.info(f"Saving {len(self.metadata)} metadata entries...")
         Path(self.metadata_save_path).parent.mkdir(parents=True, exist_ok=True)
         with open(self.metadata_save_path, "a") as fp:
             fp.write(json.dumps(self.medata, indent=4))
 
+    def __del__(self):
+        self._save_metadata()
 
 class KeyboardController(threading.Thread):
     def __init__(self, drone: olympe.Drone, logger_dir: str | None = None):
         super().__init__()
         logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
-        self.logger = LoggerSetup.setup_logger(logger_name=self.__class__.__name__, log_file=logger_dir)
         self.listener = Listener(on_release=self.on_release)
         self.drone = drone
 
     def on_release(self, key: KeyCode) -> bool | None:
         res = True
         if key == KeyCode.from_char("T"):
-            self.logger.info("T pressed. Lifting off.")
+            logger.info("T pressed. Lifting off.")
             res = self.drone(TakeOff()).wait().success()
         elif key == KeyCode.from_char("L"):
-            self.logger.info("L pressed. Landing.")
+            logger.info("L pressed. Landing.")
             res = self.drone(Landing()).wait().success()
         elif key == Key.esc:
-            self.logger.info("ESC pressed. Stopping Keyboard Controller.")
+            logger.info("ESC pressed. Stopping Keyboard Controller.")
             return False
         elif key == KeyCode.from_char("i"): # forward
-            self.logger.info("i pressed. Moving forward.")
+            logger.info("i pressed. Moving forward.")
             res = self.drone(
-                moveBy(1, 0, 0, 0) # (forward, right, down, rotation)
-                >> FlyingStateChanged(state="hovering", _timeout=3)
+                moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
+                FlyingStateChanged(state="hovering", _timeout=3)
             ).wait()
         elif key == KeyCode.from_char("k"): # rotate (?)
-            self.logger.info("k pressed. Rotating")
+            logger.info("k pressed. Rotating")
             res = self.drone(
-                moveBy(0, 0, 0, 0.2) # (forward, right, down, rotation)
-                >> FlyingStateChanged(state="hovering", _timeout=3)
+                moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
+                FlyingStateChanged(state="hovering", _timeout=3)
             ).wait()
         else:
-            self.logger.debug(f"Unused char: {key}")
-        if not res: self.logger.info("{key} failed")
+            logger.debug(f"Unused char: {key}")
+        if not res: logger.info("{key} failed")
 
     def run(self):
         self.listener.start()
@@ -216,10 +168,10 @@ class KeyboardController(threading.Thread):
 def main():
     drone = olympe.Drone(ip := os.getenv("DRONE_IP"))
     assert drone.connect(), f"could not connect to '{ip}'"
-    frame_reader = DroneFrameReader(drone, logger_dir=Path.cwd() / "logs", metadata_dir=Path.cwd() / "metadata")
+    frame_reader = DroneFrameReader(drone, metadata_dir=Path.cwd() / "metadata")
     frame_reader.start_streaming()
 
-    kb_controller = KeyboardController(drone=drone, logger_dir=Path.cwd() / "logs")
+    kb_controller = KeyboardController(drone=drone)
     kb_controller.start()
 
     prev_frame = None
