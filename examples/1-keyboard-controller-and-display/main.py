@@ -4,7 +4,7 @@ from pathlib import Path
 from multiprocessing import Queue
 
 import olympe
-from drone_ioact.olympe_io import OlympeFrameReader, OlympleActionsMaker
+from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.controllers import KeyboardController, ScreenDisplayer
 from drone_ioact.utils import logger
 
@@ -23,7 +23,7 @@ def main():
     # data consumer & actions producer threads (data/RGB in -> action out)
     kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue)
     # actions consumer thread (1) (action in -> drone I/O out)
-    olympe_actions_maker = OlympleActionsMaker(drone=drone, actions_queue=actions_queue)
+    olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
 
     while True:
         threads = {
