@@ -19,7 +19,7 @@ class KeyboardController(threading.Thread):
     def key_to_action(self, key: KeyCode) -> Action | None:
         """Converts a keyboard key to a drone action. Can be overriden for custom actions."""
         action: Action | None = None
-        if key == Key.esc:
+        if key == KeyCode.from_char("q"):
             action = Action.DISCONNECT
         if key == KeyCode.from_char("T"):
             action = Action.LIFT
@@ -42,7 +42,7 @@ class KeyboardController(threading.Thread):
             logger.debug(f"Unused char: {key}")
             return
 
-        logger.info(f"Pressed {key}. Performing: {action.name}")
+        logger.info(f"Pressed {key}. Pushing: {action.name}")
         self.actions_queue.put(action, block=True)
 
         if action == Action.DISCONNECT:

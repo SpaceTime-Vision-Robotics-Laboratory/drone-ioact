@@ -21,10 +21,10 @@ class CustomKBController(KeyboardController):
             logger.debug(f"Unused char: {key}")
             return
 
-        logger.info(f"Pressed {key}. Performing: {action.name}")
+        logger.info(f"Pressed {key}. Pushing: {action.name}")
         priority = 1 # lower is better
-        if action.value in (Action.FORWARD_NOWAIT, Action.ROTATE_NOWAIT, Action.DISCONNECT):
-            logger.debug(f"Received a priority action: {action.value}. Adding it to the start of the queue")
+        if action in (Action.FORWARD_NOWAIT, Action.ROTATE_NOWAIT, Action.DISCONNECT):
+            logger.debug(f"Received a priority action: {action.name}. Adding it to the start of the queue")
             priority = 0
         self.actions_queue.put((priority, action), block=True)
 
