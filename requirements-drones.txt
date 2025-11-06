@@ -1,0 +1,2 @@
+-r requirements-base.txt
+parrot-olympe==7.7.5

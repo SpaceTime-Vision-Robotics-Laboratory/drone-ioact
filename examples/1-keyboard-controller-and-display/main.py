@@ -14,15 +14,15 @@ def main():
     """main fn"""
     drone = olympe.Drone(ip := os.getenv("DRONE_IP"))
     assert drone.connect(), f"could not connect to '{ip}'"
+    actions_queue = Queue(maxsize=QUEUE_MAX_SIZE)
 
-    # data producer threads (just 1) (drone I/O in -> data/RGB out)
+    # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
     # data consumer threads (data/RGB in -> I/O out)
     screen_displayer = ScreenDisplayer(drone_in=olympe_frame_reader)
-    # data consumer and actions producer threads (data/RGB in -> action out)
-    actions_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+    # data consumer & actions producer threads (data/RGB in -> action out)
     kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue)
-    # actions consumer threads (just 1) (action in -> drone I/O out)
+    # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympleActionsMaker(drone=drone, actions_queue=actions_queue)
 
     while True:
