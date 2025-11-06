@@ -2,7 +2,7 @@
 
 Architecture:
 
-<img src="./arch.png" width="50%">
+<img alt="arch" src="./arch.png" width="50%">
 
 See [examples](examples/) for how to use it.
 
