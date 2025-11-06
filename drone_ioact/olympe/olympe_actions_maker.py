@@ -1,7 +1,7 @@
 """olympe_actions_maker.py - Takes generic actions and converts them to olympe-specific commands"""
 # TODO: inherit a 'DroneOut' interface
 import threading
-from multiprocessing import Queue
+from queue import Queue
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff

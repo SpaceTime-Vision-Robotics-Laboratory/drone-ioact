@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import os
 from pathlib import Path
-from multiprocessing import Queue
+from queue import Queue
 
 import olympe
 from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
-from drone_ioact.controllers import KeyboardController, ScreenDisplayer
+from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
