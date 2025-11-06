@@ -12,7 +12,7 @@ Every `main` script will contain the following logic:
 ```python
 def main():
     """main fn"""
-    drone = SOME_DRONE(ip := drone_ip)
+    drone = SomeDrone(ip := drone_ip) # real drone or simulated
     drone.connect() # establish connection to the drone before any callbacks
     actions_queue = PriorityQueue(maxsize=QUEUE_MAX_SIZE) # how many actions can there be at most in the internal queue
 
