@@ -4,53 +4,49 @@ import sys
 import time
 from pathlib import Path
 from queue import PriorityQueue
-from pynput.keyboard import KeyCode
 
 import olympe
-from drone_ioact.actions import Action
 from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
+from drone_ioact import ActionsQueue, Action
 from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
 
-class CustomKBController(KeyboardController):
-    """Wrapper that inserts two actions with higher priority in the queue"""
-    def on_release(self, key: KeyCode) -> bool:
-        action: Action = self.key_to_action(key)
-        if action is None:
-            logger.debug(f"Unused char: {key}")
-            return True
+class MyActionsPriorityQueue(ActionsQueue):
+    """Wrapper on top of a priority queue for actions"""
+    def get_actions(self) -> list[Action]:
+        return ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
 
-        logger.info(f"Pressed {key}. Pushing: {action.name}")
-        priority = 1 # lower is better
-        if action in (Action.FORWARD_NOWAIT, Action.ROTATE_NOWAIT, Action.DISCONNECT):
-            logger.debug(f"Received a priority action: {action.name}. Adding it to the start of the queue")
-            priority = 0
-        self.actions_queue.put((priority, action), block=True)
+    def put(self, item: tuple[int, Action], *args, **kwargs):
+        self.queue.put(item, *args, **kwargs)
 
-        if action == Action.DISCONNECT:
-            logger.info("Disconnect was requested. Stopping Keyboard Controller.")
-            return False
-        return True
-
-class CustomPriorityQueue(PriorityQueue):
-    """Wrapper that returns the item and not the priority"""
     def get(self, *args, **kwargs) -> Action:
-        return super().get(*args, **kwargs)[1] # (priority, action)
+        return self.queue.get(*args, **kwargs)[1]
+
+class PriorityKeyboardController(KeyboardController):
+    def add_to_queue(self, action: Action):
+        """1 = low priority, 0 = high priority as per PriorityQueue rules: lower is better"""
+        priority = 1
+        if action in ("DISCONNECT", "FORWARD_NOWAIT", "ROTATE_NOWAIT"):
+            priority = 0
+        return super().add_to_queue((priority, action))
 
 def main():
     """main fn"""
     drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
-    actions_queue = CustomPriorityQueue(maxsize=QUEUE_MAX_SIZE)
+    actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE))
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
     # data consumer threads (data/RGB in -> I/O out)
     screen_displayer = ScreenDisplayer(drone_in=olympe_frame_reader)
     # data consumer & actions producer threads (data/RGB in -> action out)
-    kb_controller = CustomKBController(drone_in=olympe_frame_reader, actions_queue=actions_queue)
+    key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
+                     "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
+    kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue,
+                                       key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
 

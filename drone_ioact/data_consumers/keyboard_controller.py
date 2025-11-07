@@ -1,51 +1,35 @@
 """keyboard_controller.py - Converts a keyboard key to a drone action"""
 import threading
-from queue import Queue
 from pynput.keyboard import Listener, KeyCode
 
-from drone_ioact import DroneIn, DataConsumer, DroneOut
+from drone_ioact import DroneIn, DataConsumer, ActionsProducer, ActionsQueue, Action
 from drone_ioact.utils import logger
-from drone_ioact.actions import Action
 
-class KeyboardController(DataConsumer, DroneOut, threading.Thread):
-    """Converts a keyboard key to a drone action"""
-    def __init__(self, drone_in: DroneIn, actions_queue: Queue):
-        threading.Thread.__init__(self)
+class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
+    """Converts a keyboard key to a drone action. Has support for a few standard actions."""
+    def __init__(self, drone_in: DroneIn, actions_queue: ActionsQueue, key_to_action: dict[str, str]):
         DataConsumer.__init__(self, drone_in)
-        DroneOut.__init__(self, actions_queue)
+        ActionsProducer.__init__(self, actions_queue)
+        threading.Thread.__init__(self)
         self.listener = Listener(on_release=self.on_release)
-        self.start()
+        self.key_to_action = key_to_action
+        assert all(v in (acts := actions_queue.get_actions()) for v in key_to_action.values()), (key_to_action, acts)
 
-    def key_to_action(self, key: KeyCode) -> Action | None:
-        """Converts a keyboard key to a drone action. Can be overriden for custom actions."""
-        action: Action | None = None
-        if key == KeyCode.from_char("q"):
-            action = Action.DISCONNECT
-        if key == KeyCode.from_char("T"):
-            action = Action.LIFT
-        if key == KeyCode.from_char("L"):
-            action = Action.LAND
-        if key == KeyCode.from_char("i"):
-            action = Action.FORWARD
-        if key == KeyCode.from_char("o"):
-            action = Action.ROTATE
-        if key == KeyCode.from_char("w"):
-            action = Action.FORWARD_NOWAIT
-        if key == KeyCode.from_char("e"):
-            action = Action.ROTATE_NOWAIT
-        return action
+    def add_to_queue(self, action: Action):
+        """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
+        self.actions_queue.put(action, block=True)
 
     def on_release(self, key: KeyCode) -> bool:
         """puts an action in the actions queue based on the key pressed by the user"""
-        action = self.key_to_action(key)
+        action: Action | None = self.key_to_action.get(getattr(key, "char", str(key))) # key.char if a key else str(key)
         if action is None:
             logger.debug(f"Unused char: {key}")
             return True
 
-        logger.info(f"Pressed {key}. Pushing: {action.name}")
-        self.actions_queue.put(action, block=True)
+        logger.info(f"Pressed {key}. Pushing: {action}")
+        self.add_to_queue(action)
 
-        if action == Action.DISCONNECT:
+        if action == "DISCONNECT": # Note: the actual action may be called different, but it's easier to hardcode it.
             logger.info("Disconnect was requested. Stopping Keyboard Controller.")
             return False
         return True

@@ -14,7 +14,7 @@ def main():
     """main fn"""
     drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
     drone.connect() # establish connection to the drone before any callbacks
-    actions_queue = PriorityQueue(maxsize=QUEUE_MAX_SIZE) # how many actions can there be at most in the internal queue
+    actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE) # defines the list of actions understandable by XXX as well!
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     data_reader = XXXDataReader(drone=drone, ...args...) # thread that reads data from the drone and makes it available
@@ -23,14 +23,14 @@ def main():
     # data consumer & actions producer threads (data/RGB in -> action out)
     kb_controller = KeyboardController(drone_in=data_reader, actions_queue=actions_queue) # keyboard in -> action out
     # actions consumer thread (1) (action in -> drone I/O out)
-    actions_mkaer = XXXActionsMaker(drone=drone, actions_queue=actions_queue) # action in -> actual drone action
+    actions_maker = XXXActionsMaker(drone=drone, actions_queue=actions_queue) # action in -> actual drone action
 
     while True:
         threads = {
             "Data reader": data_reader.is_alive(),
             "Screen displayer": screen_displayer.is_alive(),
             "Keyboard controller": kb_controller.is_alive(),
-            "Olympe actions maker": actions_mkaer.is_alive(),
+            "Olympe actions maker": actions_maker.is_alive(),
         }
         if any(v is False for v in threads.values()): # if any thread crashes, stop the application
             logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))

@@ -11,7 +11,6 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
     def __init__(self, drone_in: DroneIn):
         DataConsumer.__init__(self, drone_in)
         threading.Thread.__init__(self)
-        self.start()
 
     def run(self):
         prev_frame = None
