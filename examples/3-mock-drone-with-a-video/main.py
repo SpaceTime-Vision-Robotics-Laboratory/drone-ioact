@@ -92,7 +92,7 @@ def main():
     while True:
         logger.debug2(f"Queue size: {len(actions_queue)}")
         if any(not v.is_alive() for v in threads.values()) or not video_frame_reader.is_streaming():
-            logger.info(f"{video_frame_reader} streaming:. {video_frame_reader.is_streaming()}")
+            logger.info(f"{video_frame_reader} streaming: {video_frame_reader.is_streaming()}")
             logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
             break
         time.sleep(1)

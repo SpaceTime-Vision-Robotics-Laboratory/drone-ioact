@@ -25,14 +25,16 @@ def main():
     # actions consumer thread (1) (action in -> drone I/O out)
     actions_maker = XXXActionsMaker(drone=drone, actions_queue=actions_queue) # action in -> actual drone action
 
+    threads: dict[str, threading.Thread] = {
+        "Screen displayer": screen_displayer,
+        "Keyboard controller": kb_controller,
+        "Actions maker": actions_maker,
+    }
+    [v.start() for v in threads.values()] # start the threads
+
     while True:
-        threads = {
-            "Data reader": data_reader.is_alive(),
-            "Screen displayer": screen_displayer.is_alive(),
-            "Keyboard controller": kb_controller.is_alive(),
-            "Olympe actions maker": actions_maker.is_alive(),
-        }
-        if any(v is False for v in threads.values()): # if any thread crashes, stop the application
+        if any(not v.is_alive() for v in threads.values()) or not data_reader.is_streaming():
+            logger.info(f"{data_reader} streaming: {data_reader.is_streaming()}")
             logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
             break
         time.sleep(1) # important to not throttle everything with this main thread
