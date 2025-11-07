@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 
 class Action(Enum):
-    """Possible actions of a drone. Move to a "drone_out" class"""
+    """Various generic actions of any drone. Custom actions should be built on top of this in the main code"""
     DISCONNECT = 0
     LIFT = 1
     LAND = 2
