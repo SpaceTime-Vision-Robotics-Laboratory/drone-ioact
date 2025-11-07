@@ -14,7 +14,6 @@ class OlympeActionsMaker(DroneOut, threading.Thread):
         DroneOut.__init__(self, actions_queue)
         threading.Thread.__init__(self)
         self.drone = drone
-        self.start()
 
     def run(self):
         while True:
@@ -26,37 +25,37 @@ class OlympeActionsMaker(DroneOut, threading.Thread):
                 logger.debug(f"Did not receive an action: {type(action)}. Skipping")
                 continue
 
-            logger.info(f"Received action: {action.name} (#in queue: {self.actions_queue.qsize()})")
-            if action == Action.DISCONNECT:
+            logger.info(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+            if action == "DISCONNECT":
                 self.drone.streaming.stop()
                 continue
 
             res = True
-            if action == Action.LIFT:
+            if action == "LIFT":
                 res = self.drone(TakeOff()).wait().success()
-            if action == Action.LAND:
+            if action == "LAND":
                 res = self.drone(Landing()).wait().success()
-            if action == Action.FORWARD:
+            if action == "FORWARD":
                 res = self.drone(
                     moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
                     FlyingStateChanged(state="hovering", _timeout=3)
                 ).wait()
-            if action == Action.ROTATE:
+            if action == "ROTATE":
                 res = self.drone(
                     moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
                     FlyingStateChanged(state="hovering", _timeout=3)
                 ).wait()
-            if action == Action.FORWARD_NOWAIT:
+            if action == "FORWARD_NOWAIT":
                 self.drone(
                     moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
                     FlyingStateChanged(state="hovering", _timeout=3)
                 )
-            if action == Action.ROTATE_NOWAIT:
+            if action == "ROTATE_NOWAIT":
                 self.drone(
                     moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
                     FlyingStateChanged(state="hovering", _timeout=3)
                 )
 
             if res is False:
-                logger.warning(f"Action {action.name} could not be performed")
+                logger.warning(f"Action '{action}' could not be performed")
         logger.warning("OlympeActionsMaker thread stopping")

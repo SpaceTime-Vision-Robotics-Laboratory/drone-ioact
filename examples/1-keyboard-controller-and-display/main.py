@@ -2,6 +2,7 @@
 """keyboard controller and display example"""
 import sys
 import time
+import threading
 from pathlib import Path
 from queue import Queue
 
@@ -35,15 +36,18 @@ def main():
     # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
 
+    threads: dict[str, threading.Thread] = {
+        "Keyboard controller": kb_controller,
+        "Screen displayer": screen_displayer,
+        "Olympe actions maker": olympe_actions_maker,
+    }
+    [v.start() for v in threads.values()] # start the threads
+
     while True:
-        threads = {
-            "Olympe frame reader": olympe_frame_reader.is_streaming(),
-            "Keyboard controller": kb_controller.is_alive(),
-            "Screen displayer": screen_displayer.is_alive(),
-            "Olympe actions maker": olympe_actions_maker.is_alive(),
-        }
-        if any(v is False for v in threads.values()):
-            logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
+        logger.debug2(f"Queue size: {len(actions_queue)}")
+        if any(not v.is_alive() for v in threads.values()) or not olympe_frame_reader.is_streaming():
+            logger.info(f"{olympe_frame_reader} streaming:. {olympe_frame_reader.is_streaming()}")
+            logger.info("\n".join(f"- {k}: {v.is_alive()}" for k, v in threads.items()))
             break
         time.sleep(1)
     drone.disconnect()

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""keyboard controller and display example + priority queue"""
+"""keyboard controller and display example. Same as the first example but also uses a priority queue."""
 import sys
 import time
+import threading
 from pathlib import Path
 from queue import PriorityQueue
 
@@ -45,20 +46,23 @@ def main():
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue,
-                                       key_to_action=key_to_action)
+    kb_controller = PriorityKeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue,
+                                               key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
 
+    threads: dict[str, threading.Thread] = {
+        "Keyboard controller": kb_controller,
+        "Screen displayer": screen_displayer,
+        "Olympe actions maker": olympe_actions_maker,
+    }
+    [v.start() for v in threads.values()] # start the threads
+
     while True:
-        threads = {
-            "Olympe frame reader": olympe_frame_reader.is_streaming(),
-            "Keyboard controller": kb_controller.is_alive(),
-            "Screen displayer": screen_displayer.is_alive(),
-            "Olympe actions maker": olympe_actions_maker.is_alive(),
-        }
-        if any(v is False for v in threads.values()):
-            logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
+        logger.debug2(f"Queue size: {len(actions_queue)}")
+        if any(not v.is_alive() for v in threads.values()) or not olympe_frame_reader.is_streaming():
+            logger.info(f"{olympe_frame_reader} streaming:. {olympe_frame_reader.is_streaming()}")
+            logger.info("\n".join(f"- {k}: {v.is_alive()}" for k, v in threads.items()))
             break
         time.sleep(1)
     drone.disconnect()

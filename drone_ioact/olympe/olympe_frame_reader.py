@@ -35,8 +35,8 @@ class OlympeFrameReader(DroneIn):
             end_cb=(lambda _: logger.info("Video stream end.")),
             flush_raw_cb=(lambda _: logger.warning("Flush requested for stream. Resetting queue.")),
         )
+        assert self.drone.streaming.start(), "error starting stream"
         logger.info("Starting streaming...")
-        self.drone.streaming.start()
 
     def get_current_data(self, timeout_s: int = 10) -> np.ndarray:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""

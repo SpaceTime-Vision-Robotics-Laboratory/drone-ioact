@@ -33,6 +33,9 @@ class ActionsQueue(ABC):
         """Remove and return an item from the queue"""
         return self.queue.get(*args, **kwargs)
 
+    def __len__(self):
+        return self.queue.qsize()
+
 class DroneIn(ABC):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
     @abstractmethod
