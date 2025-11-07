@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import os
+import sys
+import time
 from pathlib import Path
 from queue import Queue
 
@@ -12,7 +13,7 @@ QUEUE_MAX_SIZE = 30
 
 def main():
     """main fn"""
-    drone = olympe.Drone(ip := os.getenv("DRONE_IP"))
+    drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
     actions_queue = Queue(maxsize=QUEUE_MAX_SIZE)
 
@@ -35,6 +36,7 @@ def main():
         if any(v is False for v in threads.values()):
             logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
             break
+        time.sleep(1)
     drone.disconnect()
 
 if __name__ == '__main__':

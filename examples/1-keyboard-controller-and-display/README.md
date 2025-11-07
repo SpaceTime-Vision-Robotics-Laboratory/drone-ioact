@@ -12,5 +12,5 @@ sphinx "/opt/parrot-sphinx/usr/share/sphinx/drones/anafi_ai.drone"::firmware="/h
 parrot-ue4-empty # or parrot-ue4-carla or other
 
 # In a third terminal: this code. The IP may depend on the internal network the sphinx simulator creates.
-DRONE_IP=10.202.0.1 python main.py
+python main.py 10.202.0.1
 ```

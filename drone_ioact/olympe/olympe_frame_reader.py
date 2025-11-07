@@ -20,12 +20,10 @@ class OlympeFrameReader(DroneIn):
     """
     SAVE_EVERY_N_METADATA = 100
 
-    def __init__(self, drone: olympe.Drone, 
-                 logger_dir: str | Path | None = None, metadata_dir: str | Path | None = None):
+    def __init__(self, drone: olympe.Drone, metadata_dir: str | Path | None = None):
         assert drone.connected, f"{drone} is not connected"
         assert drone.streaming is not None, f"{drone} drone.streaming is None"
         self.drone = drone
-        logger_dir = Path(logger_dir) / f"{self.__class__.__name__}.log" if logger_dir is not None else None
         self.metadata_dir = Path(metadata_dir) / "metadata.json" if metadata_dir is not None else None
 
         self._metadata = []
