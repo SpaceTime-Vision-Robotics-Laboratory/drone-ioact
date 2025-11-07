@@ -17,7 +17,7 @@ before_script:
 
 pylint:
   script:
-    - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py" | grep -v "test/\|examples/")
+    - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py")
 
 ruff:
   script:
