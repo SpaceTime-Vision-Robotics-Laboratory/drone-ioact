@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""keyboard controller and display example + priority queue"""
 import sys
 import time
 from pathlib import Path
@@ -15,12 +16,11 @@ QUEUE_MAX_SIZE = 30
 
 class CustomKBController(KeyboardController):
     """Wrapper that inserts two actions with higher priority in the queue"""
-    def on_release(self, key: KeyCode) -> bool | None:
-        """puts an action in the actions queue based on the key pressed by the user"""
+    def on_release(self, key: KeyCode) -> bool:
         action: Action = self.key_to_action(key)
         if action is None:
             logger.debug(f"Unused char: {key}")
-            return
+            return True
 
         logger.info(f"Pressed {key}. Pushing: {action.name}")
         priority = 1 # lower is better
@@ -32,6 +32,7 @@ class CustomKBController(KeyboardController):
         if action == Action.DISCONNECT:
             logger.info("Disconnect was requested. Stopping Keyboard Controller.")
             return False
+        return True
 
 class CustomPriorityQueue(PriorityQueue):
     """Wrapper that returns the item and not the priority"""
@@ -66,5 +67,5 @@ def main():
         time.sleep(1)
     drone.disconnect()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

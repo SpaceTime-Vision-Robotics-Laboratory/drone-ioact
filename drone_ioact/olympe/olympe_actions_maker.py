@@ -12,7 +12,7 @@ class OlympeActionsMaker(DroneOut, threading.Thread):
     """OlympeActionsMaker: Takes generic actions and converts them to olympe-specific commands."""
     def __init__(self, drone: olympe.Drone, actions_queue: Queue):
         DroneOut.__init__(self, actions_queue)
-        threading.Thread(self)
+        threading.Thread.__init__(self)
         self.drone = drone
         self.start()
 

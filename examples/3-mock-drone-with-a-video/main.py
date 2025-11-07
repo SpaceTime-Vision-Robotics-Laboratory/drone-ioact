@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+"""keyboard controller and display example with frames of a video not a real or simulated drone"""
 from queue import Queue
 import sys
 import time
 import numpy as np
 from vre_video import VREVideo
 
-# from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact import DroneIn
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
@@ -13,6 +13,7 @@ from drone_ioact.utils import logger
 QUEUE_MAX_SIZE = 30
 
 class VideoFrameReader(DroneIn):
+    """VideoFrameReader mocks a drone but gets data from an actual video file"""
     def __init__(self, video: VREVideo):
         self.video = video
         self._is_streaming = True
@@ -57,5 +58,5 @@ def main():
         time.sleep(1)
     video_frame_reader.stop_streaming()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

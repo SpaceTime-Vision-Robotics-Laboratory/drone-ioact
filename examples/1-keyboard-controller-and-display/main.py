@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""keyboard controller and display example"""
 import sys
 import time
 from pathlib import Path
@@ -39,5 +40,5 @@ def main():
         time.sleep(1)
     drone.disconnect()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

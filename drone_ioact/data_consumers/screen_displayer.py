@@ -10,7 +10,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
     def __init__(self, drone_in: DroneIn):
         DataConsumer.__init__(self, drone_in)
-        threading.Thread(self)
+        threading.Thread.__init__(self)
         self.start()
 
     def run(self):

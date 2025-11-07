@@ -23,7 +23,7 @@ class OlympeFrameReader(DroneIn):
         assert drone.connected, f"{drone} is not connected"
         assert drone.streaming is not None, f"{drone} drone.streaming is None"
         self.drone = drone
-        self.metadata_dir = Path(metadata_dir) / "metadata.json" if metadata_dir is not None else None
+        self.metadata_save_path = Path(metadata_dir) / "metadata.json" if metadata_dir is not None else None
 
         self._metadata = []
         self._current_frame: np.ndarray | None = None
@@ -90,7 +90,7 @@ class OlympeFrameReader(DroneIn):
             yuv_frame.unref()
 
     def _prepare_metadata(self, vmeta_data: dict) -> None:
-        if self.metadata_dir is None or len(vmeta_data) == 0:
+        if self.metadata_save_path is None or len(vmeta_data) == 0:
             logger.debug(f"Received empty metadata (len: {len(vmeta_data)} or dir is empty.")
             return
 
@@ -104,7 +104,7 @@ class OlympeFrameReader(DroneIn):
 
     def _save_metadata(self) -> None:
         """Save the current metadata to disk and clear the in-memory list."""
-        if self.metadata_dir is None or len(self._metadata) == 0:
+        if self.metadata_save_path is None or len(self._metadata) == 0:
             logger.debug("No metadata to save or path non existent.")
             return
 

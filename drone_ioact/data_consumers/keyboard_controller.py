@@ -35,12 +35,12 @@ class KeyboardController(DataConsumer, DroneOut, threading.Thread):
             action = Action.ROTATE_NOWAIT
         return action
 
-    def on_release(self, key: KeyCode) -> bool | None:
+    def on_release(self, key: KeyCode) -> bool:
         """puts an action in the actions queue based on the key pressed by the user"""
         action = self.key_to_action(key)
         if action is None:
             logger.debug(f"Unused char: {key}")
-            return
+            return True
 
         logger.info(f"Pressed {key}. Pushing: {action.name}")
         self.actions_queue.put(action, block=True)
@@ -48,6 +48,7 @@ class KeyboardController(DataConsumer, DroneOut, threading.Thread):
         if action == Action.DISCONNECT:
             logger.info("Disconnect was requested. Stopping Keyboard Controller.")
             return False
+        return True
 
     def run(self):
         self.listener.start()

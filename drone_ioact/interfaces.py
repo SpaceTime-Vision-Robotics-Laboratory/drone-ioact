@@ -1,7 +1,7 @@
 """drone_in.py - Interface for interacting with the data produced by a drone"""
-import numpy as np
-from queue import Queue
 from abc import ABC, abstractmethod
+from queue import Queue
+import numpy as np
 
 class DroneIn(ABC):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
