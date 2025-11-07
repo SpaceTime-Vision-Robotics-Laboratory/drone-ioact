@@ -1,19 +1,19 @@
 """keyboard_controller.py - Converts a keyboard key to a drone action"""
 import threading
 from queue import Queue
-from pynput.keyboard import Listener, KeyCode, Key
+from pynput.keyboard import Listener, KeyCode
 
-from drone_ioact.drone_in import DroneIn
+from drone_ioact import DroneIn, DataConsumer, DroneOut
 from drone_ioact.utils import logger
 from drone_ioact.actions import Action
 
-class KeyboardController(threading.Thread):
+class KeyboardController(DataConsumer, DroneOut, threading.Thread):
     """Converts a keyboard key to a drone action"""
     def __init__(self, drone_in: DroneIn, actions_queue: Queue):
-        super().__init__()
+        threading.Thread.__init__(self)
+        DataConsumer.__init__(self, drone_in)
+        DroneOut.__init__(self, actions_queue)
         self.listener = Listener(on_release=self.on_release)
-        self.drone_in = drone_in
-        self.actions_queue = actions_queue
         self.start()
 
     def key_to_action(self, key: KeyCode) -> Action | None:

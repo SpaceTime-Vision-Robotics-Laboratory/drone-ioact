@@ -3,14 +3,14 @@ import threading
 import numpy as np
 import cv2
 
-from drone_ioact.drone_in import DroneIn
+from drone_ioact import DroneIn, DataConsumer
 from drone_ioact.utils import logger
 
-class ScreenDisplayer(threading.Thread):
+class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
     def __init__(self, drone_in: DroneIn):
-        super().__init__()
-        self.drone_in = drone_in
+        DataConsumer.__init__(self, drone_in)
+        threading.Thread(self)
         self.start()
 
     def run(self):

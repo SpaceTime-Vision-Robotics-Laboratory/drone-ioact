@@ -1,20 +1,19 @@
-"""olympe_actions_maker.py - Takes generic actions and converts them to olympe-specific commands"""
-# TODO: inherit a 'DroneOut' interface
+"""olympe_actions_maker.py: Takes generic actions and converts them to olympe-specific commands"""
 import threading
 from queue import Queue
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
-from drone_ioact.actions import Action
+from drone_ioact import Action, DroneOut
 from drone_ioact.utils import logger
 
-class OlympeActionsMaker(threading.Thread):
-    """OlympeActionsMaker --  Takes generic actions and converts them to olympe-specific commands."""
+class OlympeActionsMaker(DroneOut, threading.Thread):
+    """OlympeActionsMaker: Takes generic actions and converts them to olympe-specific commands."""
     def __init__(self, drone: olympe.Drone, actions_queue: Queue):
-        super().__init__()
+        DroneOut.__init__(self, actions_queue)
+        threading.Thread(self)
         self.drone = drone
-        self.actions_queue = actions_queue
         self.start()
 
     def run(self):

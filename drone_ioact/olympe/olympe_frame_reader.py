@@ -2,14 +2,13 @@
 from pathlib import Path
 import json
 from datetime import datetime
-from pathlib import Path
 import threading
 import time
 import numpy as np
 import cv2
 import olympe
 
-from drone_ioact.drone_in import DroneIn
+from drone_ioact import DroneIn
 from drone_ioact.utils import logger
 
 class OlympeFrameReader(DroneIn):
