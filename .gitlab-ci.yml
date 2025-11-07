@@ -13,12 +13,9 @@ workflow:
 
 before_script:
   - pip install -r requirements-drones.txt
-  - pip install pylint ruff
 
-pylint:
+linters:
   script:
+    - pip install pylint ruff
     - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py")
-
-ruff:
-  script:
     - ruff check
