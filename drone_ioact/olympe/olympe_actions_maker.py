@@ -23,7 +23,7 @@ class OlympeActionsMaker(DroneOut, threading.Thread):
                 break
             action: Action = self.actions_queue.get(block=True, timeout=1_000)
             if not isinstance(action, Action):
-                logger.debug("Did not receive an action: {type(action)}. Skipping")
+                logger.debug(f"Did not receive an action: {type(action)}. Skipping")
                 continue
 
             logger.info(f"Received action: {action.name} (#in queue: {self.actions_queue.qsize()})")

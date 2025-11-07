@@ -12,7 +12,7 @@ workflow:
   - when: never
 
 before_script:
-  - pip install -r requirements-base.txt
+  - pip install -r requirements-drones.txt
   - pip install pylint ruff
 
 pylint:
