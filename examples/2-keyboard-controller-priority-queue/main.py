@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """keyboard controller and display example. Same as the first example but also uses a priority queue."""
+# pylint: disable=duplicate-code
 import sys
 import time
 import threading
@@ -26,8 +27,8 @@ class MyActionsPriorityQueue(ActionsQueue):
         return self.queue.get(*args, **kwargs)[1]
 
 class PriorityKeyboardController(KeyboardController):
+    """1 = low priority, 0 = high priority as per PriorityQueue rules: lower is better"""
     def add_to_queue(self, action: Action):
-        """1 = low priority, 0 = high priority as per PriorityQueue rules: lower is better"""
         priority = 1
         if action in ("DISCONNECT", "FORWARD_NOWAIT", "ROTATE_NOWAIT"):
             priority = 0

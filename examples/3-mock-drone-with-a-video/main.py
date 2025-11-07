@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """keyboard controller and display example with frames of a video not a real or simulated drone"""
+# pylint: disable=duplicate-code
 from queue import Queue
 import sys
 import time
@@ -14,6 +15,7 @@ from drone_ioact.utils import logger
 QUEUE_MAX_SIZE = 30
 
 class MyActionsQueue(ActionsQueue):
+    """Defines the actions of this video player"""
     def get_actions(self) -> list[Action]:
         return ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
 
@@ -44,6 +46,7 @@ class VideoFrameReader(DroneIn):
         self._is_streaming = False
 
 class VideoActionsMaker(ActionsProducer, threading.Thread):
+    """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoWithFrames, actions_queue: Queue):
         ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self)

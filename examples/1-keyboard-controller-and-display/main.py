@@ -15,6 +15,7 @@ from drone_ioact.utils import logger
 QUEUE_MAX_SIZE = 30
 
 class MyActionsQueue(ActionsQueue):
+    """Defines the actions of this drone controller"""
     def get_actions(self) -> list[Action]:
         return ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
 
