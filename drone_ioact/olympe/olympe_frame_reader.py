@@ -75,8 +75,8 @@ class OlympeFrameReader(DroneIn):
             return
 
         cv2_cvt_colors = {
-            olympe.VDEF_I420: cv2.COLOR_YUV2BGR_I420,
-            olympe.VDEF_NV12: cv2.COLOR_YUV2BGR_NV12,
+            olympe.VDEF_I420: cv2.COLOR_YUV2RGB_I420,
+            olympe.VDEF_NV12: cv2.COLOR_YUV2RGB_NV12,
         }
 
         try:

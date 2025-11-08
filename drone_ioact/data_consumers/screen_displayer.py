@@ -17,7 +17,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         while self.drone_in.is_streaming():
             rgb = self.drone_in.get_current_data()["rgb"]
             if prev_frame is None or not np.allclose(prev_frame, rgb):
-                cv2.imshow("img", rgb)
+                cv2.imshow("img", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
             prev_frame = rgb
         logger.warning("ScreenDisplayer thread stopping")

@@ -54,7 +54,7 @@ class VideoContainer(threading.Thread):
                 time.sleep(diff)
 
 class VideoFrameReader(DroneIn):
-    """VideoFrameReader gets data from a video file"""
+    """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, video: VideoContainer):
         self.video = video
 
@@ -92,7 +92,7 @@ def main():
     video = VREVideo(sys.argv[1])
     logger.info(f"Read video: {video}")
     actions_queue = MyActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE))
-    (video_container := VideoContainer(video)).start()
+    (video_container := VideoContainer(video)).start() # start the video thread so it produces "real time" frames
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = VideoFrameReader(video=video_container)
