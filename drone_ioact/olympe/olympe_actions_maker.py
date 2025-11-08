@@ -25,7 +25,7 @@ class OlympeActionsMaker(DroneOut, threading.Thread):
                 logger.debug(f"Did not receive an action: {type(action)}. Skipping")
                 continue
 
-            logger.info(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+            logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
             if action == "DISCONNECT":
                 self.drone.streaming.stop()
                 continue

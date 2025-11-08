@@ -2,6 +2,7 @@
 """keyboard controller and display example with frames of a video not a real or simulated drone"""
 # pylint: disable=duplicate-code
 from queue import Queue
+from datetime import datetime
 import sys
 import time
 import threading
@@ -44,11 +45,13 @@ class VideoContainer(threading.Thread):
     def run(self):
         self.is_paused = False
         while not self.is_done:
+            now = datetime.now()
             with self._current_frame_lock:
                 self._current_frame = self.video[self.frame_ix]
             if not self.is_paused:
                 self.increment_frame(n=1)
-            time.sleep(1 / self.video.fps)
+            if (diff := (1 / self.fps - (datetime.now() - now).total_seconds())) > 0:
+                time.sleep(diff)
 
 class VideoFrameReader(DroneIn):
     """VideoFrameReader gets data from a video file"""
@@ -73,14 +76,15 @@ class VideoActionsMaker(ActionsProducer, threading.Thread):
 
     def run(self):
         while True:
-            item: Action = self.actions_queue.get()
-            if item == "DISCONNECT":
+            action: Action = self.actions_queue.get()
+            logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+            if action == "DISCONNECT":
                 break
-            if item == "PLAY_PAUSE":
+            if action == "PLAY_PAUSE":
                 self.video.is_paused = not self.video.is_paused
-            if item == "SKIP_AHEAD_ONE_SECOND":
+            if action == "SKIP_AHEAD_ONE_SECOND":
                 self.video.increment_frame(self.video.fps)
-            if item == "GO_BACK_ONE_SECOND":
+            if action == "GO_BACK_ONE_SECOND":
                 self.video.increment_frame(-self.video.fps)
 
 def main():
