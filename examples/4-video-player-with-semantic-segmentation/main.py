@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""keyboard controller and display example with frames of a video not a real or simulated drone"""
+"""keyboard controller and display example with frames of a video + semantic segmentation"""
 # pylint: disable=duplicate-code
 from queue import Queue
 import sys
@@ -47,7 +47,7 @@ def main():
     actions_queue = MyActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE))
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
-    video_frame_reader = SemanticDataProducer(video=video_container, model_path=sys.argv[2])
+    video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
     screen_displayer = ScreenDisplayer(drone_in=video_frame_reader)
     # data consumer & actions producer threads (data/RGB in -> action out)
