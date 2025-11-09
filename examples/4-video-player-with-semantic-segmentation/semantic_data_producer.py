@@ -1,12 +1,13 @@
 """semantic_data_producer.py produces both RGB and semantic segmentation using a PHG-MAE-Distil model"""
+# pylint: disable=duplicate-code
 import numpy as np
+import torch as tr # pylint: disable=import-error
+from torch.nn import functional as F # pylint: disable=import-error
 from drone_ioact import DroneIn
 from drone_ioact.utils import logger
 
 from video_container import VideoContainer
 from safeuav import SafeUAV
-import torch as tr
-from torch.nn import functional as F
 
 COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
              [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]

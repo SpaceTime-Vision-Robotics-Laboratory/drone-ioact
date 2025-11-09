@@ -1,4 +1,5 @@
 """video_container.py acts as a drone producing frames in real time"""
+# pylint: disable=duplicate-code
 from datetime import datetime
 import threading
 import time
