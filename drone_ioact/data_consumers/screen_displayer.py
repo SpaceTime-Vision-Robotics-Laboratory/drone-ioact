@@ -8,7 +8,8 @@ from drone_ioact.utils import logger
 
 class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
-    def __init__(self, drone_in: DroneIn):
+    def __init__(self, drone_in: DroneIn, screen_height: int | None = None):
+        self.h = screen_height
         DataConsumer.__init__(self, drone_in)
         threading.Thread.__init__(self)
 
@@ -17,6 +18,9 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         while self.drone_in.is_streaming():
             rgb = self.drone_in.get_current_data()["rgb"]
             if prev_frame is None or not np.allclose(prev_frame, rgb):
+                aspect_ratio = rgb.shape[1] / rgb.shape[0]
+                w = int(self.h / aspect_ratio)
+                rgb = cv2.resize(rgb, (self.h, w)) if self.h is not None else rgb
                 cv2.imshow("img", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
             prev_frame = rgb

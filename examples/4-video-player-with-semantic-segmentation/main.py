@@ -5,13 +5,15 @@ from queue import Queue
 import sys
 import time
 import threading
+import cv2
+import numpy as np
 
 from drone_ioact import Action, ActionsQueue, ActionsProducer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
 
 from video_container import VideoContainer
-from semantic_data_producer import SemanticDataProducer
+from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
 QUEUE_MAX_SIZE = 30
 
@@ -40,6 +42,24 @@ class VideoActionsMaker(ActionsProducer, threading.Thread):
             if action == "GO_BACK_ONE_SECOND":
                 self.video.increment_frame(-self.video.fps)
 
+class SemanticScreenDisplayer(ScreenDisplayer):
+    def run(self):
+        prev_frame = None
+        while self.drone_in.is_streaming():
+            data = self.drone_in.get_current_data()
+            rgb, semantic = data["rgb"], data["semantic"]
+            if prev_frame is None or not np.allclose(prev_frame, rgb):
+                sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
+                combined = np.concatenate([rgb, sema_rgb], axis=1)
+                aspect_ratio = combined.shape[1] / combined.shape[0]
+                w = int(self.h / aspect_ratio)
+                combined = cv2.resize(combined, (self.h, w)) if self.h is not None else combined
+                cv2.imshow("img", cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
+                cv2.waitKey(1)
+            prev_frame = rgb
+        logger.warning("ScreenDisplayer thread stopping")
+
+
 def main():
     """main fn"""
     # start the video thread immediately so it produces "real time" frames
@@ -49,7 +69,7 @@ def main():
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = ScreenDisplayer(drone_in=video_frame_reader)
+    screen_displayer = SemanticScreenDisplayer(drone_in=video_frame_reader, screen_height=720)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
