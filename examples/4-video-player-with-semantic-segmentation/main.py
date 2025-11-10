@@ -16,6 +16,7 @@ from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
+SCREEN_HEIGHT = 480 # width is auto-scaled
 
 class MyActionsQueue(ActionsQueue):
     """Defines the actions of this video player"""
@@ -53,8 +54,8 @@ class SemanticScreenDisplayer(ScreenDisplayer):
                 sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
                 combined = np.concatenate([rgb, sema_rgb], axis=1)
                 aspect_ratio = combined.shape[1] / combined.shape[0]
-                w = int(self.h / aspect_ratio)
-                combined = cv2.resize(combined, (self.h, w)) if self.h is not None else combined
+                w = int(self.h * aspect_ratio)
+                combined = cv2.resize(combined, (w, self.h)) if self.h is not None else combined
                 cv2.imshow("img", cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
             prev_frame = rgb
@@ -70,7 +71,7 @@ def main():
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = SemanticScreenDisplayer(drone_in=video_frame_reader, screen_height=720)
+    screen_displayer = SemanticScreenDisplayer(drone_in=video_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}

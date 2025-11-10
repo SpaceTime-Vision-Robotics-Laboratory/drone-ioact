@@ -19,8 +19,8 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
             rgb = self.drone_in.get_current_data()["rgb"]
             if prev_frame is None or not np.allclose(prev_frame, rgb):
                 aspect_ratio = rgb.shape[1] / rgb.shape[0]
-                w = int(self.h / aspect_ratio)
-                rgb = cv2.resize(rgb, (self.h, w)) if self.h is not None else rgb
+                w = int(self.h * aspect_ratio)
+                rgb = cv2.resize(rgb, (w, self.h)) if self.h is not None else rgb
                 cv2.imshow("img", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
             prev_frame = rgb
