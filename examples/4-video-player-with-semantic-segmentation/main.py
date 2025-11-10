@@ -18,11 +18,6 @@ from drone_ioact.utils import logger
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 
-class MyActionsQueue(ActionsQueue):
-    """Defines the actions of this video player"""
-    def get_actions(self) -> list[Action]:
-        return ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
-
 class VideoActionsMaker(ActionsProducer, threading.Thread):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue):
@@ -54,7 +49,7 @@ class SemanticScreenDisplayer(ScreenDisplayer):
                 sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
                 combined = np.concatenate([rgb, sema_rgb], axis=1)
                 aspect_ratio = combined.shape[1] / combined.shape[0]
-                w = int(self.h * aspect_ratio)
+                w = int(self.h * aspect_ratio) if self.h is not None else None
                 combined = cv2.resize(combined, (w, self.h)) if self.h is not None else combined
                 cv2.imshow("img", cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
@@ -66,7 +61,8 @@ def main():
     """main fn"""
     # start the video thread immediately so it produces "real time" frames
     (video_container := VideoContainer(video_path=sys.argv[1])).start()
-    actions_queue = MyActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE))
+    actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
+    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])

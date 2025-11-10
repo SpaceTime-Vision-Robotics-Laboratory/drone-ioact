@@ -13,7 +13,7 @@ class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
         threading.Thread.__init__(self)
         self.listener = Listener(on_release=self.on_release)
         self.key_to_action = key_to_action
-        assert all(v in (acts := actions_queue.get_actions()) for v in key_to_action.values()), (key_to_action, acts)
+        assert all(v in (acts := actions_queue.actions) for v in key_to_action.values()), (key_to_action, acts)
 
     def add_to_queue(self, action: Action):
         """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""

@@ -17,9 +17,6 @@ QUEUE_MAX_SIZE = 30
 
 class MyActionsPriorityQueue(ActionsQueue):
     """Wrapper on top of a priority queue for actions"""
-    def get_actions(self) -> list[Action]:
-        return ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
-
     def put(self, item: tuple[int, Action], *args, **kwargs):
         self.queue.put(item, *args, **kwargs)
 
@@ -38,7 +35,8 @@ def main():
     """main fn"""
     drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
-    actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE))
+    actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
+    actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")

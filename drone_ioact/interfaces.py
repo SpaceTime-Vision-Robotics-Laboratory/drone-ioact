@@ -15,18 +15,15 @@ Action = str # actions are stored as simple strings for simplicity :)
 
 class ActionsQueue(ABC):
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
-    def __init__(self, queue: Queue):
+    def __init__(self, queue: Queue, actions: list[str]):
         super().__init__()
         self.queue = queue
-
-    @abstractmethod
-    def get_actions(self) -> list[Action]:
-        """the valid actions defined for this application"""
+        self.actions = actions
 
     def put(self, item: Action, *args, **kwargs):
         """Put an item into the queue"""
         assert isinstance(item, Action), type(item)
-        assert item in (actions := self.get_actions()), f"{item} not in {actions}"
+        assert item in (actions := self.actions), f"{item} not in {actions}"
         self.queue.put(item, *args, **kwargs)
 
     def get(self, *args, **kwargs) -> Action:

@@ -9,21 +9,17 @@ from queue import Queue
 import olympe
 from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
-from drone_ioact import ActionsQueue, Action
+from drone_ioact import ActionsQueue
 from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
-
-class MyActionsQueue(ActionsQueue):
-    """Defines the actions of this drone controller"""
-    def get_actions(self) -> list[Action]:
-        return ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
 
 def main():
     """main fn"""
     drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
-    actions_queue = MyActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE))
+    actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
+    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")

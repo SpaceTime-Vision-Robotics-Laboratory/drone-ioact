@@ -14,11 +14,7 @@ from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
 
 QUEUE_MAX_SIZE = 30
-
-class MyActionsQueue(ActionsQueue):
-    """Defines the actions of this video player"""
-    def get_actions(self) -> list[Action]:
-        return ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
+SCREEN_HEIGHT = 402
 
 class VideoFrameReader(DroneIn):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
@@ -57,12 +53,13 @@ class VideoActionsMaker(ActionsProducer, threading.Thread):
 def main():
     """main fn"""
     (video_container := VideoContainer(sys.argv[1])).start() # start the video thread so it produces "real time" frames
-    actions_queue = MyActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE))
+    actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
+    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = VideoFrameReader(video=video_container)
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = ScreenDisplayer(drone_in=video_frame_reader)
+    screen_displayer = ScreenDisplayer(drone_in=video_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
