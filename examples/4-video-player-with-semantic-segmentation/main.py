@@ -8,12 +8,12 @@ import threading
 import cv2
 import numpy as np
 
+from video_container import VideoContainer
+from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
+
 from drone_ioact import Action, ActionsQueue, ActionsProducer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
-
-from video_container import VideoContainer
-from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
 QUEUE_MAX_SIZE = 30
 
@@ -43,6 +43,7 @@ class VideoActionsMaker(ActionsProducer, threading.Thread):
                 self.video.increment_frame(-self.video.fps)
 
 class SemanticScreenDisplayer(ScreenDisplayer):
+    """Extends ScreenDisplayer to display semantic segmentation"""
     def run(self):
         prev_frame = None
         while self.drone_in.is_streaming():

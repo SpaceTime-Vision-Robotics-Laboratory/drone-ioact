@@ -2,18 +2,16 @@
 """keyboard controller and display example with frames of a video not a real or simulated drone"""
 # pylint: disable=duplicate-code
 from queue import Queue
-from datetime import datetime
 import sys
 import time
 import threading
 import numpy as np
-from vre_video import VREVideo # pylint: disable=import-error
+
+from video_container import VideoContainer
 
 from drone_ioact import DroneIn, Action, ActionsQueue, ActionsProducer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger
-
-from video_container import VideoContainer
 
 QUEUE_MAX_SIZE = 30
 

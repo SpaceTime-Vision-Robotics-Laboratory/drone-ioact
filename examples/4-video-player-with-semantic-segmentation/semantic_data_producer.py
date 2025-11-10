@@ -3,11 +3,12 @@
 import numpy as np
 import torch as tr # pylint: disable=import-error
 from torch.nn import functional as F # pylint: disable=import-error
-from drone_ioact import DroneIn
-from drone_ioact.utils import logger
 
 from video_container import VideoContainer
 from safeuav import SafeUAV
+
+from drone_ioact import DroneIn
+from drone_ioact.utils import logger
 
 COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
              [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
@@ -40,6 +41,7 @@ class SemanticDataProducer(DroneIn):
 
     @tr.no_grad()
     def compute_sema(self, rgb: np.ndarray) -> np.ndarray:
+        """computes semantic segmentation for one rgb frame"""
         h, w = self.cfg["model"]["hparams"]["data_shape"]["rgb"][1:3]
         rgb_h, rgb_w = rgb.shape[0:2]
 
