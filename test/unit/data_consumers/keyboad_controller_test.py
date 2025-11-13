@@ -1,4 +1,3 @@
-import pytest
 from pytest_mock import MockerFixture
 from drone_ioact.data_consumers import KeyboardController
 from drone_ioact import ActionsQueue, DroneIn

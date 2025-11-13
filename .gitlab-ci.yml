@@ -23,5 +23,5 @@ linters:
 unit_tests:
   script:
     - export PYTHONPATH="$PYTHONPATH:$(pwd)"
-    - pip install pytest pytest-mock
+    - pip install pytest pytest-mock python3-tk
     - pytest test/unit
