@@ -22,6 +22,7 @@ linters:
 
 unit_tests:
   script:
+    - sudo apt-get update
     - apt install python3-tk
     - export PYTHONPATH="$PYTHONPATH:$(pwd)"
     - pip install pytest pytest-mock
