@@ -3,7 +3,6 @@
 # pylint: disable=duplicate-code
 import sys
 import time
-import threading
 from pathlib import Path
 from queue import PriorityQueue
 

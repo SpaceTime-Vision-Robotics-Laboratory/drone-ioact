@@ -2,7 +2,6 @@
 """keyboard controller and display example"""
 import sys
 import time
-import threading
 from pathlib import Path
 from queue import Queue
 
@@ -38,7 +37,7 @@ def main():
         "Screen displayer": screen_displayer,
         "Olympe actions maker": olympe_actions_maker,
     })
-    threads.strart()
+    threads.start()
 
     while olympe_frame_reader.is_streaming() and not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")

@@ -1,8 +1,8 @@
 """generic utils file"""
 from pathlib import Path
 from datetime import datetime
-from loggez import make_logger
 import threading
+from loggez import make_logger
 
 def get_project_root() -> Path:
     """returns the project root"""
