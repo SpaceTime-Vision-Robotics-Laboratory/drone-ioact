@@ -10,16 +10,16 @@ def test_ThreadGroup_ctor():
     with pytest.raises(AssertionError, match="Not all are threads"):
         _ = ThreadGroup({"a": "B"})
 
-    tg = ThreadGroup({"a": threading.Thread(target=(lambda : 0))})
+    tg = ThreadGroup({"a": threading.Thread(target=lambda: 0)})
     assert len(tg) == 1
 
 def test_ThreadGroup_status():
-    tg = ThreadGroup({"a": threading.Thread(target=(lambda : 0))})
+    tg = ThreadGroup({"a": threading.Thread(target=lambda: 0)})
     assert tg.status() == [False]
     assert tg.is_any_dead() is True
 
 def test_ThreadGroup_dict_overrides():
-    tg = ThreadGroup({"a": (t := threading.Thread(target=(lambda : 0)))})
+    tg = ThreadGroup({"a": (t := threading.Thread(target=lambda: 0))})
     assert tg.values() == [t]
     assert tg.items() == [("a", t)]
 
