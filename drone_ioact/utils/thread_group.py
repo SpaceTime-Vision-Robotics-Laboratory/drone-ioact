@@ -13,6 +13,9 @@ class ThreadGroup(dict):
     def start(self):
         """starts all the threads"""
         for k, v in self.items():
+            if not v.daemon:
+                logger.warning(f"Thread '{k}' is not a daemon. This is needed to kill it from main. Setting to true")
+                v.daemon = True
             logger.debug(f"Starting thread '{k}'")
             v.start()
 

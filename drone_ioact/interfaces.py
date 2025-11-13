@@ -15,7 +15,7 @@ Action = str # actions are stored as simple strings for simplicity :)
 
 class ActionsQueue(ABC):
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
-    def __init__(self, queue: Queue, actions: list[str]):
+    def __init__(self, queue: Queue, actions: list[Action]):
         super().__init__()
         self.queue = queue
         self.actions = actions
