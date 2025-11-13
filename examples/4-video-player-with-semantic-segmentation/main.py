@@ -13,7 +13,7 @@ from semantic_data_producer import SemanticDataProducer, colorize_semantic_segme
 
 from drone_ioact import Action, ActionsQueue, ActionsProducer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
-from drone_ioact.utils import logger
+from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
@@ -76,20 +76,17 @@ def main():
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
 
-    threads: dict[str, threading.Thread] = {
+    threads = ThreadGroup({
         "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
         "Video actions maker": video_actions_maker,
-    }
-    [v.start() for v in threads.values()] # start the threads
+    })
+    threads.start()
 
-    while True:
+    while video_frame_reader.is_streaming() and not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")
-        if any(not v.is_alive() for v in threads.values()) or not video_frame_reader.is_streaming():
-            logger.info(f"{video_frame_reader} streaming: {video_frame_reader.is_streaming()}")
-            logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
-            break
         time.sleep(1)
+    logger.info(f"Stopping threads: \n{threads}")
     video_frame_reader.stop_streaming()
 
 if __name__ == "__main__":

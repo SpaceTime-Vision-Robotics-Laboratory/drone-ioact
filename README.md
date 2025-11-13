@@ -25,19 +25,16 @@ def main():
     # actions consumer thread (1) (action in -> drone I/O out)
     actions_maker = XXXActionsMaker(drone=drone, actions_queue=actions_queue) # action in -> actual drone action
 
-    threads: dict[str, threading.Thread] = {
+    threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Screen displayer": screen_displayer,
         "Keyboard controller": kb_controller,
         "Actions maker": actions_maker,
-    }
-    [v.start() for v in threads.values()] # start the threads
+    })
+    threads.start() # start the threads
 
-    while True:
-        if any(not v.is_alive() for v in threads.values()) or not data_reader.is_streaming():
-            logger.info(f"{data_reader} streaming: {data_reader.is_streaming()}")
-            logger.info("\n".join(f"- {k}: {v}" for k, v in threads.items()))
-            break
+    while data_reader.is_streaming() and not threads.is_any_dead(): # wait for any of them to die or drone to disconnect
         time.sleep(1) # important to not throttle everything with this main thread
+
     drone.disconnect() # disconnect from the drone.
 
 if __name__ == "__main__":

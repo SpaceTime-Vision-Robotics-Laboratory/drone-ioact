@@ -11,7 +11,7 @@ import olympe
 from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact import ActionsQueue, Action
-from drone_ioact.utils import logger
+from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 
@@ -50,20 +50,18 @@ def main():
     # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
 
-    threads: dict[str, threading.Thread] = {
+    threads = ThreadGroup({
         "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
         "Olympe actions maker": olympe_actions_maker,
-    }
-    [v.start() for v in threads.values()] # start the threads
+    })
+    threads.start()
 
-    while True:
+    while olympe_frame_reader.is_streaming() and not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")
-        if any(not v.is_alive() for v in threads.values()) or not olympe_frame_reader.is_streaming():
-            logger.info(f"{olympe_frame_reader} streaming: {olympe_frame_reader.is_streaming()}")
-            logger.info("\n".join(f"- {k}: {v.is_alive()}" for k, v in threads.items()))
-            break
         time.sleep(1)
+
+    logger.info(f"Stopping threads: \n{threads}")
     drone.disconnect()
 
 if __name__ == "__main__":
