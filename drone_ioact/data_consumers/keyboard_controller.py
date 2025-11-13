@@ -18,7 +18,7 @@ class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
     def __init__(self, drone_in: DroneIn, actions_queue: ActionsQueue, key_to_action: dict[str, Action]):
         DataConsumer.__init__(self, drone_in)
         ActionsProducer.__init__(self, actions_queue)
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.listener = Listener(on_release=self.on_release)
         self.key_to_action = key_to_action
         assert all(v in (acts := actions_queue.actions) for v in key_to_action.values()), (key_to_action, acts)

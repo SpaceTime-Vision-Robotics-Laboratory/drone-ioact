@@ -34,7 +34,7 @@ class VideoActionsMaker(ActionsProducer, threading.Thread):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue):
         ActionsProducer.__init__(self, actions_queue)
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.video = video
 
     def run(self):
