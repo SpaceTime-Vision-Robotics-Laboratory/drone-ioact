@@ -23,7 +23,7 @@ linters:
 unit_tests:
   script:
     - apt-get update
-    - apt install -y python3-tk
+    - apt install -y xvfb # for fake screen so pynput doesn't crash
     - export PYTHONPATH="$PYTHONPATH:$(pwd)"
     - pip install pytest pytest-mock
-    - pytest test/unit
+    - xvfb-run -a pytest test/unit
