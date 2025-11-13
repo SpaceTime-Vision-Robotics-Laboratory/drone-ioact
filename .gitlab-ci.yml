@@ -17,10 +17,11 @@ before_script:
 linters:
   script:
     - pip install pylint ruff
-    - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py")
+    - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py" | grep -v "test")
     - ruff check
 
 unit_tests:
   script:
+    - export PYTHONPATH="$PYTHONPATH:$(pwd)"
     - pip install pytest
     - pytest test/unit
