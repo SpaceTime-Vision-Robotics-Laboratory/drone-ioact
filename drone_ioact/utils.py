@@ -23,6 +23,10 @@ class ThreadGroup(dict):
             logger.debug(f"Starting thread '{k}'")
             v.start()
 
+    def status(self) -> list[bool]:
+        """Returns the status (is alive) of all threads"""
+        return [t.is_alive() for t in self.values()]
+
     def is_any_dead(self) -> bool:
         """checks if any thread is dead"""
         return any(not t.is_alive() for t in self.values())

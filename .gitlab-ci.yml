@@ -19,3 +19,8 @@ linters:
     - pip install pylint ruff
     - python -m pylint --rcfile=.pylintrc $(git ls-files "*.py")
     - ruff check
+
+unit_tests:
+  script:
+    - pip install pytest
+    - pytest test/unit
