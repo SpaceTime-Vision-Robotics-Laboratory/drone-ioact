@@ -43,8 +43,8 @@ def main():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
 
-    logger.info(f"Stopping threads: \n{threads}")
     drone.disconnect()
+    threads.join(timeout=1)
 
 if __name__ == "__main__":
     main()

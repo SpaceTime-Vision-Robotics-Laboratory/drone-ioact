@@ -36,6 +36,7 @@ def main():
         time.sleep(1) # important to not throttle everything with this main thread
 
     drone.disconnect() # disconnect from the drone.
+    threads.join(timeout=1) # stop all the threads
 
 if __name__ == "__main__":
     main()

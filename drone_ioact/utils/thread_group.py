@@ -24,8 +24,9 @@ class ThreadGroup(dict):
         """checks if any thread is dead"""
         return any(not t.is_alive() for t in self.values())
 
-    def join(self, timeout: float | None=None):
+    def join(self, timeout: float | None=1.0):
         """joins all the threads"""
+        logger.info(f"Joining threads: \n{self}")
         for k, v in self.items():
             logger.debug(f"Joining thread '{k}' (timeout: {timeout})")
             v.join(timeout)

@@ -86,8 +86,9 @@ def main():
     while video_frame_reader.is_streaming() and not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
-    logger.info(f"Stopping threads: \n{threads}")
+
     video_frame_reader.stop_streaming()
+    threads.join(timeout=1)
 
 if __name__ == "__main__":
     main()
