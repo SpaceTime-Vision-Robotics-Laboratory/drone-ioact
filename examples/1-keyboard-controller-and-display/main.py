@@ -6,7 +6,7 @@ from pathlib import Path
 from queue import Queue
 
 import olympe
-from drone_ioact.olympe import OlympeFrameReader, OlympeActionsMaker
+from drone_ioact.drones.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact import ActionsQueue
 from drone_ioact.utils import logger, ThreadGroup
