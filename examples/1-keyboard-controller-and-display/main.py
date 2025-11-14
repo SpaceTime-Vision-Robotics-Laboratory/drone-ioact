@@ -6,12 +6,50 @@ from pathlib import Path
 from queue import Queue
 
 import olympe
+from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
+from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
+
 from drone_ioact.drones.olympe import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
-from drone_ioact import ActionsQueue
+from drone_ioact import ActionsQueue, Action
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
+
+def action_callback(actions_maker: OlympeActionsMaker, action: Action):
+    drone: olympe.Drone = actions_maker.drone
+    if action == "DISCONNECT":
+        actions_maker.stop_streaming()
+        return
+
+    res = True
+    if action == "LIFT":
+        res = drone(TakeOff()).wait().success()
+    if action == "LAND":
+        res = drone(Landing()).wait().success()
+    if action == "FORWARD":
+        res = drone(
+            moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
+            FlyingStateChanged(state="hovering", _timeout=3)
+        ).wait()
+    if action == "ROTATE":
+        res = drone(
+            moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
+            FlyingStateChanged(state="hovering", _timeout=3)
+        ).wait()
+    if action == "FORWARD_NOWAIT":
+        drone(
+            moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
+            FlyingStateChanged(state="hovering", _timeout=3)
+        )
+    if action == "ROTATE_NOWAIT":
+        drone(
+            moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
+            FlyingStateChanged(state="hovering", _timeout=3)
+        )
+
+    if res is False:
+        logger.warning(f"Action '{action}' could not be performed")
 
 def main():
     """main fn"""
