@@ -16,17 +16,6 @@ from drone_ioact.utils import logger, ThreadGroup
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 402
 
-def action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
-    if action == "DISCONNECT":
-        actions_maker.stop_streaming()
-    if action == "PLAY_PAUSE":
-        actions_maker.video.is_paused = not actions_maker.video.is_paused
-    if action == "SKIP_AHEAD_ONE_SECOND":
-        actions_maker.video.increment_frame(actions_maker.video.fps)
-    if action == "GO_BACK_ONE_SECOND":
-        actions_maker.video.increment_frame(-actions_maker.video.fps)
-    return True
-
 class VideoFrameReader(DroneIn):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, video: VideoContainer):
@@ -40,8 +29,8 @@ class VideoFrameReader(DroneIn):
 
 class VideoActionsMaker(DroneOut):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
-    def __init__(self, video: VideoContainer, actions_queue: Queue, action_callback: ActionCallback):
-        super().__init__(actions_queue, action_callback)
+    def __init__(self, video: VideoContainer, actions_queue: Queue):
+        super().__init__(actions_queue, VideoActionsMaker.action_callback)
         self.video = video
 
     def stop_streaming(self):
@@ -49,6 +38,18 @@ class VideoActionsMaker(DroneOut):
 
     def is_streaming(self) -> bool:
         return not self.video.is_done
+
+    @staticmethod
+    def action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
+        if action == "DISCONNECT":
+            actions_maker.stop_streaming()
+        if action == "PLAY_PAUSE":
+            actions_maker.video.is_paused = not actions_maker.video.is_paused
+        if action == "SKIP_AHEAD_ONE_SECOND":
+            actions_maker.video.increment_frame(actions_maker.video.fps)
+        if action == "GO_BACK_ONE_SECOND":
+            actions_maker.video.increment_frame(-actions_maker.video.fps)
+        return True
 
 def main():
     """main fn"""
@@ -66,8 +67,7 @@ def main():
     kb_controller = KeyboardController(drone_in=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
-    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue,
-                                            action_callback=action_callback)
+    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,
