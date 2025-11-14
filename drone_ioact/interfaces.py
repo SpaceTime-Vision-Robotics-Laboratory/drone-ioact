@@ -86,7 +86,7 @@ class DroneOut(ABC, threading.Thread):
     @property
     def action_callback(self) -> ActionCallback:
         """Given a generic action, communicates it to the drone"""
-        return self.action_callback
+        return self._action_callback
 
     @abstractmethod
     def stop_streaming(self):
@@ -108,7 +108,7 @@ class DroneOut(ABC, threading.Thread):
                 logger.debug(f"Action '{action}' not in actions={self.actions_queue.actions}. Skipping.")
                 continue
 
-            res = self.action_callback(action)
+            res = self.action_callback(self, action)
             if res is False:
                 logger.warning(f"Could not perform action '{action}'")
 

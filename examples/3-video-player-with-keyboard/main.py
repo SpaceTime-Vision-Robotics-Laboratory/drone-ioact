@@ -41,7 +41,7 @@ class VideoFrameReader(DroneIn):
 class VideoActionsMaker(DroneOut):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue, action_callback: ActionCallback):
-        super().__init__(self, actions_queue, action_callback)
+        super().__init__(actions_queue, action_callback)
         self.video = video
 
     def stop_streaming(self):
@@ -80,7 +80,7 @@ def main():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
 
-    video_frame_reader.stop_streaming()
+    video_actions_maker.stop_streaming()
     threads.join(timeout=1)
 
 if __name__ == "__main__":
