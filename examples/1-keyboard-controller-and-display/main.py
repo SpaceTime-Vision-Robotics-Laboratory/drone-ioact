@@ -16,24 +16,23 @@ from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 
-def action_callback(actions_maker: OlympeActionsMaker, action: Action):
+def action_callback(actions_maker: OlympeActionsMaker, action: Action) -> bool:
     drone: olympe.Drone = actions_maker.drone
     if action == "DISCONNECT":
         actions_maker.stop_streaming()
-        return
+        return True
 
-    res = True
     if action == "LIFT":
-        res = drone(TakeOff()).wait().success()
+        return drone(TakeOff()).wait().success()
     if action == "LAND":
-        res = drone(Landing()).wait().success()
+        return drone(Landing()).wait().success()
     if action == "FORWARD":
-        res = drone(
+        return drone(
             moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
             FlyingStateChanged(state="hovering", _timeout=3)
         ).wait()
     if action == "ROTATE":
-        res = drone(
+        return drone(
             moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
             FlyingStateChanged(state="hovering", _timeout=3)
         ).wait()
@@ -42,14 +41,14 @@ def action_callback(actions_maker: OlympeActionsMaker, action: Action):
             moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
             FlyingStateChanged(state="hovering", _timeout=3)
         )
+        return True
     if action == "ROTATE_NOWAIT":
         drone(
             moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
             FlyingStateChanged(state="hovering", _timeout=3)
         )
-
-    if res is False:
-        logger.warning(f"Action '{action}' could not be performed")
+        return True
+    return False
 
 def main():
     """main fn"""
@@ -68,7 +67,7 @@ def main():
     kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
-    olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue)
+    olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue, action_callback=action_callback)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,
