@@ -1,42 +1,45 @@
 #!/usr/bin/env python3
 """keyboard controller and display example with frames of a video + semantic segmentation"""
 # pylint: disable=duplicate-code
+from __future__ import annotations
 from queue import Queue
 import sys
 import time
-import threading
 import cv2
 import numpy as np
 
 from video_container import VideoContainer
 from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
-from drone_ioact import Action, ActionsQueue, ActionsProducer
+from drone_ioact import Action, ActionsQueue, ActionCallback, DroneOut
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 
-class VideoActionsMaker(ActionsProducer, threading.Thread):
+def action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
+    if action == "DISCONNECT":
+        actions_maker.stop_streaming()
+    if action == "PLAY_PAUSE":
+        actions_maker.video.is_paused = not actions_maker.video.is_paused
+    if action == "SKIP_AHEAD_ONE_SECOND":
+        actions_maker.video.increment_frame(actions_maker.video.fps)
+    if action == "GO_BACK_ONE_SECOND":
+        actions_maker.video.increment_frame(-actions_maker.video.fps)
+    return True
+
+class VideoActionsMaker(DroneOut):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
-    def __init__(self, video: VideoContainer, actions_queue: Queue):
-        ActionsProducer.__init__(self, actions_queue)
-        threading.Thread.__init__(self, daemon=True)
+    def __init__(self, video: VideoContainer, actions_queue: Queue, action_callback: ActionCallback):
+        super().__init__(actions_queue, action_callback)
         self.video = video
 
-    def run(self):
-        while True:
-            action: Action = self.actions_queue.get()
-            logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
-            if action == "DISCONNECT":
-                break
-            if action == "PLAY_PAUSE":
-                self.video.is_paused = not self.video.is_paused
-            if action == "SKIP_AHEAD_ONE_SECOND":
-                self.video.increment_frame(self.video.fps)
-            if action == "GO_BACK_ONE_SECOND":
-                self.video.increment_frame(-self.video.fps)
+    def stop_streaming(self):
+        self.video.is_done = True
+
+    def is_streaming(self) -> bool:
+        return not self.video.is_done
 
 class SemanticScreenDisplayer(ScreenDisplayer):
     """Extends ScreenDisplayer to display semantic segmentation"""
@@ -56,7 +59,6 @@ class SemanticScreenDisplayer(ScreenDisplayer):
             prev_frame = rgb
         logger.warning("ScreenDisplayer thread stopping")
 
-
 def main():
     """main fn"""
     # start the video thread immediately so it produces "real time" frames
@@ -74,7 +76,8 @@ def main():
     kb_controller = KeyboardController(drone_in=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
-    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
+    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue,
+                                            action_callback=action_callback)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,
@@ -87,7 +90,7 @@ def main():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
 
-    video_frame_reader.stop_streaming()
+    video_actions_maker.stop_streaming()
     threads.join(timeout=1)
 
 if __name__ == "__main__":
