@@ -17,6 +17,7 @@ from drone_ioact.utils import logger, ThreadGroup
 QUEUE_MAX_SIZE = 30
 
 def action_callback(actions_maker: OlympeActionsMaker, action: Action) -> bool:
+    """the actions callback from generic actions to drone-specific ones"""
     drone: olympe.Drone = actions_maker.drone
     if action == "DISCONNECT":
         actions_maker.stop_streaming()

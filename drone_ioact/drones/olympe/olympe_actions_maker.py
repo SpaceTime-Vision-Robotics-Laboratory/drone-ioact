@@ -3,6 +3,7 @@ from queue import Queue
 import olympe
 
 from drone_ioact import DroneOut, ActionCallback
+from drone_ioact.utils import logger
 
 class OlympeActionsMaker(DroneOut):
     """OlympeActionsMaker: Takes generic actions and converts them to olympe-specific commands."""
@@ -11,6 +12,13 @@ class OlympeActionsMaker(DroneOut):
         self.drone = drone
 
     def stop_streaming(self):
+        logger.info("Stopping streaming...")
+        try:
+            self.drone.streaming.stop()
+        except Exception as e:
+            logger.error("Unable to properly stop the streaming...")
+            logger.critical(e, exc_info=True)
+
         return self.drone.streaming.stop()
 
     def is_streaming(self) -> bool:

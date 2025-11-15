@@ -9,7 +9,7 @@ import numpy as np
 
 from video_container import VideoContainer
 
-from drone_ioact import DroneIn, Action, ActionsQueue, DroneOut, ActionCallback
+from drone_ioact import DroneIn, Action, ActionsQueue, DroneOut
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
@@ -30,7 +30,7 @@ class VideoFrameReader(DroneIn):
 class VideoActionsMaker(DroneOut):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue):
-        super().__init__(actions_queue, VideoActionsMaker.action_callback)
+        super().__init__(actions_queue, VideoActionsMaker.video_action_callback)
         self.video = video
 
     def stop_streaming(self):
@@ -40,7 +40,8 @@ class VideoActionsMaker(DroneOut):
         return not self.video.is_done
 
     @staticmethod
-    def action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
+    def video_action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
+        """the actions callback from generic actions to video-specific ones"""
         if action == "DISCONNECT":
             actions_maker.stop_streaming()
         if action == "PLAY_PAUSE":
