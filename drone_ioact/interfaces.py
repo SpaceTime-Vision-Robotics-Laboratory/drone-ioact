@@ -7,11 +7,17 @@ Drone --raw data--> DroneIn --get_current_data()--> DataConsumer1            | <
                                                     ...
 DroneIn can be seen as DataProducer and DroneOut as ActionsConsumer, so it's two producer-consumers on each side.
 """
+from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Callable
 from queue import Queue
+import threading
 import numpy as np
 
+from drone_ioact.utils import logger
+
 Action = str # actions are stored as simple strings for simplicity :)
+ActionCallback = Callable[["DroneOut", Action], bool]
 
 class ActionsQueue(ABC):
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
@@ -43,10 +49,6 @@ class DroneIn(ABC):
     def is_streaming(self) -> bool:
         """checks if the drone is connected and streaming or not"""
 
-    @abstractmethod
-    def stop_streaming(self):
-        """calls the drone to stop sending messages"""
-
 class DataConsumer(ABC):
     """Interface defining the requirements of a data consumer getting data from a DroneIn"""
     def __init__(self, drone_in: DroneIn):
@@ -68,13 +70,46 @@ class ActionsProducer(ABC):
         """The actions queue where the actions are inserted"""
         return self._actions_queue
 
-class DroneOut(ABC):
+class DroneOut(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to receive an action & apply it to the drone"""
-    def __init__(self, actions_queue: ActionsQueue):
+    def __init__(self, actions_queue: ActionsQueue, action_callback: ActionCallback):
+        threading.Thread.__init__(self, daemon=True)
         assert isinstance(actions_queue, ActionsQueue), f"queue must inherit ActionsQueue: {type(actions_queue)}"
         self._actions_queue = actions_queue
+        self._action_callback = action_callback
 
     @property
-    def actions_queue(self) -> Queue:
+    def actions_queue(self) -> ActionsQueue:
         """The actions queue where the actions are inserted"""
         return self._actions_queue
+
+    @property
+    def action_callback(self) -> ActionCallback:
+        """Given a generic action, communicates it to the drone"""
+        return self._action_callback
+
+    @abstractmethod
+    def stop_streaming(self):
+        """calls the drone to stop sending messages"""
+
+    @abstractmethod
+    def is_streaming(self) -> bool:
+        """checks if the drone is connected and streaming or not"""
+
+    def run(self):
+        while self.is_streaming():
+            action: Action = self.actions_queue.get(block=True, timeout=1_000)
+            if not isinstance(action, Action):
+                logger.debug(f"Did not receive an action: {type(action)}. Skipping")
+                continue
+
+            logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+            if action not in self.actions_queue.actions:
+                logger.debug(f"Action '{action}' not in actions={self.actions_queue.actions}. Skipping.")
+                continue
+
+            res = self.action_callback(self, action)
+            if res is False:
+                logger.warning(f"Could not perform action '{action}'")
+
+        logger.info(f"Stopping {self}.")

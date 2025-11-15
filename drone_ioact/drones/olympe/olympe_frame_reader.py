@@ -56,15 +56,6 @@ class OlympeFrameReader(DroneIn):
         streaming = self.drone.streaming is not None
         return connected and streaming
 
-    def stop_streaming(self):
-        logger.info("Stopping streaming...")
-        try:
-            self.drone.streaming.stop()
-            self._save_metadata()
-        except Exception as e:
-            logger.error("Unable to properly stop the streaming...")
-            logger.critical(e, exc_info=True)
-
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """
         This function will be called by Olympe for each decoded YUV frame. It transforms the YUV frame into an OpenCV

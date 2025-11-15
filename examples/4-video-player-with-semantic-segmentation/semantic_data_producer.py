@@ -67,6 +67,3 @@ class SemanticDataProducer(DroneIn):
 
     def is_streaming(self) -> bool:
         return not self.video.is_done
-
-    def stop_streaming(self):
-        self.video.is_done = True
