@@ -33,11 +33,15 @@ class VideoContainer(threading.Thread):
 
     def run(self):
         self.is_paused = False
-        while not self.is_done:
-            now = datetime.now()
-            with self._current_frame_lock:
-                self._current_frame = self.video[self.frame_ix]
-            if not self.is_paused:
-                self.increment_frame(n=1)
-            if (diff := (1 / self.fps - (datetime.now() - now).total_seconds())) > 0:
-                time.sleep(diff)
+        while True:
+            try:
+                now = datetime.now()
+                with self._current_frame_lock:
+                    self._current_frame = self.video[self.frame_ix]
+                if not self.is_paused:
+                    self.increment_frame(n=1)
+                if (diff := (1 / self.fps - (datetime.now() - now).total_seconds())) > 0:
+                    time.sleep(diff)
+            except Exception as e:
+                logger.error(e)
+                self.is_done = True

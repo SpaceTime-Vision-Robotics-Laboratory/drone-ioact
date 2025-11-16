@@ -10,7 +10,7 @@ import numpy as np
 from video_container import VideoContainer
 
 from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
-from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
+from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController, UDPController
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
@@ -55,6 +55,7 @@ class VideoActionsMaker(ActionsConsumer):
 def main():
     """main fn"""
     (video_container := VideoContainer(sys.argv[1])).start() # start the video thread so it produces "real time" frames
+    port = int(sys.argv[2]) if len(sys.argv) == 3 else 42069
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
@@ -67,11 +68,14 @@ def main():
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_producer=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
+    udp_controller = UDPController(port=port, data_producer=video_frame_reader, actions_queue=actions_queue,
+                                   message_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,
+        "UDP controller": udp_controller,
         "Screen displayer": screen_displayer,
         "Video actions maker": video_actions_maker,
     })

@@ -8,7 +8,7 @@ from drone_ioact.utils import logger
 
 class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
     """
-    Converts a keyboard key to a generic action. Has support for a few standard actions.
+    Converts a keyboard key to a generic action.
     Parameters:
     - data_producer The DataProducer object with which this controller communicates
     - actions_queue The queue of possible actions this controller can send to the data_producer object
@@ -35,7 +35,7 @@ class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
             logger.debug(f"Unused char: {key}")
             return True
 
-        logger.debug(f"Pressed {key}. Pushing: {action} to the actions queue.")
+        logger.debug(f"Pressed '{key}'. Pushing: {action} to the actions queue.")
         self.add_to_queue(action)
         return True
 
