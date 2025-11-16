@@ -5,7 +5,6 @@ from __future__ import annotations
 from queue import Queue
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
-import sys
 import time
 import numpy as np
 import cv2
