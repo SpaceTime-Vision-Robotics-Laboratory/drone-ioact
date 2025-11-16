@@ -40,8 +40,9 @@ class VideoContainer(threading.Thread):
                     self._current_frame = self.video[self.frame_ix]
                 if not self.is_paused:
                     self.increment_frame(n=1)
-                if (diff := (1 / self.fps - (datetime.now() - now).total_seconds())) > 0:
+                if (diff := (1 / self.fps - (took_s := (datetime.now() - now).total_seconds()))) > 0:
                     time.sleep(diff)
+                logger.debug2(f"Frame: {self.frame_ix}. FPS: {self.fps:.2f}. Took: {took_s:.5f}")
             except Exception as e:
                 logger.error(e)
                 self.is_done = True

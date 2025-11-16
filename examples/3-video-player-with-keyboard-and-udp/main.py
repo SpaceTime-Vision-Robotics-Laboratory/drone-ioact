@@ -89,9 +89,8 @@ def main(args: Namespace):
         "Keyboard controller": kb_controller,
         "UDP controller": udp_controller,
         "Video actions maker": video_actions_maker,
+        **({} if args.headless else {"Screen displayer": screen_displayer}),
     })
-    if not args.headless:
-        threads["Screen displayer"] = screen_displayer
     threads.start()
 
     while video_frame_reader.is_streaming() and not threads.is_any_dead():
