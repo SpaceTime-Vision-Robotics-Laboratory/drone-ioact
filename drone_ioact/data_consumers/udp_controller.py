@@ -37,7 +37,8 @@ class UDPController(DataConsumer, ActionsProducer, threading.Thread):
             if message not in self.actions:
                 logger.debug(msg := f"Unknown message: {message}")
             else:
-                logger.debug(msg := f"Recevied '{message}'. Pushing to the actions queue.")
+                logger.debug(f"Recevied '{message}'. Pushing to the actions queue.")
+                msg = "OK"
                 self.add_to_queue(message)
 
             s.sendto(f"{msg}\n".encode("utf-8"), addr)
