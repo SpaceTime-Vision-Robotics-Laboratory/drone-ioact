@@ -24,9 +24,10 @@ echo "-- starting end to end test"
 
 echo "-- cleanup"
 ( kill $(lsof -i udp:$PORT -t) 2>/dev/null ) || echo "no server to kill"
-rm -f frame.png
+rm -f frame.png # uses "cwd" of the user
 
-DRONE_LOGLEVEL=2 $PROJ_ROOT/examples/3-video-player-with-keyboard-and-udp/main.py test_video.mp4 --headless --port $PORT &
+DRONE_LOGLEVEL=2 $PROJ_ROOT/examples/3-video-player-with-keyboard-and-udp/main.py $CWD/test_video.mp4 \
+    --headless --port $PORT &
 PID_MAIN=$!
 wait_for_start 100 $PORT
 
@@ -42,7 +43,8 @@ res=$(echo "TAKE_SCREENSHOT" | nc -w1 -u 127.0.0.1 $PORT)
 expected="OK"
 test "$res" == "$expected" || ( echo -e "Expected $expected.\nGot $res."; kill $PID_MAIN $$; )
 
-[[ -f $CWD/frame.png && $(head -c 4 $CWD/frame.png) == $'\x89PNG' ]] \
-  && echo "Valid PNG" || ( echo "Invalid or missing PNG"; kill $PID_MAIN $$; )
+[[ -f frame.png && $(head -c 4 frame.png) == $'\x89PNG' ]] \
+  && echo "Valid PNG" || ( echo "Invalid or missing PNG"; kill $PID_MAIN $$; rm -f frame.png)
 
 kill $PID_MAIN
+rm -f frame.png
