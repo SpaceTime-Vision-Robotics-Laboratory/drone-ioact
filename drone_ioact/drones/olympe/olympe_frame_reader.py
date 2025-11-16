@@ -8,10 +8,10 @@ import numpy as np
 import cv2
 import olympe
 
-from drone_ioact import DroneIn
+from drone_ioact import DataProducer
 from drone_ioact.utils import logger
 
-class OlympeFrameReader(DroneIn):
+class OlympeFrameReader(DataProducer):
     """
     Handler for drone video streams that processes frames and manages metadata.
     This class handles the streaming of video from a drone, converting frames to OpenCV

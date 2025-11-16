@@ -1,4 +1,7 @@
 """init file"""
-from .interfaces import DroneIn, DataConsumer, ActionsProducer, DroneOut, ActionsQueue, Action, ActionCallback
+from .interfaces import (
+    DataProducer, DataConsumer, ActionsProducer, ActionsConsumer, ActionsQueue, Action, ActionCallback
+)
 
-__all__ = ["DroneIn", "DataConsumer", "ActionsProducer", "DroneOut", "Action", "ActionsQueue", "ActionCallback"]
+__all__ = ["DataProducer", "DataConsumer", "ActionsProducer", "ActionsConsumer",
+           "Action", "ActionsQueue", "ActionCallback"]

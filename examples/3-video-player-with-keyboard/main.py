@@ -9,14 +9,14 @@ import numpy as np
 
 from video_container import VideoContainer
 
-from drone_ioact import DroneIn, Action, ActionsQueue, DroneOut
+from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 402
 
-class VideoFrameReader(DroneIn):
+class VideoFrameReader(DataProducer):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, video: VideoContainer):
         self.video = video
@@ -27,7 +27,7 @@ class VideoFrameReader(DroneIn):
     def is_streaming(self) -> bool:
         return not self.video.is_done
 
-class VideoActionsMaker(DroneOut):
+class VideoActionsMaker(ActionsConsumer):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue):
         super().__init__(actions_queue, VideoActionsMaker.video_action_callback)

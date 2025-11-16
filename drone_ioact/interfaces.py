@@ -1,11 +1,11 @@
 """
 interfaces.py - Interfaces for interacting with the data produced by a drone. The usual flow is like this:
-Drone --raw data--> DroneIn --get_current_data()--> DataConsumer1            | <--a_q.pop()-- DroneOut --action-- Drone
+Drone --raw data--> DataPrd --get_current_data()--> DataConsumer1            | <--a_q.pop()-- ActionsC --action-- Drone
                                                     DC2 & ActionsProducer1 --|
                                                     DC3                      |
                                                     DC4 & ActionsProducer2 --|
                                                     ...
-DroneIn can be seen as DataProducer and DroneOut as ActionsConsumer, so it's two producer-consumers on each side.
+DataPrd = Data producer; ActionsC = Actions Consumer.
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
@@ -17,9 +17,9 @@ import numpy as np
 from drone_ioact.utils import logger
 
 Action = str # actions are stored as simple strings for simplicity :)
-ActionCallback = Callable[["DroneOut", Action], bool]
+ActionCallback = Callable[["ActionsConsumer", Action], bool]
 
-class ActionsQueue(ABC):
+class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
     def __init__(self, queue: Queue, actions: list[Action]):
         super().__init__()
@@ -39,7 +39,7 @@ class ActionsQueue(ABC):
     def __len__(self):
         return self.queue.qsize()
 
-class DroneIn(ABC):
+class DataProducer(ABC):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
     @abstractmethod
     def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
@@ -50,17 +50,17 @@ class DroneIn(ABC):
         """checks if the drone is connected and streaming or not"""
 
 class DataConsumer(ABC):
-    """Interface defining the requirements of a data consumer getting data from a DroneIn"""
-    def __init__(self, drone_in: DroneIn):
+    """Interface defining the requirements of a data consumer getting data from a DataProducer"""
+    def __init__(self, drone_in: DataProducer):
         self._drone_in = drone_in
 
     @property
-    def drone_in(self) -> DroneIn:
-        """The DroneIn instance from which data is created"""
+    def drone_in(self) -> DataProducer:
+        """The DataProducer instance from which data is created"""
         return self._drone_in
 
 class ActionsProducer(ABC):
-    """Interface defining the requirements of an actions producer (i.e. sending to a DroneOut)"""
+    """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""
     def __init__(self, actions_queue: ActionsQueue):
         assert isinstance(actions_queue, ActionsQueue), f"queue must inherit ActionsQueue: {type(actions_queue)}"
         self._actions_queue = actions_queue
@@ -70,7 +70,7 @@ class ActionsProducer(ABC):
         """The actions queue where the actions are inserted"""
         return self._actions_queue
 
-class DroneOut(ABC, threading.Thread):
+class ActionsConsumer(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to receive an action & apply it to the drone"""
     def __init__(self, actions_queue: ActionsQueue, action_callback: ActionCallback):
         threading.Thread.__init__(self, daemon=True)

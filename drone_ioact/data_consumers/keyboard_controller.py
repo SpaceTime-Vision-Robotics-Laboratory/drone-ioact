@@ -3,19 +3,19 @@ import threading
 import time
 from pynput.keyboard import Listener, KeyCode
 
-from drone_ioact import DroneIn, DataConsumer, ActionsProducer, ActionsQueue, Action
+from drone_ioact import DataProducer, DataConsumer, ActionsProducer, ActionsQueue, Action
 from drone_ioact.utils import logger
 
 class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
     """
     Converts a keyboard key to a drone action. Has support for a few standard actions.
     Parameters:
-    - drone_in The DroneIn object with which this controller communicates
+    - drone_in The DataProducer object with which this controller communicates
     - actions_queue The queue of possible actions this controller can send to the drone_in object
     - key_to_action The dictionary between keyboard keys and actions to take. Must be a subset of possible actions.
     - stop_key (optional) If set, defines the name of the key that can close this keyboard controller.
     """
-    def __init__(self, drone_in: DroneIn, actions_queue: ActionsQueue, key_to_action: dict[str, Action]):
+    def __init__(self, drone_in: DataProducer, actions_queue: ActionsQueue, key_to_action: dict[str, Action]):
         DataConsumer.__init__(self, drone_in)
         ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self, daemon=True)

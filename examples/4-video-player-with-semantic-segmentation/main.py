@@ -11,14 +11,14 @@ import numpy as np
 from video_container import VideoContainer
 from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
-from drone_ioact import Action, ActionsQueue, DroneOut
+from drone_ioact import Action, ActionsQueue, ActionsConsumer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 
-class VideoActionsMaker(DroneOut):
+class VideoActionsMaker(ActionsConsumer):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
     def __init__(self, video: VideoContainer, actions_queue: Queue):
         super().__init__(actions_queue, VideoActionsMaker.video_action_callback)

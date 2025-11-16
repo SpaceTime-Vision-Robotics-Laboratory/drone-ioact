@@ -2,13 +2,13 @@
 from queue import Queue
 import olympe
 
-from drone_ioact import DroneOut, ActionCallback
+from drone_ioact import ActionsConsumer, ActionCallback
 from drone_ioact.utils import logger
 
-class OlympeActionsMaker(DroneOut):
+class OlympeActionsMaker(ActionsConsumer):
     """OlympeActionsMaker: Takes generic actions and converts them to olympe-specific commands."""
     def __init__(self, drone: olympe.Drone, actions_queue: Queue, action_callback: ActionCallback):
-        DroneOut.__init__(self, actions_queue, action_callback)
+        ActionsConsumer.__init__(self, actions_queue, action_callback)
         self.drone = drone
 
     def stop_streaming(self):

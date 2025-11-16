@@ -7,7 +7,7 @@ from torch.nn import functional as F # pylint: disable=import-error
 from video_container import VideoContainer
 from safeuav import SafeUAV
 
-from drone_ioact import DroneIn
+from drone_ioact import DataProducer
 from drone_ioact.utils import logger
 
 COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
@@ -23,7 +23,7 @@ def colorize_semantic_segmentation(semantic_map: np.ndarray, color_map: list[tup
     assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
     return np.array(color_map)[semantic_map]
 
-class SemanticDataProducer(DroneIn):
+class SemanticDataProducer(DataProducer):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, video: VideoContainer, weights_path: str):
         self.video = video
