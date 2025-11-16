@@ -4,6 +4,7 @@
 from __future__ import annotations
 from queue import Queue
 from pathlib import Path
+from argparse import ArgumentParser, Namespace
 import sys
 import time
 import numpy as np
@@ -57,10 +58,18 @@ class VideoActionsMaker(ActionsConsumer):
             logger.debug(f"Stored screenshot at '{pth}'")
         return True
 
-def main():
+def get_args() -> Namespace:
+    """cli args"""
+    parser = ArgumentParser()
+    parser.add_argument("video_path")
+    parser.add_argument("--port", type=int, default=42069)
+    parser.add_argument("--headless", action="store_true")
+    args = parser.parse_args()
+    return args
+
+def main(args: Namespace):
     """main fn"""
-    (video_container := VideoContainer(sys.argv[1])).start() # start the video thread so it produces "real time" frames
-    port = int(sys.argv[2]) if len(sys.argv) == 3 else 42069
+    (video_container := VideoContainer(args.video_path)).start() # start the video thread so it produces realtime frames
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
@@ -73,16 +82,17 @@ def main():
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_producer=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
-    udp_controller = UDPController(port=port, data_producer=video_frame_reader, actions_queue=actions_queue)
+    udp_controller = UDPController(port=args.port, data_producer=video_frame_reader, actions_queue=actions_queue)
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,
         "UDP controller": udp_controller,
-        "Screen displayer": screen_displayer,
         "Video actions maker": video_actions_maker,
     })
+    if not args.headless:
+        threads["Screen displayer"] = screen_displayer
     threads.start()
 
     while video_frame_reader.is_streaming() and not threads.is_any_dead():
@@ -93,4 +103,4 @@ def main():
     threads.join(timeout=1)
 
 if __name__ == "__main__":
-    main()
+    main(get_args())
