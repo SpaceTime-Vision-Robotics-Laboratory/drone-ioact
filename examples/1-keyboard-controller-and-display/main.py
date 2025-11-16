@@ -61,11 +61,11 @@ def main():
     # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = ScreenDisplayer(drone_in=olympe_frame_reader)
+    screen_displayer = ScreenDisplayer(data_producer=olympe_frame_reader)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    kb_controller = KeyboardController(drone_in=olympe_frame_reader, actions_queue=actions_queue,
+    kb_controller = KeyboardController(data_producer=olympe_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue, action_callback=action_callback)

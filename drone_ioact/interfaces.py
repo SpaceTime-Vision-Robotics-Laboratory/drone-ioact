@@ -51,13 +51,13 @@ class DataProducer(ABC):
 
 class DataConsumer(ABC):
     """Interface defining the requirements of a data consumer getting data from a DataProducer"""
-    def __init__(self, drone_in: DataProducer):
-        self._drone_in = drone_in
+    def __init__(self, data_producer: DataProducer):
+        self._data_producer = data_producer
 
     @property
-    def drone_in(self) -> DataProducer:
+    def data_producer(self) -> DataProducer:
         """The DataProducer instance from which data is created"""
-        return self._drone_in
+        return self._data_producer
 
 class ActionsProducer(ABC):
     """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""

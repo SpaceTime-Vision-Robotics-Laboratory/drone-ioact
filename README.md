@@ -19,9 +19,9 @@ def main():
     # data producer thread (1) (drone I/O in -> data/RGB out)
     data_reader = XXXDataReader(drone=drone, ...args...) # thread that reads data from the drone and makes it available
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = ScreenDisplayer(drone_in=data_reader) # example of data consumer (show rgb to screen)
+    screen_displayer = ScreenDisplayer(data_producer=data_reader) # example of data consumer (show rgb to screen)
     # data consumer & actions producer threads (data/RGB in -> action out)
-    kb_controller = KeyboardController(drone_in=data_reader, actions_queue=actions_queue) # keyboard in -> action out
+    kb_controller = KeyboardController(data_producer=data_reader, actions_queue=actions_queue) # keyboard in -> action out
     # actions consumer thread (1) (action in -> drone I/O out)
     actions_maker = XXXActionsMaker(drone=drone, actions_queue=actions_queue) # action in -> actual drone action
 

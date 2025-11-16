@@ -47,8 +47,8 @@ class SemanticScreenDisplayer(ScreenDisplayer):
     """Extends ScreenDisplayer to display semantic segmentation"""
     def run(self):
         prev_frame = None
-        while self.drone_in.is_streaming():
-            data = self.drone_in.get_current_data()
+        while self.data_producer.is_streaming():
+            data = self.data_producer.get_current_data()
             rgb, semantic = data["rgb"], data["semantic"]
             if prev_frame is None or not np.allclose(prev_frame, rgb):
                 sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
@@ -71,11 +71,11 @@ def main():
     # data producer thread (1) (drone I/O in -> data/RGB out)
     video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = SemanticScreenDisplayer(drone_in=video_frame_reader, screen_height=SCREEN_HEIGHT)
+    screen_displayer = SemanticScreenDisplayer(data_producer=video_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
-    kb_controller = KeyboardController(drone_in=video_frame_reader, actions_queue=actions_queue,
+    kb_controller = KeyboardController(data_producer=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
