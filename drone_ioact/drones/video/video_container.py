@@ -14,7 +14,7 @@ class VideoContainer(threading.Thread):
         super().__init__()
         self.video = VREVideo(video_path)
         logger.info(f"Read video: {self.video}")
-        self.frame_ix = 5300
+        self.frame_ix = 0
         self.is_paused = True
         self.is_done = False
         self.fps = self.video.fps

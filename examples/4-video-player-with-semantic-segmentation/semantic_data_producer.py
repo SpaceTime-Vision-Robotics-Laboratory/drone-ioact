@@ -4,10 +4,10 @@ import numpy as np
 import torch as tr # pylint: disable=import-error
 from torch.nn import functional as F # pylint: disable=import-error
 
-from video_container import VideoContainer
 from safeuav import SafeUAV
 
 from drone_ioact import DataProducer
+from drone_ioact.drones.video import VideoContainer
 from drone_ioact.utils import logger
 
 COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],

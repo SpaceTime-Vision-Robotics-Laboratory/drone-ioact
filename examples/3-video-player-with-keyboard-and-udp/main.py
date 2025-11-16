@@ -7,9 +7,8 @@ import sys
 import time
 import numpy as np
 
-from video_container import VideoContainer
-
 from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
+from drone_ioact.drones.video import VideoContainer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController, UDPController
 from drone_ioact.utils import logger, ThreadGroup
 

@@ -8,10 +8,10 @@ import time
 import cv2
 import numpy as np
 
-from video_container import VideoContainer
 from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
 from drone_ioact import Action, ActionsQueue, ActionsConsumer
+from drone_ioact.drones.video import VideoContainer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
