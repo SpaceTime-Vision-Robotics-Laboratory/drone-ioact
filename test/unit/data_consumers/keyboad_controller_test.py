@@ -11,7 +11,6 @@ class FakeDataProducer(DataProducer):
     def stop_streaming(self):
         pass
 
-
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
     actions_queue = ActionsQueue(q := Queue(), actions=list(key_to_action.values()))

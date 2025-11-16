@@ -13,6 +13,7 @@ workflow:
 
 before_script:
   - pip install -r requirements-drones.txt
+  - pip install opencv-python-headless==4.11.0.86
   - export PYTHONPATH="$PYTHONPATH:$(pwd)"
 
 linters:
@@ -31,7 +32,6 @@ unit_tests:
 e2e_test_udp_screenshot:
   script:
     - apt-get update
-    - apt install -y wget lsof netcat ffmpeg xvfb
-    - pip install opencv-python-headless==4.11.0.86
+    - apt install -y lsof netcat ffmpeg
     - wget https://gitlab.com/video-representations-extractor/video-representations-extractor/-/raw/master/resources/test_video.mp4 -P test/e2e/video-udp-screenshot 2>/dev/null
-    - xvfb-run bash test/e2e/video-udp-screenshot/run.sh
+    - bash test/e2e/video-udp-screenshot/run.sh

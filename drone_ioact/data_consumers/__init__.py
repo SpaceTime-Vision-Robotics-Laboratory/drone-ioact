@@ -9,4 +9,4 @@ try:
     __all__ = [*__all__, "KeyboardController"]
 except ImportError as e:
     from drone_ioact.utils import logger
-    logger.warning(f"KeyboardController could not be imported {e}. Perhaps due to pynput... Use xvfb-run")
+    logger.warning(f"KeyboardController could not be imported {e}. Perhaps due to pynput...")

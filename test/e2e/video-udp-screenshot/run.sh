@@ -26,8 +26,7 @@ echo "-- cleanup"
 ( kill $(lsof -i udp:$PORT -t) 2>/dev/null ) || echo "no server to kill"
 rm -f frame.png # uses "cwd" of the user
 
-DRONE_LOGLEVEL=2 $PROJ_ROOT/examples/3-video-player-with-keyboard-and-udp/main.py $CWD/test_video.mp4 \
-    --headless --port $PORT &
+DRONE_LOGLEVEL=2 $CWD/main.py $CWD/test_video.mp4 --port $PORT &
 PID_MAIN=$!
 wait_for_start 100 $PORT
 
