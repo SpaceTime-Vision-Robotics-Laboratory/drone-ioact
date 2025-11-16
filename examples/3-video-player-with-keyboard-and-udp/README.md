@@ -4,16 +4,17 @@
 python main.py video.mp4 [PORT=42069]
 ```
 
-Controls:
-- `q` - closes the window
-- `Key.space` - pauses or plays the video
-- `Key.right` - skips on second ahead
-- `Key.left` - goes one second behind
+Key to Action:
+- `q` -> `DISCONNECT`: closes the window
+- `Key.space` -> `PLAY_PAUSE`: pauses or plays the video
+- `Key.right` -> `SKIP_AHEAD_ONE_SECOND`: skips on second ahead
+- `Key.left` -> `GO_BACK_ONE_SECOND`: goes one second behind
+- `n/a` -> `TAKE_SCREENSHOT`: take a screenshot (no key, only UDP)
 
-Furthermore, this example starts an UDP socket listening to the given port. If the controls from above are provided as an UDP message, the actions are also taken.
+Furthermore, this example starts an UDP socket listening to the given port. The raw actions (right side) can also be sent via UDP messages.
 
 To test the UDP connection, use:
 
 ```bash
-echo -e "Key.left" | ncat -u 127.0.0.1 42069
+echo -e "SKIP_AHEAD_ONE_SECOND" | ncat -u 127.0.0.1 42069
 ```

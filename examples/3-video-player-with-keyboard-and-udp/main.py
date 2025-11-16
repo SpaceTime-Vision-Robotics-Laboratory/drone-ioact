@@ -3,9 +3,11 @@
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from queue import Queue
+from pathlib import Path
 import sys
 import time
 import numpy as np
+import cv2
 
 from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
 from drone_ioact.drones.video import VideoContainer
@@ -13,7 +15,7 @@ from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController, UDPC
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
-SCREEN_HEIGHT = 402
+SCREEN_HEIGHT = 420
 
 class VideoFrameReader(DataProducer):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
@@ -41,21 +43,25 @@ class VideoActionsMaker(ActionsConsumer):
     @staticmethod
     def video_action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
         """the actions callback from generic actions to video-specific ones"""
+        video = actions_maker.video
         if action == "DISCONNECT":
             actions_maker.stop_streaming()
         if action == "PLAY_PAUSE":
-            actions_maker.video.is_paused = not actions_maker.video.is_paused
+            video.is_paused = not video.is_paused
         if action == "SKIP_AHEAD_ONE_SECOND":
-            actions_maker.video.increment_frame(actions_maker.video.fps)
+            video.increment_frame(video.fps)
         if action == "GO_BACK_ONE_SECOND":
-            actions_maker.video.increment_frame(-actions_maker.video.fps)
+            video.increment_frame(-video.fps)
+        if action == "TAKE_SCREENSHOT":
+            cv2.imwrite(pth := f"{Path.cwd()}/frame.png", cv2.cvtColor(video.get_current_frame(), cv2.COLOR_RGB2BGR))
+            logger.debug(f"Stored screenshot at '{pth}'")
         return True
 
 def main():
     """main fn"""
     (video_container := VideoContainer(sys.argv[1])).start() # start the video thread so it produces "real time" frames
     port = int(sys.argv[2]) if len(sys.argv) == 3 else 42069
-    actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
+    actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
@@ -67,8 +73,7 @@ def main():
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_producer=video_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
-    udp_controller = UDPController(port=port, data_producer=video_frame_reader, actions_queue=actions_queue,
-                                   message_to_action=key_to_action)
+    udp_controller = UDPController(port=port, data_producer=video_frame_reader, actions_queue=actions_queue)
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
 
