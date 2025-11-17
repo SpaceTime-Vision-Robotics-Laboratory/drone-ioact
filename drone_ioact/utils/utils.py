@@ -18,10 +18,10 @@ except ImportError:
     logger.error("OpenCV is not installed. Will use PIL for image_reisze")
     DEFAULT_RESIZE_BACKEND = "pil"
 
-def image_write(file: np.ndarray, path: str):
+def image_write(data: np.ndarray, path: str):
     """PIL image writer"""
-    assert file.min() >= 0 and file.max() <= 255
-    img = Image.fromarray(file.astype(np.uint8), "RGB")
+    assert data.min() >= 0 and data.max() <= 255
+    img = Image.fromarray(data.astype(np.uint8), "RGB")
     img.save(path)
 
 def image_resize(data: np.ndarray, height: int | None, width: int | None,
