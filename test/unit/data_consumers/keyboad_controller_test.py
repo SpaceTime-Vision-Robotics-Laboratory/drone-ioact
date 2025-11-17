@@ -8,8 +8,8 @@ class FakeDataProducer(DataProducer):
         return {}
     def is_streaming(self):
         return True
-    def stop_streaming(self):
-        pass
+    def get_supported_types(self) -> list[str]:
+        return []
 
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}

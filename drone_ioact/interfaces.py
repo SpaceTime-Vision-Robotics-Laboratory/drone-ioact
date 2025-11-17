@@ -49,6 +49,10 @@ class DataProducer(ABC):
     def is_streaming(self) -> bool:
         """checks if the drone is connected and streaming or not"""
 
+    @abstractmethod
+    def get_supported_types(self) -> list[str]:
+        """returns a list of supported types which will be the keys of get_current_data"""
+
 class DataConsumer(ABC):
     """Interface defining the requirements of a data consumer getting data from a DataProducer"""
     def __init__(self, data_producer: DataProducer):

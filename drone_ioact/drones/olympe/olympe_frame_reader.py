@@ -56,6 +56,9 @@ class OlympeFrameReader(DataProducer):
         streaming = self.drone.streaming is not None
         return connected and streaming
 
+    def get_supported_types(self) -> list[str]:
+        return ["rgb"]
+
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """
         This function will be called by Olympe for each decoded YUV frame. It transforms the YUV frame into an OpenCV

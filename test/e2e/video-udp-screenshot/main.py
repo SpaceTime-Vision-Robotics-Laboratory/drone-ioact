@@ -7,12 +7,11 @@ from pathlib import Path
 from argparse import ArgumentParser, Namespace
 import time
 import numpy as np
-import cv2
 
 from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
 from drone_ioact.drones.video import VideoContainer
 from drone_ioact.data_consumers import UDPController
-from drone_ioact.utils import logger, ThreadGroup
+from drone_ioact.utils import logger, ThreadGroup, image_write
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
@@ -27,6 +26,9 @@ class VideoFrameReader(DataProducer):
 
     def is_streaming(self) -> bool:
         return not self.video.is_done
+
+    def get_supported_types(self) -> list[str]:
+        return ["rgb"]
 
 class VideoActionsMaker(ActionsConsumer):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
@@ -53,7 +55,7 @@ class VideoActionsMaker(ActionsConsumer):
         if action == "GO_BACK_ONE_SECOND":
             video.increment_frame(-video.fps)
         if action == "TAKE_SCREENSHOT":
-            cv2.imwrite(pth := f"{Path.cwd()}/frame.png", cv2.cvtColor(video.get_current_frame(), cv2.COLOR_RGB2BGR))
+            image_write(video.get_current_frame(), pth := f"{Path.cwd()}/frame.png")
             logger.debug(f"Stored screenshot at '{pth}'")
         return True
 
