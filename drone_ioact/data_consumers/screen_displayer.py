@@ -27,7 +27,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
     def _startup_tk(self, rgb_rsz: np.ndarray):
         """starts the tk window"""
         assert self.root is None, "cannot call twice"
-        self.root = tk.Tk()
+        self.root = tk.Tk(className=" Screen Displayer")
         self.canvas = tk.Canvas(self.root, width=rgb_rsz.shape[1], height=rgb_rsz.shape[0])
         self.canvas.pack(fill="both", expand=True)
         self.canvas.focus_set()
@@ -42,7 +42,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         while self.data_producer.is_streaming():
             now = datetime.now()
             self.root.update()
-            rgb = np.ascontiguousarray(self.get_current_frame())
+            rgb = self.get_current_frame()
 
             curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
             if np.allclose(prev_frame, rgb) and prev_shape == curr_shape:
