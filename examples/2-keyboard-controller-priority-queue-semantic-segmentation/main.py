@@ -9,13 +9,15 @@ from queue import PriorityQueue
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
+from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
 
 from drone_ioact.drones.olympe_parrot import OlympeFrameReader, OlympeActionsMaker
-from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
+from drone_ioact.data_consumers import KeyboardController, SemanticScreenDisplayer, ScreenDisplayer
 from drone_ioact import ActionsQueue, Action
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
+SCREEN_HEIGHT = 420
 
 def action_callback(actions_maker: OlympeActionsMaker, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
@@ -77,8 +79,13 @@ def main():
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
     olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
-    # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = ScreenDisplayer(data_producer=olympe_frame_reader)
+    if len(sys.argv) == 3:
+        semantic_data_producer = SafeUAVSemanticDataProducer(data_producer=olympe_frame_reader,
+                                                             weights_path=sys.argv[2])
+        screen_displayer = SemanticScreenDisplayer(data_producer=semantic_data_producer, screen_height=SCREEN_HEIGHT,
+                                                   color_map=COLOR_MAP)
+    else:
+        screen_displayer = ScreenDisplayer(data_producer=olympe_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}

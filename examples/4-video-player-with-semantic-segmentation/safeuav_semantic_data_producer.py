@@ -15,15 +15,7 @@ COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
 CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
 DEVICE = "cuda" if tr.cuda.is_available() else "cpu"
 
-def colorize_semantic_segmentation(semantic_map: np.ndarray, color_map: list[tuple[int, int, int]] | None = None) \
-        -> np.ndarray:
-    """Colorize semantic segmentation maps. Must be argmaxed (H, W). Can paint over the original RGB frame or not."""
-    color_map = color_map or COLOR_MAP
-    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
-    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
-    return np.array(color_map)[semantic_map]
-
-class SemanticDataProducer(DataProducer):
+class SafeUAVSemanticDataProducer(DataProducer):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, data_producer: DataProducer, weights_path: str):
         assert "rgb" in (st := data_producer.get_supported_types()), f"'rgb' not in {st}"

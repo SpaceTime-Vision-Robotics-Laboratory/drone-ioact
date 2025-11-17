@@ -40,7 +40,7 @@ class OlympeFrameReader(DataProducer):
         logger.info("Starting streaming...")
 
     @overrides
-    def get_current_data(self, timeout_s: int = 10) -> np.ndarray:
+    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
         assert self.is_streaming(), f"{self.drone} is not streaming"
         n_tries, sleep_duration = 0, 1
