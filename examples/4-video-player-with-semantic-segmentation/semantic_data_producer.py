@@ -39,8 +39,19 @@ class SemanticDataProducer(DataProducer):
         self._std = tr.Tensor(self.statistics["rgb"][3]).reshape(1, 3, 1, 1).to(DEVICE)
         self.model = self.model.eval().to(DEVICE)
 
+    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
+        rgb = self.video.get_current_frame()
+        semantic = self._compute_sema(rgb)
+        return {"rgb": rgb, "semantic": semantic}
+
+    def is_streaming(self) -> bool:
+        return not self.video.is_done
+
+    def get_supported_types(self) -> list[str]:
+        return ["rgb", "semantic"]
+
     @tr.no_grad()
-    def compute_sema(self, rgb: np.ndarray) -> np.ndarray:
+    def _compute_sema(self, rgb: np.ndarray) -> np.ndarray:
         """computes semantic segmentation for one rgb frame"""
         h, w = self.cfg["model"]["hparams"]["data_shape"]["rgb"][1:3]
         rgb_h, rgb_w = rgb.shape[0:2]
@@ -59,11 +70,3 @@ class SemanticDataProducer(DataProducer):
         tr_y_sema = F.interpolate(y[:, cumsum[sema_pos]: cumsum[sema_pos+1]], (rgb_h, rgb_w))
         y_sema = tr_y_sema.permute(0, 2, 3, 1).cpu().numpy()[0]
         return y_sema
-
-    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
-        rgb = self.video.get_current_frame()
-        semantic = self.compute_sema(rgb)
-        return {"rgb": rgb, "semantic": semantic}
-
-    def is_streaming(self) -> bool:
-        return not self.video.is_done

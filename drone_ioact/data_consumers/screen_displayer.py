@@ -1,42 +1,66 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 import threading
 from datetime import datetime
+import tkinter as tk
+from PIL import Image, ImageTk
 import numpy as np
-import cv2
 
 from drone_ioact import DataProducer, DataConsumer
-from drone_ioact.utils import logger
+from drone_ioact.utils import logger, image_resize
 
 class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
     def __init__(self, data_producer: DataProducer, screen_height: int | None = None):
-        self.h = screen_height
+        assert "rgb" in (st := data_producer.get_supported_types()), f"'rgb' not in {st}"
         DataConsumer.__init__(self, data_producer)
         threading.Thread.__init__(self, daemon=True)
+        self.initial_h = screen_height
+        # state of the canvas: initialized at startup time.
+        self.root: tk.Tk | None = None
+        self.canvas: tk.Canvas | None = None
+        self.photo: ImageTk.PhotoImage | None = None
 
     def get_current_frame(self) -> np.ndarray:
-        """gets the current RGB frame. Useful for overwriting if we have more representations, like sem. segmentation"""
+        """returns the current frame as RGB"""
         return self.data_producer.get_current_data()["rgb"]
 
+    def _startup_tk(self, rgb_rsz: np.ndarray):
+        """starts the tk window"""
+        assert self.root is None, "cannot call twice"
+        self.root = tk.Tk()
+        self.canvas = tk.Canvas(self.root, width=rgb_rsz.shape[1], height=rgb_rsz.shape[0])
+        self.canvas.pack(fill="both", expand=True)
+        self.canvas.focus_set()
+
     def run(self):
-        assert self.data_producer.is_streaming()
-        prev_frame = self.get_current_frame()
+        assert self.data_producer.is_streaming(), "data producer is not streaming"
+        prev_frame = rgb = self.get_current_frame()
+        self._startup_tk(image_resize(rgb, height=self.initial_h or rgb.shape[0], width=None))
+        prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
+
         fpss = []
         while self.data_producer.is_streaming():
             now = datetime.now()
-            rgb = self.get_current_frame()
-            if np.allclose(rgb, prev_frame):
+            self.root.update()
+            rgb = np.ascontiguousarray(self.get_current_frame())
+
+            curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
+            if np.allclose(prev_frame, rgb) and prev_shape == curr_shape:
                 continue
 
-            aspect_ratio = rgb.shape[1] / rgb.shape[0]
-            w = int(self.h * aspect_ratio) if self.h is not None else None
-            rgb_rsz = cv2.resize(rgb, (w, self.h)) if self.h is not None else rgb
+            rgb_rsz = image_resize(rgb, height=curr_shape[0], width=curr_shape[1])
+            if prev_shape != curr_shape:
+                self.photo = ImageTk.PhotoImage(Image.fromarray(rgb_rsz))
+                self.canvas.delete("all")
+                self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+            else:
+                self.photo.paste(Image.fromarray(rgb_rsz))
 
-            cv2.imshow("img", cv2.cvtColor(rgb_rsz, cv2.COLOR_RGB2BGR))
-            cv2.waitKey(1)
-
+            prev_frame = rgb
+            prev_shape = curr_shape
             fpss.append((datetime.now() - now).total_seconds())
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            prev_frame = rgb
             getattr(logger, "debug" if len(fpss) % 10 == 0 else "debug2")(f"FPS: {len(fpss) / sum(fpss):.2f}")
+
+        self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")
