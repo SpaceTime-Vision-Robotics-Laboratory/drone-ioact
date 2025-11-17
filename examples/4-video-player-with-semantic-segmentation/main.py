@@ -5,13 +5,12 @@ from __future__ import annotations
 from queue import Queue
 import sys
 import time
-import numpy as np
 
-from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
+from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
 
 from drone_ioact import Action, ActionsQueue, ActionsConsumer
 from drone_ioact.drones.video import VideoFrameReader
-from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
+from drone_ioact.data_consumers import SemanticScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
@@ -42,15 +41,6 @@ class VideoActionsMaker(ActionsConsumer):
             actions_maker.video.increment_frame(-actions_maker.video.fps)
         return True
 
-class SemanticScreenDisplayer(ScreenDisplayer):
-    """Extends ScreenDisplayer to display semantic segmentation"""
-    def get_current_frame(self):
-        data = self.data_producer.get_current_data()
-        rgb, semantic = data["rgb"], data["semantic"]
-        sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
-        combined = np.concatenate([rgb, sema_rgb], axis=1)
-        return combined
-
 def main():
     """main fn"""
     # start the video thread immediately so it produces "real time" frames
@@ -59,13 +49,14 @@ def main():
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
-    semantic_frame_reader = SemanticDataProducer(data_producer=video_frame_reader, weights_path=sys.argv[2])
+    semantic_data_producer = SafeUAVSemanticDataProducer(data_producer=video_frame_reader, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = SemanticScreenDisplayer(data_producer=semantic_frame_reader, screen_height=SCREEN_HEIGHT)
+    screen_displayer = SemanticScreenDisplayer(data_producer=semantic_data_producer, screen_height=SCREEN_HEIGHT,
+                                               color_map=COLOR_MAP)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
-    kb_controller = KeyboardController(data_producer=semantic_frame_reader, actions_queue=actions_queue,
+    kb_controller = KeyboardController(data_producer=semantic_data_producer, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
     video_actions_maker = VideoActionsMaker(video=video_frame_reader, actions_queue=actions_queue)
@@ -77,7 +68,7 @@ def main():
     })
     threads.start()
 
-    while video_frame_reader.is_streaming() and not threads.is_any_dead():
+    while semantic_data_producer.is_streaming() and not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
 

@@ -10,10 +10,12 @@ class OlympeActionsMaker(ActionsConsumer):
     def __init__(self, drone: olympe.Drone, actions_queue: Queue, action_callback: ActionCallback):
         ActionsConsumer.__init__(self, actions_queue, action_callback)
         self.drone = drone
+        self.stop_called = False
 
     def stop_streaming(self):
         logger.info("Stopping streaming...")
         try:
+            self.stop_called = True
             self.drone.streaming.stop()
         except Exception as e:
             logger.error("Unable to properly stop the streaming...")
@@ -22,4 +24,4 @@ class OlympeActionsMaker(ActionsConsumer):
     def is_streaming(self) -> bool:
         connected = self.drone.connected
         streaming = self.drone.streaming is not None
-        return connected and streaming
+        return connected and streaming and not self.stop_called
