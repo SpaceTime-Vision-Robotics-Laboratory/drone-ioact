@@ -1,5 +1,6 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 import threading
+from datetime import datetime
 import numpy as np
 import cv2
 
@@ -13,15 +14,29 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         DataConsumer.__init__(self, data_producer)
         threading.Thread.__init__(self, daemon=True)
 
+    def get_current_frame(self) -> np.ndarray:
+        """gets the current RGB frame. Useful for overwriting if we have more representations, like sem. segmentation"""
+        return self.data_producer.get_current_data()["rgb"]
+
     def run(self):
-        prev_frame = None
+        assert self.data_producer.is_streaming()
+        prev_frame = self.get_current_frame()
+        fpss = []
         while self.data_producer.is_streaming():
-            rgb = self.data_producer.get_current_data()["rgb"]
-            if prev_frame is None or not np.allclose(prev_frame, rgb):
-                aspect_ratio = rgb.shape[1] / rgb.shape[0]
-                w = int(self.h * aspect_ratio) if self.h is not None else None
-                prev_frame = rgb
-                rgb = cv2.resize(rgb, (w, self.h)) if self.h is not None else rgb
-                cv2.imshow("img", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-                cv2.waitKey(1)
+            now = datetime.now()
+            rgb = self.get_current_frame()
+            if np.allclose(rgb, prev_frame):
+                continue
+
+            aspect_ratio = rgb.shape[1] / rgb.shape[0]
+            w = int(self.h * aspect_ratio) if self.h is not None else None
+            rgb_rsz = cv2.resize(rgb, (w, self.h)) if self.h is not None else rgb
+
+            cv2.imshow("img", cv2.cvtColor(rgb_rsz, cv2.COLOR_RGB2BGR))
+            cv2.waitKey(1)
+
+            fpss.append((datetime.now() - now).total_seconds())
+            fpss = fpss[-100:] if len(fpss) > 1000 else fpss
+            prev_frame = rgb
+            getattr(logger, "debug" if len(fpss) % 10 == 0 else "debug2")(f"FPS: {len(fpss) / sum(fpss):.2f}")
         logger.warning("ScreenDisplayer thread stopping")

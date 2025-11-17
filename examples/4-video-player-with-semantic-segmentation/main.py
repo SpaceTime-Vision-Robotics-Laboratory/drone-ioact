@@ -5,7 +5,6 @@ from __future__ import annotations
 from queue import Queue
 import sys
 import time
-import cv2
 import numpy as np
 
 from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
@@ -45,21 +44,12 @@ class VideoActionsMaker(ActionsConsumer):
 
 class SemanticScreenDisplayer(ScreenDisplayer):
     """Extends ScreenDisplayer to display semantic segmentation"""
-    def run(self):
-        prev_frame = None
-        while self.data_producer.is_streaming():
-            data = self.data_producer.get_current_data()
-            rgb, semantic = data["rgb"], data["semantic"]
-            if prev_frame is None or not np.allclose(prev_frame, rgb):
-                sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
-                combined = np.concatenate([rgb, sema_rgb], axis=1)
-                aspect_ratio = combined.shape[1] / combined.shape[0]
-                w = int(self.h * aspect_ratio) if self.h is not None else None
-                combined = cv2.resize(combined, (w, self.h)) if self.h is not None else combined
-                cv2.imshow("img", cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
-                cv2.waitKey(1)
-            prev_frame = rgb
-        logger.warning("ScreenDisplayer thread stopping")
+    def get_current_frame(self):
+        data = self.data_producer.get_current_data()
+        rgb, semantic = data["rgb"], data["semantic"]
+        sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1)).astype(np.uint8)
+        combined = np.concatenate([rgb, sema_rgb], axis=1)
+        return combined
 
 def main():
     """main fn"""
