@@ -1,9 +1,8 @@
 """init file"""
 from .screen_displayer import ScreenDisplayer
-from .semantic_screen_displayer import SemanticScreenDisplayer
 from .udp_controller import UDPController
 
-__all__ = ["ScreenDisplayer", "SemanticScreenDisplayer", "UDPController"]
+__all__ = ["ScreenDisplayer", "UDPController"]
 
 try:
     from .keyboard_controller import KeyboardController

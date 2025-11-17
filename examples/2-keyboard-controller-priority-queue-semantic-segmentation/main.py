@@ -6,18 +6,33 @@ import time
 from pathlib import Path
 from queue import PriorityQueue
 
+import numpy as np
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
 
 from drone_ioact.drones.olympe_parrot import OlympeFrameReader, OlympeActionsMaker
-from drone_ioact.data_consumers import KeyboardController, SemanticScreenDisplayer, ScreenDisplayer
+from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact import ActionsQueue, Action
-from drone_ioact.utils import logger, ThreadGroup
+from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
+
+class SemanticScreenDisplayer(ScreenDisplayer):
+    """Extends ScreenDisplayer to display semantic segmentation"""
+    def __init__(self, *args, color_map: list[tuple[int, int, int]], **kwargs):
+        super().__init__(*args, **kwargs)
+        assert "semantic" in (st := self.data_producer.get_supported_types()), f"'rgb' not in {st}"
+        self.color_map = color_map
+
+    def get_current_frame(self):
+        data = self.data_producer.get_current_data()
+        rgb, semantic = data["rgb"], data["semantic"]
+        sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1), self.color_map).astype(np.uint8)
+        combined = np.concatenate([rgb, sema_rgb], axis=1)
+        return combined
 
 def action_callback(actions_maker: OlympeActionsMaker, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""

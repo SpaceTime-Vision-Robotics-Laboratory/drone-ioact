@@ -7,11 +7,12 @@ import sys
 import time
 
 from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
+import numpy as np
 
 from drone_ioact import Action, ActionsQueue, ActionsConsumer
 from drone_ioact.drones.video import VideoFrameReader
-from drone_ioact.data_consumers import SemanticScreenDisplayer, KeyboardController
-from drone_ioact.utils import logger, ThreadGroup
+from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
+from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
@@ -40,6 +41,20 @@ class VideoActionsMaker(ActionsConsumer):
         if action == "GO_BACK_ONE_SECOND":
             actions_maker.video.increment_frame(-actions_maker.video.fps)
         return True
+
+class SemanticScreenDisplayer(ScreenDisplayer):
+    """Extends ScreenDisplayer to display semantic segmentation"""
+    def __init__(self, *args, color_map: list[tuple[int, int, int]], **kwargs):
+        super().__init__(*args, **kwargs)
+        assert "semantic" in (st := self.data_producer.get_supported_types()), f"'rgb' not in {st}"
+        self.color_map = color_map
+
+    def get_current_frame(self):
+        data = self.data_producer.get_current_data()
+        rgb, semantic = data["rgb"], data["semantic"]
+        sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1), self.color_map).astype(np.uint8)
+        combined = np.concatenate([rgb, sema_rgb], axis=1)
+        return combined
 
 def main():
     """main fn"""
