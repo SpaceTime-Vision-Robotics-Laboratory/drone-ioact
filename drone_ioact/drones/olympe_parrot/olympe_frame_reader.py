@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import threading
 import time
+from overrides import overrides
 import numpy as np
 import cv2
 import olympe
@@ -38,6 +39,7 @@ class OlympeFrameReader(DataProducer):
         assert self.drone.streaming.start(), "error starting stream"
         logger.info("Starting streaming...")
 
+    @overrides
     def get_current_data(self, timeout_s: int = 10) -> np.ndarray:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
         assert self.is_streaming(), f"{self.drone} is not streaming"
@@ -51,11 +53,13 @@ class OlympeFrameReader(DataProducer):
         with self._current_frame_lock:
             return {"rgb": self._current_frame}
 
+    @overrides
     def is_streaming(self) -> bool:
         connected = self.drone.connected
         streaming = self.drone.streaming is not None
         return connected and streaming
 
+    @overrides
     def get_supported_types(self) -> list[str]:
         return ["rgb"]
 

@@ -9,7 +9,7 @@ import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
-from drone_ioact.drones.olympe import OlympeFrameReader, OlympeActionsMaker
+from drone_ioact.drones.olympe_parrot import OlympeFrameReader, OlympeActionsMaker
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact import ActionsQueue, Action
 from drone_ioact.utils import logger, ThreadGroup

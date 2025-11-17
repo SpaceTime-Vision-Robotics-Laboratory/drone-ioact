@@ -10,7 +10,7 @@ import numpy as np
 from semantic_data_producer import SemanticDataProducer, colorize_semantic_segmentation
 
 from drone_ioact import Action, ActionsQueue, ActionsConsumer
-from drone_ioact.drones.video import VideoContainer
+from drone_ioact.drones.video import VideoFrameReader
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup
 
@@ -19,7 +19,7 @@ SCREEN_HEIGHT = 480 # width is auto-scaled
 
 class VideoActionsMaker(ActionsConsumer):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
-    def __init__(self, video: VideoContainer, actions_queue: Queue):
+    def __init__(self, video: VideoFrameReader, actions_queue: Queue):
         super().__init__(actions_queue, VideoActionsMaker.video_action_callback)
         self.video = video
 
@@ -54,21 +54,21 @@ class SemanticScreenDisplayer(ScreenDisplayer):
 def main():
     """main fn"""
     # start the video thread immediately so it produces "real time" frames
-    (video_container := VideoContainer(video_path=sys.argv[1])).start()
+    (video_frame_reader := VideoFrameReader(video_path=sys.argv[1])).start()
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
     # data producer thread (1) (drone I/O in -> data/RGB out)
-    video_frame_reader = SemanticDataProducer(video=video_container, weights_path=sys.argv[2])
+    semantic_frame_reader = SemanticDataProducer(data_producer=video_frame_reader, weights_path=sys.argv[2])
     # data consumer threads (data/RGB in -> I/O out)
-    screen_displayer = SemanticScreenDisplayer(data_producer=video_frame_reader, screen_height=SCREEN_HEIGHT)
+    screen_displayer = SemanticScreenDisplayer(data_producer=semantic_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
-    kb_controller = KeyboardController(data_producer=video_frame_reader, actions_queue=actions_queue,
+    kb_controller = KeyboardController(data_producer=semantic_frame_reader, actions_queue=actions_queue,
                                        key_to_action=key_to_action)
     # actions consumer thread (1) (action in -> drone I/O out)
-    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
+    video_actions_maker = VideoActionsMaker(video=video_frame_reader, actions_queue=actions_queue)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,

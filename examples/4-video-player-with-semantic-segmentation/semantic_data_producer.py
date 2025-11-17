@@ -3,11 +3,11 @@
 import numpy as np
 import torch as tr # pylint: disable=import-error
 from torch.nn import functional as F # pylint: disable=import-error
+from overrides import overrides
 
 from safeuav import SafeUAV
 
 from drone_ioact import DataProducer
-from drone_ioact.drones.video import VideoContainer
 from drone_ioact.utils import logger
 
 COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
@@ -25,8 +25,9 @@ def colorize_semantic_segmentation(semantic_map: np.ndarray, color_map: list[tup
 
 class SemanticDataProducer(DataProducer):
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
-    def __init__(self, video: VideoContainer, weights_path: str):
-        self.video = video
+    def __init__(self, data_producer: DataProducer, weights_path: str):
+        assert "rgb" in (st := data_producer.get_supported_types()), f"'rgb' not in {st}"
+        self.data_producer = data_producer
         self.weights_path = weights_path
 
         ckpt = tr.load(weights_path, map_location="cpu")
@@ -39,14 +40,17 @@ class SemanticDataProducer(DataProducer):
         self._std = tr.Tensor(self.statistics["rgb"][3]).reshape(1, 3, 1, 1).to(DEVICE)
         self.model = self.model.eval().to(DEVICE)
 
+    @overrides
     def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
-        rgb = self.video.get_current_frame()
+        rgb = self.data_producer.get_current_data()["rgb"]
         semantic = self._compute_sema(rgb)
         return {"rgb": rgb, "semantic": semantic}
 
+    @overrides
     def is_streaming(self) -> bool:
-        return not self.video.is_done
+        return self.data_producer.is_streaming()
 
+    @overrides
     def get_supported_types(self) -> list[str]:
         return ["rgb", "semantic"]
 

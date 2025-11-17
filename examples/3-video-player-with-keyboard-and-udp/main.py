@@ -6,33 +6,18 @@ from queue import Queue
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 import time
-import numpy as np
 
-from drone_ioact import DataProducer, Action, ActionsQueue, ActionsConsumer
-from drone_ioact.drones.video import VideoContainer
+from drone_ioact import Action, ActionsQueue, ActionsConsumer
+from drone_ioact.drones.video import VideoFrameReader
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController, UDPController
 from drone_ioact.utils import logger, ThreadGroup, image_write
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
-class VideoFrameReader(DataProducer):
-    """VideoFrameReader gets data from a video container (producing frames in real time)"""
-    def __init__(self, video: VideoContainer):
-        self.video = video
-
-    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
-        return {"rgb": self.video.get_current_frame()}
-
-    def is_streaming(self) -> bool:
-        return not self.video.is_done
-
-    def get_supported_types(self) -> list[str]:
-        return ["rgb"]
-
 class VideoActionsMaker(ActionsConsumer):
     """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
-    def __init__(self, video: VideoContainer, actions_queue: Queue):
+    def __init__(self, video: VideoFrameReader, actions_queue: Queue):
         super().__init__(actions_queue, VideoActionsMaker.video_action_callback)
         self.video = video
 
@@ -69,12 +54,10 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_container := VideoContainer(args.video_path)).start() # start the video thread so it produces realtime frames
+    (video_frame_reader := VideoFrameReader(args.video_path)).start()
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
 
-    # data producer thread (1) (drone I/O in -> data/RGB out)
-    video_frame_reader = VideoFrameReader(video=video_container)
     # data consumer threads (data/RGB in -> I/O out)
     screen_displayer = ScreenDisplayer(data_producer=video_frame_reader, screen_height=SCREEN_HEIGHT)
     # data consumer & actions producer threads (data/RGB in -> action out)
@@ -84,7 +67,7 @@ def main(args: Namespace):
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_producer=video_frame_reader, actions_queue=actions_queue)
     # actions consumer thread (1) (action in -> drone I/O out)
-    video_actions_maker = VideoActionsMaker(video=video_container, actions_queue=actions_queue)
+    video_actions_maker = VideoActionsMaker(video=video_frame_reader, actions_queue=actions_queue)
 
     threads = ThreadGroup({
         "Keyboard controller": kb_controller,

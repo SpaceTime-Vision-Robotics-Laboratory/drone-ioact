@@ -19,8 +19,6 @@ class OlympeActionsMaker(ActionsConsumer):
             logger.error("Unable to properly stop the streaming...")
             logger.critical(e, exc_info=True)
 
-        return self.drone.streaming.stop()
-
     def is_streaming(self) -> bool:
         connected = self.drone.connected
         streaming = self.drone.streaming is not None
