@@ -2,5 +2,3 @@ loggez==0.5.0
 numpy>=1.21
 pynput==1.8.1
 Pillow==11.3.0
-overrides==7.7.0
-
