@@ -17,7 +17,7 @@ from datetime import datetime
 import threading
 import numpy as np
 
-from drone_ioact.utils import logger, lo
+from drone_ioact.utils import logger
 
 Action = str # actions are stored as simple strings for simplicity :)
 ActionsCallback = Callable[["ActionsConsumer", Action], bool]
@@ -62,6 +62,8 @@ class DataChannel:
             assert not self._is_closed, "Cannot put data in a closed chanel"
             self._data = item
             self.timestamp = datetime.now().isoformat()
+            logger.debug3("Received item: "
+                          f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'")
 
     def get(self) -> DataItem:
         """Return the item from the channel"""
@@ -103,8 +105,6 @@ class DataProducer(ABC, threading.Thread):
     def run(self):
         while self.is_streaming():
             raw_data = self.get_raw_data()
-            logger.debug2("Received raw_data: "
-                          f"'{ {k: lo(v) if isinstance(v, np.ndarray) else v for k, v in raw_data.items() } }' ")
             self.data_channel.put(raw_data)
 
 class DataConsumer(ABC):

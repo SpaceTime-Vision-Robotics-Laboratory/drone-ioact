@@ -1,10 +1,12 @@
 """olympe_data_producer.py - Data producer for an olympe drone."""
 from datetime import datetime
 import threading
+import time
 from overrides import overrides
 import numpy as np
 import cv2
 import olympe
+from olympe.video.pdraw import PdrawState
 
 from drone_ioact import DataProducer, DataChannel, DataItem
 from drone_ioact.utils import logger
@@ -16,6 +18,7 @@ class OlympeDataProducer(DataProducer):
     format, and optionally saving metadata associated with the stream.
     """
     SAVE_EVERY_N_METADATA = 100
+    WAIT_FOR_DATA_SECONDS = 5
 
     def __init__(self, drone: olympe.Drone, data_channel: DataChannel):
         DataProducer.__init__(self, data_channel)
@@ -39,12 +42,19 @@ class OlympeDataProducer(DataProducer):
     @overrides
     def get_raw_data(self) -> DataItem:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
+        n_tries = 0
+        while self._current_frame is None:
+            time.sleep(1)
+            n_tries += 1
+            if n_tries > OlympeDataProducer.WAIT_FOR_DATA_SECONDS:
+                raise ValueError(f"no data produced for {OlympeDataProducer.WAIT_FOR_DATA_SECONDS} seconds")
+
         with self._current_frame_lock:
             return {"rgb": self._current_frame, "metadata": self._current_metadata}
 
     @overrides
     def is_streaming(self) -> bool:
-        return self.drone.connected and self.drone.streaming is not None
+        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing
 
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """
@@ -64,10 +74,10 @@ class OlympeDataProducer(DataProducer):
             with self._current_frame_lock:
                 yuv_frame.ref()
                 self._current_frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_colors[yuv_frame.format()])
-                logger.debug2(f"Received a new frame at {datetime.now().isoformat()[0:-6]}. "
-                              f"Shape: {self._current_frame.shape}")
+                now = datetime.now().isoformat()
+                logger.debug2(f"Received a new frame at {now}. Shape: {self._current_frame.shape}")
                 self._current_metadata = {
-                    "time": datetime.now().isoformat(),
+                    "time": now,
                     "drone": yuv_frame.vmeta()[1]["drone"],
                     "camera": yuv_frame.vmeta()[1]["camera"],
                 }

@@ -87,14 +87,13 @@ def main():
     assert drone.connect(), f"could not connect to '{ip}'"
     actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
     actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=actions)
-    data_channel = DataChannel(supported_types=["rgb", "metadata"])
+    data_channel = DataChannel(supported_types=["rgb", "metadata", "semantic"])
 
     # define the threads
-    olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
     if len(sys.argv) == 3:
-        semantic_data_producer = SafeUAVSemanticDataProducer(rgb_data_producer=olympe_data_producer,
-                                                             weights_path=sys.argv[2])
-        screen_displayer = SemanticScreenDisplayer(data_producer=semantic_data_producer, screen_height=SCREEN_HEIGHT,
+        data_producer = SafeUAVSemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
+        screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
                                                    color_map=COLOR_MAP)
     else:
         screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT)
@@ -106,14 +105,14 @@ def main():
                                                     actions_callback=actions_callback)
 
     threads = ThreadGroup({
-        "Olympe data producer": olympe_data_producer,
+        "Olympe data producer": data_producer,
         "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
         "Olympe actions consumer": olympe_actions_consumer,
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"Queue size: {len(actions_queue)}")
+        logger.debug2(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()

@@ -1,5 +1,6 @@
 """olympe_actions_maker.py: Takes generic actions and converts them to olympe-specific commands"""
 import olympe
+from olympe.video.pdraw import PdrawState
 from overrides import overrides
 
 from drone_ioact import ActionsConsumer, ActionsQueue, ActionsCallback
@@ -12,4 +13,4 @@ class OlympeActionsConsumer(ActionsConsumer):
 
     @overrides
     def is_streaming(self) -> bool:
-        return self.drone.connected and self.drone.streaming is not None
+        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing

@@ -75,7 +75,7 @@ def main():
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"Queue size: {len(actions_queue)}")
+        logger.debug2(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()
