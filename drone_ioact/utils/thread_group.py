@@ -1,4 +1,5 @@
 """thread_group.py"""
+from __future__ import annotations
 import threading
 
 from .utils import logger
@@ -10,7 +11,7 @@ class ThreadGroup(dict):
         assert all(isinstance(v, threading.Thread) for v in self.values()), f"Not all are threads: {self.items()}"
         assert len(self) > 0, "no threads provided"
 
-    def start(self):
+    def start(self) -> ThreadGroup:
         """starts all the threads"""
         for k, v in self.items():
             if not v.daemon:
@@ -18,6 +19,7 @@ class ThreadGroup(dict):
                 v.daemon = True
             logger.debug(f"Starting thread '{k}'")
             v.start()
+        return self
 
     def status(self) -> list[bool]:
         """Returns the status (is alive) of all threads"""
@@ -43,7 +45,7 @@ class ThreadGroup(dict):
         return list(super().values())
 
     def __repr__(self):
-        return f"ThreadGroup ({len(self)}): {'|'.join(f'- {k}: {v.is_alive()}' for k, v in self.items())}"
+        return f"ThreadGroup ({len(self)}): {'|'.join(f'- {k}: Is alive? {v.is_alive()}' for k, v in self.items())}"
 
     def __str__(self):
-        return "\n".join(f"- {k}: {v.is_alive()}" for k, v in self.items())
+        return "\n".join(f"- {k}: Is alive? {v.is_alive()}" for k, v in self.items())

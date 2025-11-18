@@ -1,7 +1,8 @@
 """init file"""
 from .interfaces import (
-    DataProducer, DataConsumer, ActionsProducer, ActionsConsumer, ActionsQueue, Action, ActionCallback
+    DataProducer, DataConsumer, ActionsProducer, ActionsConsumer,
+    Action, ActionsQueue, ActionsCallback, DataChannel, DataItem
 )
 
 __all__ = ["DataProducer", "DataConsumer", "ActionsProducer", "ActionsConsumer",
-           "Action", "ActionsQueue", "ActionCallback"]
+           "Action", "ActionsQueue", "ActionsCallback", "DataChannel", "DataItem"]

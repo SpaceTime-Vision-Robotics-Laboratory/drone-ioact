@@ -3,7 +3,7 @@ import threading
 import time
 from pynput.keyboard import Listener, KeyCode
 
-from drone_ioact import DataProducer, DataConsumer, ActionsProducer, ActionsQueue, Action
+from drone_ioact import DataChannel, DataConsumer, ActionsProducer, ActionsQueue, Action
 from drone_ioact.utils import logger
 
 class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
@@ -14,8 +14,8 @@ class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
     - actions_queue The queue of possible actions this controller can send to the data_producer object
     - key_to_action The dictionary between keyboard keys and actions to take. Must be a subset of possible actions.
     """
-    def __init__(self, data_producer: DataProducer, actions_queue: ActionsQueue, key_to_action: dict[str, Action]):
-        DataConsumer.__init__(self, data_producer)
+    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, key_to_action: dict[str, Action]):
+        DataConsumer.__init__(self, data_channel)
         ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self, daemon=True)
         self.listener = Listener(on_release=self.on_release)
@@ -40,8 +40,9 @@ class KeyboardController(DataConsumer, ActionsProducer, threading.Thread):
         return True
 
     def run(self):
+        self.wait_for_initial_data()
         self.listener.start()
-        while self.data_producer.is_streaming():
+        while self.data_channel.has_data():
             time.sleep(1)
         self.listener.stop()
         self.listener.join()

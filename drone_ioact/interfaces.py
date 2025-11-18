@@ -10,14 +10,18 @@ DataPrd = Data producer; ActionsC = Actions Consumer.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Callable
+from copy import deepcopy
+import time
 from queue import Queue
+from datetime import datetime
 import threading
 import numpy as np
 
-from drone_ioact.utils import logger
+from drone_ioact.utils import logger, lo
 
 Action = str # actions are stored as simple strings for simplicity :)
-ActionCallback = Callable[["ActionsConsumer", Action], bool]
+ActionsCallback = Callable[["ActionsConsumer", Action], bool]
+DataItem = dict[str, np.ndarray | int | str | float]
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
@@ -39,29 +43,88 @@ class ActionsQueue:
     def __len__(self):
         return self.queue.qsize()
 
-class DataProducer(ABC):
+class DataChannel:
+    """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
+    def __init__(self, supported_types: list[str]):
+        self.supported_types = set(supported_types)
+        assert len(supported_types) > 0, "cannot have a data channel that supports no data type (i.e. rgb, pose etc.)"
+
+        self._lock = threading.Lock()
+        self._data: DataItem = {}
+        self._is_closed = False
+        self.timestamp: str = "1900-01-01"
+
+    def put(self, item: DataItem):
+        """Put data into the queue"""
+        assert isinstance(item, dict), type(item)
+        assert (ks := set(item.keys())) == (st := self.supported_types), f"Data keys: {ks} vs. Supported types: {st}"
+        with self._lock:
+            assert not self._is_closed, "Cannot put data in a closed chanel"
+            self._data = item
+            self.timestamp = datetime.now().isoformat()
+
+    def get(self) -> DataItem:
+        """Return the item from the channel"""
+        with self._lock:
+            assert not self._is_closed, "Cannot get data from a closed chanel"
+            return deepcopy({**self._data, "timestamp": self.timestamp})
+
+    def has_data(self) -> bool:
+        """Checks if the channel has data"""
+        with self._lock:
+            return len(self._data) > 0 and not self._is_closed
+
+    def close(self):
+        """Closes the channel"""
+        assert self.has_data(), "cannot call close before any data was received"
+        with self._lock:
+            self._is_closed = True
+
+class DataProducer(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
+    def __init__(self, data_channel: DataChannel):
+        threading.Thread.__init__(self, daemon=True)
+        assert isinstance(data_channel, DataChannel), f"queue must inherit ActionsQueue: {type(data_channel)}"
+        self._data_channel = data_channel
+
+    @property
+    def data_channel(self) -> DataChannel:
+        """The data queue where the data is inserted"""
+        return self._data_channel
+
     @abstractmethod
-    def get_current_data(self, timeout_s: int = 10) -> dict[str, np.ndarray]:
-        """gets the data (RGB and maybe others) as a dict of numpy arrays"""
+    def get_raw_data(self) -> DataItem:
+        """gets the raw data from the actual drone"""
 
     @abstractmethod
     def is_streaming(self) -> bool:
         """checks if the drone is connected and streaming or not"""
 
-    @abstractmethod
-    def get_supported_types(self) -> list[str]:
-        """returns a list of supported types which will be the keys of get_current_data"""
+    def run(self):
+        while self.is_streaming():
+            raw_data = self.get_raw_data()
+            logger.debug2("Received raw_data: "
+                          f"'{ {k: lo(v) if isinstance(v, np.ndarray) else v for k, v in raw_data.items() } }' ")
+            self.data_channel.put(raw_data)
 
 class DataConsumer(ABC):
     """Interface defining the requirements of a data consumer getting data from a DataProducer"""
-    def __init__(self, data_producer: DataProducer):
-        self._data_producer = data_producer
+    def __init__(self, data_channel: DataChannel):
+        self._data_channel = data_channel
 
     @property
-    def data_producer(self) -> DataProducer:
-        """The DataProducer instance from which data is created"""
-        return self._data_producer
+    def data_channel(self) -> DataChannel:
+        """The data queue where the data is inserted"""
+        return self._data_channel
+
+    def wait_for_initial_data(self, timeout_s: float = 5, sleep_duration_s: float = 0.1):
+        """wait for the data channel to be populated by a data producer"""
+        n_waits = 0
+        while not self.data_channel.has_data():
+            time.sleep(sleep_duration_s)
+            n_waits += 1
+            if n_waits > timeout_s / sleep_duration_s:
+                raise ValueError(f"Data was not produced for {timeout_s} seconds")
 
 class ActionsProducer(ABC):
     """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""
@@ -76,11 +139,11 @@ class ActionsProducer(ABC):
 
 class ActionsConsumer(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to receive an action & apply it to the drone"""
-    def __init__(self, actions_queue: ActionsQueue, action_callback: ActionCallback):
+    def __init__(self, actions_queue: ActionsQueue, actions_callback: ActionsCallback):
         threading.Thread.__init__(self, daemon=True)
         assert isinstance(actions_queue, ActionsQueue), f"queue must inherit ActionsQueue: {type(actions_queue)}"
         self._actions_queue = actions_queue
-        self._action_callback = action_callback
+        self._actions_callback = actions_callback
 
     @property
     def actions_queue(self) -> ActionsQueue:
@@ -88,13 +151,9 @@ class ActionsConsumer(ABC, threading.Thread):
         return self._actions_queue
 
     @property
-    def action_callback(self) -> ActionCallback:
+    def actions_callback(self) -> ActionsCallback:
         """Given a generic action, communicates it to the drone"""
-        return self._action_callback
-
-    @abstractmethod
-    def stop_streaming(self):
-        """calls the drone to stop sending messages"""
+        return self._actions_callback
 
     @abstractmethod
     def is_streaming(self) -> bool:
@@ -103,16 +162,8 @@ class ActionsConsumer(ABC, threading.Thread):
     def run(self):
         while self.is_streaming():
             action: Action = self.actions_queue.get(block=True, timeout=1_000)
-            if not isinstance(action, Action):
-                logger.debug(f"Did not receive an action: {type(action)}. Skipping")
-                continue
-
             logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
-            if action not in self.actions_queue.actions:
-                logger.debug(f"Action '{action}' not in actions={self.actions_queue.actions}. Skipping.")
-                continue
-
-            res = self.action_callback(self, action)
+            res = self.actions_callback(self, action)
             if res is False:
                 logger.warning(f"Could not perform action '{action}'")
 

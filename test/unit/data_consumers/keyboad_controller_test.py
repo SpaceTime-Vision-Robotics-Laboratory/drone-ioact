@@ -1,20 +1,13 @@
 from pytest_mock import MockerFixture
 from drone_ioact.data_consumers import KeyboardController
-from drone_ioact import ActionsQueue, DataProducer
+from drone_ioact import ActionsQueue, DataChannel
 from queue import Queue
-
-class FakeDataProducer(DataProducer):
-    def get_current_data(self, timeout_s = 10):
-        return {}
-    def is_streaming(self):
-        return True
-    def get_supported_types(self) -> list[str]:
-        return []
 
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
     actions_queue = ActionsQueue(q := Queue(), actions=list(key_to_action.values()))
-    kbc = KeyboardController(data_producer=FakeDataProducer(), actions_queue=actions_queue, key_to_action=key_to_action)
+    data_channel = DataChannel(supported_types=["dummy"])
+    kbc = KeyboardController(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
     mocker.patch.object(kbc, "listener", mocker.Mock()) # Use mocker to fake the listener, so no real keyboard hooks
 
     def make_keypress(char: str):

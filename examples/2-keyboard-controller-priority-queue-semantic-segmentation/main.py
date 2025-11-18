@@ -3,7 +3,6 @@
 # pylint: disable=duplicate-code
 import sys
 import time
-from pathlib import Path
 from queue import PriorityQueue
 
 import numpy as np
@@ -12,9 +11,9 @@ from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
 
-from drone_ioact.drones.olympe_parrot import OlympeFrameReader, OlympeActionsMaker
+from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
+from drone_ioact.drones.olympe_parrot import OlympeDataProducer, OlympeActionsConsumer
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
-from drone_ioact import ActionsQueue, Action
 from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation
 
 QUEUE_MAX_SIZE = 30
@@ -24,23 +23,20 @@ class SemanticScreenDisplayer(ScreenDisplayer):
     """Extends ScreenDisplayer to display semantic segmentation"""
     def __init__(self, *args, color_map: list[tuple[int, int, int]], **kwargs):
         super().__init__(*args, **kwargs)
-        assert "semantic" in (st := self.data_producer.get_supported_types()), f"'rgb' not in {st}"
+        assert "semantic" in (st := self.data_channel.supported_types), f"'semantic' not in {st}"
         self.color_map = color_map
 
-    def get_current_frame(self):
-        data = self.data_producer.get_current_data()
-        rgb, semantic = data["rgb"], data["semantic"]
-        sema_rgb = colorize_semantic_segmentation(semantic.argmax(-1), self.color_map).astype(np.uint8)
-        combined = np.concatenate([rgb, sema_rgb], axis=1)
+    def get_screen_frame(self, data: DataItem) -> np.ndarray:
+        sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), self.color_map).astype(np.uint8)
+        combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
         return combined
 
-def action_callback(actions_maker: OlympeActionsMaker, action: Action) -> bool:
+def actions_callback(actions_consumer: OlympeActionsConsumer, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
-    drone: olympe.Drone = actions_maker.drone
+    drone: olympe.Drone = actions_consumer.drone
     if action == "DISCONNECT":
-        actions_maker.stop_streaming()
+        drone.streaming.stop()
         return True
-
     if action == "LIFT":
         return drone(TakeOff()).wait().success()
     if action == "LAND":
@@ -91,32 +87,32 @@ def main():
     assert drone.connect(), f"could not connect to '{ip}'"
     actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
     actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=actions)
+    data_channel = DataChannel(supported_types=["rgb", "metadata"])
 
-    # data producer thread (1) (drone I/O in -> data/RGB out)
-    olympe_frame_reader = OlympeFrameReader(drone=drone, metadata_dir=Path.cwd() / "metadata")
+    # define the threads
+    olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
     if len(sys.argv) == 3:
-        semantic_data_producer = SafeUAVSemanticDataProducer(data_producer=olympe_frame_reader,
+        semantic_data_producer = SafeUAVSemanticDataProducer(rgb_data_producer=olympe_data_producer,
                                                              weights_path=sys.argv[2])
         screen_displayer = SemanticScreenDisplayer(data_producer=semantic_data_producer, screen_height=SCREEN_HEIGHT,
                                                    color_map=COLOR_MAP)
     else:
-        screen_displayer = ScreenDisplayer(data_producer=olympe_frame_reader, screen_height=SCREEN_HEIGHT)
-    # data consumer & actions producer threads (data/RGB in -> action out)
+        screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    kb_controller = PriorityKeyboardController(data_producer=olympe_frame_reader, actions_queue=actions_queue,
+    kb_controller = PriorityKeyboardController(data_channel=data_channel, actions_queue=actions_queue,
                                                key_to_action=key_to_action)
-    # actions consumer thread (1) (action in -> drone I/O out)
-    olympe_actions_maker = OlympeActionsMaker(drone=drone, actions_queue=actions_queue, action_callback=action_callback)
+    olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
+                                                    actions_callback=actions_callback)
 
     threads = ThreadGroup({
+        "Olympe data producer": olympe_data_producer,
         "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
-        "Olympe actions maker": olympe_actions_maker,
-    })
-    threads.start()
+        "Olympe actions consumer": olympe_actions_consumer,
+    }).start()
 
-    while olympe_frame_reader.is_streaming() and not threads.is_any_dead():
+    while not threads.is_any_dead():
         logger.debug2(f"Queue size: {len(actions_queue)}")
         time.sleep(1)
 
