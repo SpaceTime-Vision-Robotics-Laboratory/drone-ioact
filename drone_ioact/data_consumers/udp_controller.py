@@ -1,4 +1,4 @@
-"""udp_controller.py - Converts a udp message to a generic action. Useful for end-to-end tests."""
+"""udp_controller.py - Converts a UDP message to a generic action. Useful for end-to-end tests."""
 import threading
 import socket
 
@@ -9,13 +9,14 @@ HOST = "127.0.0.1"
 
 class UDPController(DataConsumer, ActionsProducer, threading.Thread):
     """
-    Converts a udp message to a generic action.
+    Converts a UDP message to a generic action.
     Parameters:
-    - data_producer The DataProducer object with which this controller communicates
+    - data_channel The DataChannel object from which this controller gets data
     - actions_queue The queue of possible actions this controller can send to the data_producer object
+    - port The UDP port where this controller listens for commands from
     """
-    def __init__(self, data_producer: DataProducer, actions_queue: ActionsQueue, port: int):
-        DataConsumer.__init__(self, data_producer)
+    def __init__(self, data_channel: DataProducer, actions_queue: ActionsQueue, port: int):
+        DataConsumer.__init__(self, data_channel)
         ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self, daemon=True)
         self.port = port
@@ -26,10 +27,11 @@ class UDPController(DataConsumer, ActionsProducer, threading.Thread):
         self.actions_queue.put(action, block=True)
 
     def run(self):
+        self.wait_for_initial_data()
         (s := socket.socket(socket.AF_INET, socket.SOCK_DGRAM)).bind((HOST, self.port))
         logger.info(f"UDP socket listening to '{HOST}:{self.port}'")
 
-        while self.data_producer.is_streaming():
+        while self.data_channel.has_data():
             data, addr = s.recvfrom(1024)
             message = data.decode("utf-8").strip()
             logger.debug(f"Received from '{addr[0]}:{addr[1]}', message: '{message}'")

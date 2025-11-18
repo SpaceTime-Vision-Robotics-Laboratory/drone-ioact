@@ -6,43 +6,31 @@ from queue import Queue
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 import time
+from vre_video import VREVideo
 
-from drone_ioact import Action, ActionsQueue, ActionsConsumer
-from drone_ioact.drones.video import VideoFrameReader
+from drone_ioact import Action, ActionsQueue, DataChannel
+from drone_ioact.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer
 from drone_ioact.data_consumers import UDPController
 from drone_ioact.utils import logger, ThreadGroup, image_write
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
-class VideoActionsMaker(ActionsConsumer):
-    """VideoActionsMaker defines the actions taken on the video container based on the actions produced"""
-    def __init__(self, video: VideoFrameReader, actions_queue: Queue):
-        super().__init__(actions_queue, VideoActionsMaker.video_action_callback)
-        self.video = video
-
-    def stop_streaming(self):
-        self.video.is_done = True
-
-    def is_streaming(self) -> bool:
-        return not self.video.is_done
-
-    @staticmethod
-    def video_action_callback(actions_maker: VideoActionsMaker, action: Action) -> bool:
-        """the actions callback from generic actions to video-specific ones"""
-        video = actions_maker.video
-        if action == "DISCONNECT":
-            actions_maker.stop_streaming()
-        if action == "PLAY_PAUSE":
-            video.is_paused = not video.is_paused
-        if action == "SKIP_AHEAD_ONE_SECOND":
-            video.increment_frame(video.fps)
-        if action == "GO_BACK_ONE_SECOND":
-            video.increment_frame(-video.fps)
-        if action == "TAKE_SCREENSHOT":
-            image_write(video.get_current_data()["rgb"], pth := f"{Path.cwd()}/frame.png")
-            logger.debug(f"Stored screenshot at '{pth}'")
-        return True
+def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) -> bool:
+    """the actions callback from generic actions to video-specific ones"""
+    video_player = actions_maker.video_player
+    if action == "DISCONNECT":
+        video_player.stop_video()
+    if action == "PLAY_PAUSE":
+        video_player.is_paused = not video_player.is_paused
+    if action == "SKIP_AHEAD_ONE_SECOND":
+        video_player.increment_frame(video_player.fps)
+    if action == "GO_BACK_ONE_SECOND":
+        video_player.increment_frame(-video_player.fps)
+    if action == "TAKE_SCREENSHOT":
+        image_write(video_player.get_current_frame()["rgb"], pth := f"{Path.cwd()}/frame.png")
+        logger.debug(f"Stored screenshot at '{pth}'")
+    return True
 
 def get_args() -> Namespace:
     """cli args"""
@@ -54,24 +42,30 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_frame_reader := VideoFrameReader(args.video_path)).start() # start the video thread so it produces rt frames
+    (video_player := VideoPlayer(VREVideo(args.video_path))).start() # start the video player
+
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
+    data_channel = DataChannel(supported_types=["rgb", "frame_ix"])
 
-    udp_controller = UDPController(port=args.port, data_producer=video_frame_reader, actions_queue=actions_queue)
-    video_actions_maker = VideoActionsMaker(video=video_frame_reader, actions_queue=actions_queue)
+    # define the threads of the app
+    video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
+    udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
+    video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
+                                                  actions_callback=video_actions_callback)
 
+    # start the threads
     threads = ThreadGroup({
+        "Video data producer": video_data_producer,
         "UDP controller": udp_controller,
-        "Video actions maker": video_actions_maker,
-    })
-    threads.start()
+        "Video actions consumer": video_actions_consumer,
+    }).start()
 
-    while video_frame_reader.is_streaming() and not threads.is_any_dead():
-        logger.debug2(f"Queue size: {len(actions_queue)}")
+    while not video_player.is_done and not threads.is_any_dead():
+        logger.debug2(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
-    video_actions_maker.stop_streaming()
+    video_player.stop_video()
     threads.join(timeout=1)
 
 if __name__ == "__main__":
