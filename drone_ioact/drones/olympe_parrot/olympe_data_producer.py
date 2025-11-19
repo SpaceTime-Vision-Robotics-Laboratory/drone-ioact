@@ -42,19 +42,22 @@ class OlympeDataProducer(DataProducer):
     @overrides
     def get_raw_data(self) -> DataItem:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
-        n_tries = 0
-        while self._current_frame is None:
-            time.sleep(1)
-            n_tries += 1
-            if n_tries > OlympeDataProducer.WAIT_FOR_DATA_SECONDS:
-                raise ValueError(f"no data produced for {OlympeDataProducer.WAIT_FOR_DATA_SECONDS} seconds")
-
+        self._wait_for_data()
         with self._current_frame_lock:
             return {"rgb": self._current_frame, "metadata": self._current_metadata}
 
     @overrides
     def is_streaming(self) -> bool:
         return self.drone.connected and self.drone.streaming.state == PdrawState.Playing
+
+    def _wait_for_data(self):
+        """wait for data at the beginning before anything was sent by the parrot drone"""
+        n_tries = 0
+        while self._current_frame is None:
+            time.sleep(1)
+            n_tries += 1
+            if n_tries > OlympeDataProducer.WAIT_FOR_DATA_SECONDS:
+                raise ValueError(f"no data produced for {OlympeDataProducer.WAIT_FOR_DATA_SECONDS} seconds")
 
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """

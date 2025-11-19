@@ -1,12 +1,4 @@
-"""
-interfaces.py - Interfaces for interacting with the data produced by a drone. The usual flow is like this:
-Drone --raw data--> DataPrd --get_current_data()--> DataConsumer1            | <--a_q.pop()-- ActionsC --action-- Drone
-                                                    DC2 & ActionsProducer1 --|
-                                                    DC3                      |
-                                                    DC4 & ActionsProducer2 --|
-                                                    ...
-DataPrd = Data producer; ActionsC = Actions Consumer.
-"""
+"""interfaces.py - Interfaces for interacting with the data produced by a drone."""
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Callable

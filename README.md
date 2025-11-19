@@ -9,6 +9,18 @@ Architecture:
 
 The two 'core' components of any robotics application are: the *data channel* and the *actions queue*. The data consumers interact with the drone (or any robot) to get raw data and write them to the data channel, while the data consumers interact with the channel and always have access to the latest data. Some data consumers are also action products and write to the actions queue. Then, the actions consumer reads one action at a time from the actions queue and sends raw actions to the drone.
 
+The usual flow is like this:
+```
+
+ Drone  -- raw data --> Data Producer                       Actions Queue  <-- Actions Consumer -- raw action --> Drone
+(robot)                 (rgb, pose...)                            ↑                                              (robot)
+                             ↓                              (LIFT, MOVE...)
+                        Data Channel <-- [Data Consumer1 ~ Actions Producer1]
+                                         [Data Consumer2 ~         n/a      ]
+                                         [Data Consumer3 ~ Actions Producer3]
+                                         [Data Consumer4 ~         n/a      ]
+```
+
 Every `main` script will contain the following logic:
 
 ```python

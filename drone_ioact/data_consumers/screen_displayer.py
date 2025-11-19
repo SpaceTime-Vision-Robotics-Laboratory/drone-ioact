@@ -19,9 +19,6 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         self.root: tk.Tk | None = None
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
-        # private stuff
-        self._wait_for_data_s = 5
-        self._wait_for_data_sleep_s = 0.1
 
     def get_screen_frame(self, data: DataItem) -> np.ndarray:
         """returns the final frame as RGB from the current data (rgb, semantic etc.)"""
