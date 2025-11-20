@@ -4,6 +4,7 @@
 import sys
 import time
 from queue import PriorityQueue
+from functools import partial
 
 import numpy as np
 import olympe
@@ -19,17 +20,11 @@ from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentatio
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
-class SemanticScreenDisplayer(ScreenDisplayer):
-    """Extends ScreenDisplayer to display semantic segmentation"""
-    def __init__(self, *args, color_map: list[tuple[int, int, int]], **kwargs):
-        super().__init__(*args, **kwargs)
-        assert "semantic" in (st := self.data_channel.supported_types), f"'semantic' not in {st}"
-        self.color_map = color_map
-
-    def get_screen_frame(self, data: DataItem) -> np.ndarray:
-        sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), self.color_map).astype(np.uint8)
-        combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
-        return combined
+def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+    """produces RGB + semantic segmentation as a single frame"""
+    sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
+    combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
+    return combined
 
 def actions_callback(actions_consumer: OlympeActionsConsumer, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
@@ -89,15 +84,16 @@ def main():
     actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=actions)
     data_channel = DataChannel(supported_types=["rgb", "metadata", "semantic"],
                                eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+    screen_frame_callback = None
 
     # define the threads
     data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
     if len(sys.argv) == 3:
         data_producer = PHGMAESemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
-        screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
-                                                   color_map=PHGMAESemanticDataProducer.COLOR_MAP)
-    else:
-        screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT)
+        screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+
+    screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
+                                       screen_frame_callback=screen_frame_callback)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
     kb_controller = PriorityKeyboardController(data_channel=data_channel, actions_queue=actions_queue,
