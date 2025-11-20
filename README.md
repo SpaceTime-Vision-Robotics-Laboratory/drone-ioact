@@ -12,13 +12,13 @@ The two 'core' components of any robotics application are: the *data channel* an
 The usual flow is like this:
 ```
 
- Drone  -- raw data --> Data Producer                       Actions Queue  <-- Actions Consumer -- raw action --> Drone
-(robot)                 (rgb, pose...)                            ↑                                              (robot)
-                             ↓                              (LIFT, MOVE...)
-                        Data Channel <-- [Data Consumer1 ~ Actions Producer1]
-                                         [Data Consumer2 ~         n/a      ]
-                                         [Data Consumer3 ~ Actions Producer3]
-                                         [Data Consumer4 ~         n/a      ]
+ Drone  -- raw data --> Data Producer --> Data Channel       Actions Queue  <-- Actions Consumer -- raw action --> Drone
+(robot)                                  (rgb, pose...)     (LIFT, MOVE...)                                       (robot)
+                                               ↓                   ↑
+                                        [Data Consumer1 ~ Actions Producer1]
+                                        [Data Consumer2 ~         n/a      ]
+                                        [Data Consumer3 ~ Actions Producer3]
+                                        [Data Consumer4 ~         n/a      ]
 ```
 
 Every `main` script will contain the following logic:
@@ -29,19 +29,16 @@ def main():
     drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
     drone.connect() # establish connection to the drone before any callbacks
     actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
-    data_channel = DataChannel(supported_types=["rgb", "pose", ...])
+    data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
-    # data producer thread (1) (drone I/O in -> data/RGB out)
-    data_reader = XXXDataReader(drone, data_channel) # thread that reads data from the drone and makes it available
-    # data consumer threads (data/RGB in -> I/O out)
+    # defines the threads of this application: all the data & actions producers and consumers.
+    data_producer = XXXDataProducer(drone, data_channel) # populates the data channel with RGB & pose from drone
     screen_displayer = ScreenDisplayer(data_channel) # example of data consumer (show rgb to screen)
-    # data consumer & actions producer threads (data/RGB in -> action out)
     kb_controller = KeyboardController(data_channel, actions_queue) # keyboard in -> action out
-    # actions consumer thread (1) (action in -> drone I/O out)
-    actions_maker = XXXActionsMaker(drone=drone, actions_queue) # action in -> actual drone action
+    actions_maker = XXXActionsConsumer(drone, actions_queue) # converts a generic action to an actual drone action
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
-        "Data reader": data_reader,
+        "Data producer": data_producer,
         "Screen displayer": screen_displayer,
         "Keyboard controller": kb_controller,
         "Actions maker": actions_maker,
