@@ -7,24 +7,34 @@ from pathlib import Path
 from functools import partial
 from argparse import ArgumentParser, Namespace
 import time
+import logging
 from vre_video import VREVideo
 import numpy as np
+import cv2
 
 from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
-
+from drone_ioact.data_producers.object_detection import YOLODataProducer
 from drone_ioact import Action, ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
 from drone_ioact.utils import logger, ThreadGroup, image_write, colorize_semantic_segmentation
 
+logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 
-def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+def screen_frame_callback(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
-    sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
-    combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
-    return combined
+    if "bbox" in data and data["bbox"] is not None:
+        x1, y1, x2, y2 = data["bbox"]
+        cv2.rectangle(data["rgb"], (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    res = data["rgb"]
+    if "semantic" in data:
+        sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
+        res = np.concatenate([data["rgb"], sema_rgb], axis=1)
+
+    return res
 
 def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) -> bool:
     """the actions callback from generic actions to video-specific ones"""
@@ -46,7 +56,8 @@ def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
     parser.add_argument("video_path")
-    parser.add_argument("weights_path")
+    parser.add_argument("--weights_path_yolo")
+    parser.add_argument("--weights_path_phg")
     args = parser.parse_args()
     return args
 
@@ -56,16 +67,23 @@ def main(args: Namespace):
 
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
-    data_channel = DataChannel(supported_types=["rgb", "frame_ix", "semantic"],
-                               eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+    supported_types = ["rgb", "frame_ix"]
+    if args.weights_path_phg is not None:
+        supported_types.append("semantic")
+    if args.weights_path_yolo is not None:
+        supported_types.append("bbox")
+
+    data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
-    semantic_data_producer = PHGMAESemanticDataProducer(rgb_data_producer=video_data_producer,
-                                                         weights_path=args.weights_path)
-    screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
-    semantic_screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
-                                                screen_frame_callback=screen_frame_callback)
+    data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
+    if args.weights_path_phg is not None:
+        data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
+    if args.weights_path_yolo is not None:
+        data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo)
+
+    f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+    screen_displayer = ScreenDisplayer(data_channel, SCREEN_HEIGHT, screen_frame_callback=f_screen_frame_callback)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_channel=data_channel, actions_queue=actions_queue,
@@ -75,8 +93,8 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
-        "Semantic data producer": semantic_data_producer,
-        "Semantic screen displayer": semantic_screen_displayer,
+        "Semantic data producer": data_producer,
+        "Semantic screen displayer": screen_displayer,
         "Keyboard controller": kb_controller,
         "Video actions consumer": video_actions_consumer,
     }).start()
