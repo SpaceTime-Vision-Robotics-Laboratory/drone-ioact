@@ -46,7 +46,7 @@ def main(args: Namespace):
 
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
-    data_channel = DataChannel(supported_types=["rgb", "frame_ix"])
+    data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
     video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
@@ -69,7 +69,7 @@ def main(args: Namespace):
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
+        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     video_player.stop_video()

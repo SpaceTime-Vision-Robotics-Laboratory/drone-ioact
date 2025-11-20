@@ -55,7 +55,8 @@ def main():
     assert drone.connect(), f"could not connect to '{ip}'"
     actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
-    data_channel = DataChannel(supported_types=["rgb", "metadata"])
+    data_channel = DataChannel(supported_types=["rgb", "metadata"],
+                               eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads
     olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
@@ -75,7 +76,7 @@ def main():
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
+        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()
