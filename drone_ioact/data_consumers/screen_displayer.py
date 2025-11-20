@@ -1,12 +1,22 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 import threading
 from datetime import datetime
+import os
 import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 
 from drone_ioact import DataChannel, DataConsumer, DataItem
 from drone_ioact.utils import logger, image_resize
+
+DEBUG_FREQ_S = float(os.getenv("DEBUG_FREQ_S", "5"))
+LAST_DEBUG = 0
+
+def _debug(start: datetime) -> bool:
+    global LAST_DEBUG # pylint: disable=global-statement
+    if (now_s := (datetime.now() - start).total_seconds()) - LAST_DEBUG >= DEBUG_FREQ_S:
+        LAST_DEBUG = now_s
+    return LAST_DEBUG == now_s
 
 class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
@@ -39,6 +49,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
         fpss = []
+        start = datetime.now()
         while self.data_channel.has_data():
             now = datetime.now()
             self.root.update()
@@ -62,7 +73,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
             prev_shape = curr_shape
             fpss.append((datetime.now() - now).total_seconds())
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            getattr(logger, "debug" if len(fpss) % 1000 == 0 else "debug2")(f"FPS: {len(fpss) / sum(fpss):.2f}")
+            getattr(logger, "debug" if _debug(start) else "debug2")(f"FPS: {len(fpss) / sum(fpss):.2f}")
 
         self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")

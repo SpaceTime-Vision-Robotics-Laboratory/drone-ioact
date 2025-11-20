@@ -5,17 +5,18 @@ import torch as tr # pylint: disable=import-error
 from torch.nn import functional as F # pylint: disable=import-error
 from overrides import overrides
 
-from safeuav import SafeUAV
-
 from drone_ioact import DataProducer, DataItem
 from drone_ioact.utils import logger
 
-COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
-             [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
-CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
+from .safeuav import SafeUAV
+
 DEVICE = "cuda" if tr.cuda.is_available() else "cpu"
 
-class SafeUAVSemanticDataProducer(DataProducer):
+class PHGMAESemanticDataProducer(DataProducer):
+    """PHGMAESemanticDataProducer - produces 'semantic' given a 'rgb' data producer which it composes over"""
+    COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
+                [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
+    CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
     """VideoFrameReader gets data from a video container (producing frames in real time)"""
     def __init__(self, rgb_data_producer: DataProducer, weights_path: str):
         DataProducer.__init__(self, data_channel=rgb_data_producer.data_channel)

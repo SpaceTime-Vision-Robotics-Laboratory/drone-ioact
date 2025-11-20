@@ -1,1 +1,0 @@
-../4-video-player-with-semantic-segmentation/safeuav.py
