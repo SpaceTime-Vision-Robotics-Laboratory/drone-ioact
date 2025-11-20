@@ -6,7 +6,7 @@ from queue import Queue
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
     actions_queue = ActionsQueue(q := Queue(), actions=list(key_to_action.values()))
-    data_channel = DataChannel(supported_types=["dummy"])
+    data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
     kbc = KeyboardController(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
     mocker.patch.object(kbc, "listener", mocker.Mock()) # Use mocker to fake the listener, so no real keyboard hooks
 

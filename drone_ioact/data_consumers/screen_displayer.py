@@ -1,22 +1,12 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 import threading
 from datetime import datetime
-import os
 import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 
 from drone_ioact import DataChannel, DataConsumer, DataItem
-from drone_ioact.utils import logger, image_resize
-
-DEBUG_FREQ_S = float(os.getenv("DEBUG_FREQ_S", "5"))
-LAST_DEBUG = 0
-
-def _debug(start: datetime) -> bool:
-    global LAST_DEBUG # pylint: disable=global-statement
-    if (now_s := (datetime.now() - start).total_seconds()) - LAST_DEBUG >= DEBUG_FREQ_S:
-        LAST_DEBUG = now_s
-    return LAST_DEBUG == now_s
+from drone_ioact.utils import logger, image_resize, log_debug_every_s
 
 class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
@@ -43,21 +33,20 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         self.canvas.focus_set()
 
     def run(self):
+        prev_ts = start = datetime.now()
         self.wait_for_initial_data()
         prev_data = curr_data = self.data_channel.get()
         self._startup_tk(image_resize(curr_data["rgb"], height=self.initial_h or curr_data["rgb"].shape[0], width=None))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
         fpss = []
-        start = datetime.now()
         while self.data_channel.has_data():
-            now = datetime.now()
             self.root.update()
 
             curr_data = self.data_channel.get()
             curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
-            if prev_data["timestamp"] == curr_data["timestamp"] and prev_shape == curr_shape:
-                logger.debug2(f"Not updating. Same timestamp '{curr_data['timestamp']}' and shape: {curr_shape}")
+            if self.data_channel.eq_fn(prev_data, curr_data) and prev_shape == curr_shape:
+                logger.debug2(f"Not updating. Prev data equals to curr data and same shape: {curr_shape}")
                 continue
 
             frame = self.get_screen_frame(curr_data)
@@ -71,9 +60,10 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
 
             prev_data = curr_data
             prev_shape = curr_shape
-            fpss.append((datetime.now() - now).total_seconds())
+            fpss.append((datetime.now() - prev_ts).total_seconds())
+            prev_ts = datetime.now()
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            getattr(logger, "debug" if _debug(start) else "debug2")(f"FPS: {len(fpss) / sum(fpss):.2f}")
+            log_debug_every_s(start, f"FPS: {len(fpss) / sum(fpss):.2f}")
 
         self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")
