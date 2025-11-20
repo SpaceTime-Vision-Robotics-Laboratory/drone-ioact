@@ -9,7 +9,7 @@ import time
 from vre_video import VREVideo
 import numpy as np
 
-from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
+from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 
 from drone_ioact import Action, ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer
@@ -65,10 +65,10 @@ def main(args: Namespace):
 
     # define the threads of the app
     video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
-    semantic_data_producer = SafeUAVSemanticDataProducer(rgb_data_producer=video_data_producer,
+    semantic_data_producer = PHGMAESemanticDataProducer(rgb_data_producer=video_data_producer,
                                                          weights_path=args.weights_path)
-    semantic_screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, color_map=COLOR_MAP,
-                                                        screen_height=SCREEN_HEIGHT)
+    semantic_screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
+                                                        color_map=PHGMAESemanticDataProducer.COLOR_MAP)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_channel=data_channel, actions_queue=actions_queue,

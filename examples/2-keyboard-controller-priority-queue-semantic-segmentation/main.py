@@ -9,8 +9,8 @@ import numpy as np
 import olympe
 from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
-from safeuav_semantic_data_producer import SafeUAVSemanticDataProducer, COLOR_MAP
 
+from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
 from drone_ioact.drones.olympe_parrot import OlympeDataProducer, OlympeActionsConsumer
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
@@ -92,9 +92,9 @@ def main():
     # define the threads
     data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
     if len(sys.argv) == 3:
-        data_producer = SafeUAVSemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
+        data_producer = PHGMAESemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
         screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
-                                                   color_map=COLOR_MAP)
+                                                   color_map=PHGMAESemanticDataProducer.COLOR_MAP)
     else:
         screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",

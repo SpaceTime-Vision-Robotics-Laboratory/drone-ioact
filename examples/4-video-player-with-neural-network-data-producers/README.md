@@ -1,6 +1,12 @@
-# Video player on a random video VREVideo plus producing semantic segmentation using PHG-MAE-Distil/SafeUAV model
+# Video player on a random video VREVideo plus various neural networks DataProducers
+
+Supported neural networks:
+- PHG-MAE-Distil
+    - TODO: flags
+- TODO: YOLO
 
 ```bash
+# TODO: argparse this properly
 python main.py video.mp4 model.ckpt
 ```
 
