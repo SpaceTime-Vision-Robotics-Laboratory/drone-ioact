@@ -60,3 +60,14 @@ def colorize_semantic_segmentation(semantic_map: np.ndarray, color_map: list[tup
     assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
     assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
     return np.array(color_map)[semantic_map]
+
+def image_read(path: str) -> np.ndarray:
+    """PIL image reader"""
+    # TODO: for grayscale, this returns a RGB image too
+    img_pil = Image.open(path)
+    img_np = np.array(img_pil, dtype=np.uint8)
+    # grayscale -> 3 gray channels repeated.
+    if img_pil.mode == "L":
+        return np.repeat(img_np[..., None], 3, axis=-1)
+    # RGB or RGBA
+    return img_np[..., 0:3]

@@ -1,4 +1,6 @@
 *.log
 *.mp4
 *.ckpt
+*.pt
+*.jpg
 

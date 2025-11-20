@@ -2,6 +2,7 @@
 import threading
 from datetime import datetime
 import tkinter as tk
+from typing import Callable
 from PIL import Image, ImageTk
 import numpy as np
 
@@ -10,7 +11,8 @@ from drone_ioact.utils import logger, image_resize, log_debug_every_s
 
 class ScreenDisplayer(DataConsumer, threading.Thread):
     """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
-    def __init__(self, data_channel: DataChannel, screen_height: int | None = None):
+    def __init__(self, data_channel: DataChannel, screen_height: int | None = None,
+                 screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None):
         assert "rgb" in (st := data_channel.supported_types), f"'rgb' not in {st}"
         DataConsumer.__init__(self, data_channel)
         threading.Thread.__init__(self, daemon=True)
@@ -19,8 +21,10 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         self.root: tk.Tk | None = None
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
+        self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
 
-    def get_screen_frame(self, data: DataItem) -> np.ndarray:
+    @staticmethod
+    def rgb_only_displayer(data: DataItem) -> np.ndarray:
         """returns the final frame as RGB from the current data (rgb, semantic etc.)"""
         return data["rgb"]
 
@@ -49,7 +53,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
                 logger.debug2(f"Not updating. Prev data equals to curr data and same shape: {curr_shape}")
                 continue
 
-            frame = self.get_screen_frame(curr_data)
+            frame = self.screen_frame_callback(curr_data)
             frame_rsz = image_resize(frame, height=curr_shape[0], width=curr_shape[1])
             if prev_shape != curr_shape:
                 self.photo = ImageTk.PhotoImage(Image.fromarray(frame_rsz))

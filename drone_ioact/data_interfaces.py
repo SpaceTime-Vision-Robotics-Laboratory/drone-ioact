@@ -60,7 +60,7 @@ class DataProducer(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
     def __init__(self, data_channel: DataChannel):
         threading.Thread.__init__(self, daemon=True)
-        assert isinstance(data_channel, DataChannel), f"queue must inherit ActionsQueue: {type(data_channel)}"
+        assert isinstance(data_channel, DataChannel), f"data_channel is of wrong type: {type(data_channel)}"
         self._data_channel = data_channel
 
     @property

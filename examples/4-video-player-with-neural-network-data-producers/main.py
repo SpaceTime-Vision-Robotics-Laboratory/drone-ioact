@@ -4,6 +4,7 @@
 from __future__ import annotations
 from queue import Queue
 from pathlib import Path
+from functools import partial
 from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
@@ -18,6 +19,12 @@ from drone_ioact.utils import logger, ThreadGroup, image_write, colorize_semanti
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
+
+def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+    """produces RGB + semantic segmentation as a single frame"""
+    sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
+    combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
+    return combined
 
 def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) -> bool:
     """the actions callback from generic actions to video-specific ones"""
@@ -34,18 +41,6 @@ def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) 
         image_write(video_player.get_current_frame()["rgb"], pth := f"{Path.cwd()}/frame.png")
         logger.debug(f"Stored screenshot at '{pth}'")
     return True
-
-class SemanticScreenDisplayer(ScreenDisplayer):
-    """Extends ScreenDisplayer to display semantic segmentation"""
-    def __init__(self, *args, color_map: list[tuple[int, int, int]], **kwargs):
-        super().__init__(*args, **kwargs)
-        assert "semantic" in (st := self.data_channel.supported_types), f"'semantic' not in {st}"
-        self.color_map = color_map
-
-    def get_screen_frame(self, data: DataItem) -> np.ndarray:
-        sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), self.color_map).astype(np.uint8)
-        combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
-        return combined
 
 def get_args() -> Namespace:
     """cli args"""
@@ -68,8 +63,9 @@ def main(args: Namespace):
     video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
     semantic_data_producer = PHGMAESemanticDataProducer(rgb_data_producer=video_data_producer,
                                                          weights_path=args.weights_path)
-    semantic_screen_displayer = SemanticScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
-                                                        color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+    screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+    semantic_screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
+                                                screen_frame_callback=screen_frame_callback)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
     kb_controller = KeyboardController(data_channel=data_channel, actions_queue=actions_queue,
