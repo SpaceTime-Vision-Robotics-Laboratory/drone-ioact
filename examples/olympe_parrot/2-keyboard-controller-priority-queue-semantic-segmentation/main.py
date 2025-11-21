@@ -6,14 +6,14 @@ import time
 from queue import PriorityQueue
 from functools import partial
 
+from overrides import overrides
 import numpy as np
 import olympe
-from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
-from olympe.messages.ardrone3.Piloting import moveBy, Landing, TakeOff
 
 from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
-from drone_ioact.drones.olympe_parrot import OlympeDataProducer, OlympeActionsConsumer
+from drone_ioact.drones.olympe_parrot import (
+    OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
 from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation
 
@@ -26,50 +26,19 @@ def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]])
     combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
     return combined
 
-def actions_callback(actions_consumer: OlympeActionsConsumer, action: Action) -> bool:
-    """the actions callback from generic actions to drone-specific ones"""
-    drone: olympe.Drone = actions_consumer.drone
-    if action == "DISCONNECT":
-        drone.streaming.stop()
-        return True
-    if action == "LIFT":
-        return drone(TakeOff()).wait().success()
-    if action == "LAND":
-        return drone(Landing()).wait().success()
-    if action == "FORWARD":
-        return drone(
-            moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
-            FlyingStateChanged(state="hovering", _timeout=3)
-        ).wait()
-    if action == "ROTATE":
-        return drone(
-            moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
-            FlyingStateChanged(state="hovering", _timeout=3)
-        ).wait()
-    if action == "FORWARD_NOWAIT":
-        drone(
-            moveBy(1, 0, 0, 0) >> # (forward, right, down, rotation)
-            FlyingStateChanged(state="hovering", _timeout=3)
-        )
-        return True
-    if action == "ROTATE_NOWAIT":
-        drone(
-            moveBy(0, 0, 0, 0.2) >> # (forward, right, down, rotation)
-            FlyingStateChanged(state="hovering", _timeout=3)
-        )
-        return True
-    return False
-
 class MyActionsPriorityQueue(ActionsQueue):
     """Wrapper on top of a priority queue for actions"""
+    @overrides
     def put(self, item: tuple[int, Action], *args, **kwargs):
         self.queue.put(item, *args, **kwargs)
 
+    @overrides
     def get(self, *args, **kwargs) -> Action:
         return self.queue.get(*args, **kwargs)[1]
 
 class PriorityKeyboardController(KeyboardController):
     """1 = low priority, 0 = high priority as per PriorityQueue rules: lower is better"""
+    @overrides
     def add_to_queue(self, action: Action):
         priority = 1
         if action in ("DISCONNECT", "FORWARD_NOWAIT", "ROTATE_NOWAIT"):
@@ -80,8 +49,7 @@ def main():
     """main fn"""
     drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
-    actions = ["DISCONNECT", "LIFT", "LAND", "FORWARD", "ROTATE", "FORWARD_NOWAIT", "ROTATE_NOWAIT"]
-    actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=actions)
+    actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
     data_channel = DataChannel(supported_types=["rgb", "metadata", "semantic"],
                                eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     screen_frame_callback = None
@@ -99,7 +67,7 @@ def main():
     kb_controller = PriorityKeyboardController(data_channel=data_channel, actions_queue=actions_queue,
                                                key_to_action=key_to_action)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
-                                                    actions_callback=actions_callback)
+                                                    actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({
         "Olympe data producer": data_producer,

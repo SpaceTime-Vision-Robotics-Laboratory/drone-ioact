@@ -1,5 +1,5 @@
 """generic utils for images manipulation"""
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 
 from .utils import logger
@@ -11,28 +11,28 @@ except ImportError:
     logger.error("OpenCV is not installed. Will use PIL for image_reisze")
     DEFAULT_RESIZE_BACKEND = "pil"
 
-def image_write(data: np.ndarray, path: str):
+def image_write(image: np.ndarray, path: str):
     """PIL image writer"""
-    assert data.min() >= 0 and data.max() <= 255
-    img = Image.fromarray(data.astype(np.uint8), "RGB")
+    assert image.min() >= 0 and image.max() <= 255
+    img = Image.fromarray(image.astype(np.uint8), "RGB")
     img.save(path)
 
-def image_resize(data: np.ndarray, height: int | None, width: int | None,
+def image_resize(image: np.ndarray, height: int | None, width: int | None,
                  interpolation: str = "bilinear", backend: str = DEFAULT_RESIZE_BACKEND, **kwargs) -> np.ndarray:
     """Wrapper on top of Image(arr).resize((w, h), args) or cv2.resize. Sadly cv2 is faster so we cannot remove it."""
 
     def _scale(a: int, b: int, c: int) -> int:
         return int(b / a * c)
 
-    def _get_height_width(data_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
-        width = _scale(data_shape[0], height, data_shape[1]) if (width is None or width == -1) else width
-        height = _scale(data_shape[1], width, data_shape[0]) if (height is None or height == -1) else height
+    def _get_height_width(image_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
+        width = _scale(image_shape[0], height, image_shape[1]) if (width is None or width == -1) else width
+        height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
         return height, width
 
-    height, width = _get_height_width(data.shape, height, width)
+    height, width = _get_height_width(image.shape, height, width)
     assert isinstance(height, int) and isinstance(width, int), (type(height), type(width))
-    if data.shape[0:2] == (height, width):
-        return data
+    if image.shape[0:2] == (height, width):
+        return image
 
     if backend == "cv2":
         interpolation = {
@@ -40,15 +40,15 @@ def image_resize(data: np.ndarray, height: int | None, width: int | None,
             "bilinear": cv2.INTER_LINEAR,
             "lanczos": cv2.INTER_LANCZOS4
         }[interpolation]
-        res = cv2.resize(data, dsize=(width, height), interpolation=interpolation, **kwargs)
+        res = cv2.resize(image, dsize=(width, height), interpolation=interpolation, **kwargs)
     elif backend == "pil":
         interpolation_type: Image.Resampling = {
             "nearest": Image.Resampling.NEAREST,
             "bilinear": Image.Resampling.BILINEAR,
             "lanczos": Image.Resampling.LANCZOS,
         }[interpolation]
-        assert data.dtype == np.uint8, f"Only uint8 allowed, got {data.dtype}"
-        pil_image = Image.fromarray(data).resize((width, height), resample=interpolation_type, **kwargs)
+        assert image.dtype == np.uint8, f"Only uint8 allowed, got {image.dtype}"
+        pil_image = Image.fromarray(image).resize((width, height), resample=interpolation_type, **kwargs)
         res = np.asarray(pil_image)
     else:
         raise ValueError(str(backend))
@@ -71,3 +71,11 @@ def image_read(path: str) -> np.ndarray:
         return np.repeat(img_np[..., None], 3, axis=-1)
     # RGB or RGBA
     return img_np[..., 0:3]
+
+def image_draw_rectangle(image: np.ndarray, top_left: tuple[int, int], bottom_right: tuple[int, int],
+                         color: tuple[int, int, int], thickness: int) -> np.ndarray:
+    """draws a rectangle (i.e. bounding box) over an image"""
+    img_pil = Image.fromarray(image)
+    draw = ImageDraw.Draw(img_pil)
+    draw.rectangle([*top_left, *bottom_right], outline=color, width=thickness)
+    return np.array(img_pil)
