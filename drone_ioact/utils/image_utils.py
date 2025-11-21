@@ -29,6 +29,8 @@ def image_resize(image: np.ndarray, height: int | None, width: int | None,
         height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
         return height, width
 
+    assert image.dtype == np.uint8, f"{image.dtype=}"
+    assert len(image.shape) == 3, image.shape
     height, width = _get_height_width(image.shape, height, width)
     assert isinstance(height, int) and isinstance(width, int), (type(height), type(width))
     if image.shape[0:2] == (height, width):
@@ -66,10 +68,22 @@ def image_read(path: str) -> np.ndarray:
 def image_draw_rectangle(image: np.ndarray, top_left: tuple[int, int], bottom_right: tuple[int, int],
                          color: tuple[int, int, int], thickness: int) -> np.ndarray:
     """Draws a rectangle (i.e. bounding box) over an image. Thinkness is in pixels."""
+    assert image.dtype == np.uint8, f"{image.dtype=}"
+    assert len(image.shape) == 3, image.shape
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
     draw.rectangle([*top_left, *bottom_right], outline=color, width=thickness)
     return np.array(img_pil)
+
+def image_paste(image1: np.ndarray, image2: np.ndarray) -> np.ndarray:
+    """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
+    assert image1.dtype == image2.dtype == np.uint8, f"{image1.dtype=}, {image1.dtype=}"
+    assert len(image1.shape) == len(image2.shape) == 3, (image1.shape, image2.shape)
+    assert image1.shape == image2.shape, (image1.shape, image2.shape)
+
+    mask: np.ndarray = (image2.astype(int).sum(-1, keepdims=True) == 0).astype(np.uint8)
+    result = image1 * mask + image2 * (~mask)
+    return result
 
 def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[tuple[int, int, int]]) -> np.ndarray:
     """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
