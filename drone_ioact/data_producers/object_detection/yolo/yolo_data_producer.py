@@ -1,5 +1,6 @@
 """yolo_data_producer.py - produces bounding boxes using a yolo pre-trained checkpoint"""
 import numpy as np
+from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
 from drone_ioact import DataProducer, DataItem
 
@@ -23,10 +24,12 @@ class YOLODataProducer(DataProducer):
         coords = boxes.xyxy[best_conf_index].int().tolist()
         return coords
 
+    @overrides
     def get_raw_data(self) -> DataItem:
         raw_data = self.rgb_data_producer.get_raw_data()
         bbox = self._compute_yolo(raw_data["rgb"])
         return {**raw_data, "bbox": bbox}
 
+    @overrides
     def is_streaming(self) -> bool:
         return self.rgb_data_producer.is_streaming()

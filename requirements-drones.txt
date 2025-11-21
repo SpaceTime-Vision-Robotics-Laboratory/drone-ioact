@@ -1,4 +1,0 @@
--r requirements-base.txt
-parrot-olympe==7.7.5
-vre-video>=0.4.3
-opencv-python==4.11.0.86

@@ -1,8 +1,7 @@
-"""semantic_data_producer.py produces both RGB and semantic segmentation using a PHG-MAE-Distil model"""
-# pylint: disable=duplicate-code
+"""phg_mae_semantic_data_producer.py produces both RGB and semantic segmentation using a PHG-MAE-Distil model"""
 import numpy as np
-import torch as tr # pylint: disable=import-error
-from torch.nn import functional as F # pylint: disable=import-error
+import torch as tr
+from torch.nn import functional as F
 from overrides import overrides
 
 from drone_ioact import DataProducer, DataItem
@@ -17,7 +16,7 @@ class PHGMAESemanticDataProducer(DataProducer):
     COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
                 [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
     CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
-    """VideoFrameReader gets data from a video container (producing frames in real time)"""
+
     def __init__(self, rgb_data_producer: DataProducer, weights_path: str):
         DataProducer.__init__(self, data_channel=rgb_data_producer.data_channel)
         assert "rgb" in (st := self.data_channel.supported_types), f"'rgb' not in {st}"
