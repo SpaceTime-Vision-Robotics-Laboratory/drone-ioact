@@ -16,18 +16,30 @@ from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
-from drone_ioact.utils import logger, ThreadGroup, semantic_map_to_image, image_draw_rectangle
+from drone_ioact.utils import (logger, ThreadGroup, semantic_map_to_image, image_draw_rectangle,
+                               image_resize, image_paste)
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
+Color = tuple[int, int, int]
 
-def screen_frame_callback(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+def screen_frame_callback(data: DataItem, color_map: list[Color], segmentation_color: Color,
+                          bbox_color: Color, only_top1_bbox: bool) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     if "bbox" in data and data["bbox"] is not None:
+        data["bbox"] = data["bbox"][0:1] if only_top1_bbox else data["bbox"]
         for bbox in data["bbox"]:
             x1, y1, x2, y2 = bbox
-            data["rgb"] = image_draw_rectangle(data["rgb"], (x1, y1), (x2, y2), color=(0, 255, 0), thickness=2)
+            data["rgb"] = image_draw_rectangle(data["rgb"], (x1, y1), (x2, y2), color=bbox_color, thickness=2)
+
+    if "segmentation" in data and data["segmentation"] is not None:
+        # merge all segmentation masks together (as bools)
+        data["segmentation"] = data["segmentation"][0:1] if only_top1_bbox else data["segmentation"]
+        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1)
+        all_segmentations = (all_segmentations * segmentation_color).astype(np.uint8)
+        img_segmentations = image_resize(all_segmentations, *data["rgb"].shape[0:2])
+        data["rgb"] = image_paste(data["rgb"], img_segmentations)
 
     res = data["rgb"]
     if "semantic" in data:
@@ -42,7 +54,8 @@ def get_args() -> Namespace:
     parser.add_argument("video_path")
     # yolo params
     parser.add_argument("--weights_path_yolo")
-    parser.add_argument("--yolo_confidence_threshold", default=0.75, type=float)
+    parser.add_argument("--yolo_bbox_threshold", default=0.75, type=float)
+    parser.add_argument("--yolo_mask_threshold", default=0.5, type=float)
     # phg-mae params
     parser.add_argument("--weights_path_phg")
     args = parser.parse_args()
@@ -54,8 +67,8 @@ def main(args: Namespace):
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
-    supported_types = [*supported_types, "semantic"] if args.weights_path_phg is not None else supported_types
-    supported_types = [*supported_types, "bbox"] if args.weights_path_yolo is not None else supported_types
+    supported_types = supported_types if args.weights_path_phg is None else [*supported_types, "semantic"]
+    supported_types = supported_types if args.weights_path_yolo is None else [*supported_types, "bbox", "segmentation"]
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
@@ -65,9 +78,11 @@ def main(args: Namespace):
         data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
     if args.weights_path_yolo is not None:
         data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
-                                         confidence_threshold=args.yolo_confidence_threshold)
+                                         bbox_threshold=args.yolo_bbox_threshold,
+                                         mask_threshold=args.yolo_mask_threshold)
 
-    f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+    f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
+                                      segmentation_color=(0, 200, 0), bbox_color=(0, 255, 0), only_top1_bbox=True)
     screen_displayer = ScreenDisplayer(data_channel, SCREEN_HEIGHT, screen_frame_callback=f_screen_frame_callback)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
