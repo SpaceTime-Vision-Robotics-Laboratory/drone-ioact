@@ -13,6 +13,7 @@ ActionsCallback = Callable[["ActionsConsumer", Action], bool]
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
     def __init__(self, queue: Queue, actions: list[Action]):
+        assert len(actions) > 0, "cannot have an empty list of actions"
         super().__init__()
         self.queue = queue
         self.actions = actions
@@ -29,7 +30,6 @@ class ActionsQueue:
 
     def __len__(self):
         return self.queue.qsize()
-
 
 class ActionsProducer(ABC):
     """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""
