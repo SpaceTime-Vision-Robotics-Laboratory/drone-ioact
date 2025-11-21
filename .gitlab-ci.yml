@@ -12,8 +12,7 @@ workflow:
   - when: never
 
 before_script:
-  - pip install -r requirements-drones.txt
-  - pip install opencv-python-headless==4.11.0.86
+  - pip install -r requirements-base.txt
   - export PYTHONPATH="$PYTHONPATH:$(pwd)"
 
 linters:
@@ -25,7 +24,7 @@ linters:
 unit_tests:
   script:
     - apt-get update
-    - apt install -y xvfb # for fake screen so pynput doesn't crash
+    - apt install -y xvfb # for fake screen so pynput doesn't crash (TODO: get rid of it)
     - pip install pytest pytest-mock
     - xvfb-run -a pytest test/unit
 
