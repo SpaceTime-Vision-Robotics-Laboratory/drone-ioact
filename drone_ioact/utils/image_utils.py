@@ -55,27 +55,25 @@ def image_resize(image: np.ndarray, height: int | None, width: int | None,
 
     return res
 
-def colorize_semantic_segmentation(semantic_map: np.ndarray, color_map: list[tuple[int, int, int]]) -> np.ndarray:
-    """Colorize semantic segmentation maps. Must be argmaxed (H, W). Can paint over the original RGB frame or not."""
-    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
-    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
-    return np.array(color_map)[semantic_map]
-
 def image_read(path: str) -> np.ndarray:
-    """PIL image reader"""
-    # TODO: for grayscale, this returns a RGB image too
+    """image reader from a path. Returns a RGB image even if the underlying image is grayscale. Removes any alpha."""
     img_pil = Image.open(path)
     img_np = np.array(img_pil, dtype=np.uint8)
     # grayscale -> 3 gray channels repeated.
-    if img_pil.mode == "L":
-        return np.repeat(img_np[..., None], 3, axis=-1)
-    # RGB or RGBA
-    return img_np[..., 0:3]
+    img_np = np.repeat(img_np[..., None], repeats=3, axis=-1) if img_pil.mode == "L" else img_np
+    return img_np[..., 0:3] # return RGB only
 
 def image_draw_rectangle(image: np.ndarray, top_left: tuple[int, int], bottom_right: tuple[int, int],
                          color: tuple[int, int, int], thickness: int) -> np.ndarray:
-    """draws a rectangle (i.e. bounding box) over an image"""
+    """Draws a rectangle (i.e. bounding box) over an image. Thinkness is in pixels."""
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
     draw.rectangle([*top_left, *bottom_right], outline=color, width=thickness)
     return np.array(img_pil)
+
+def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+    """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
+    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
+    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
+    assert len(semantic_map.shape) == 2, f"expected (H, W), got {semantic_map.shape}"
+    return np.array(color_map)[semantic_map].astype(np.uint8)
