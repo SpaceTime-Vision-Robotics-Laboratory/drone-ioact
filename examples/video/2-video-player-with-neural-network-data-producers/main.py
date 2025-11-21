@@ -16,7 +16,7 @@ from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
-from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation, image_draw_rectangle
+from drone_ioact.utils import logger, ThreadGroup, semantic_map_to_image, image_draw_rectangle
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
@@ -25,12 +25,13 @@ SCREEN_HEIGHT = 480 # width is auto-scaled
 def screen_frame_callback(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     if "bbox" in data and data["bbox"] is not None:
-        x1, y1, x2, y2 = data["bbox"]
-        data["rgb"] = image_draw_rectangle(data["rgb"], (x1, y1), (x2, y2), color=(0, 255, 0), thickness=2)
+        for bbox in data["bbox"]:
+            x1, y1, x2, y2 = bbox
+            data["rgb"] = image_draw_rectangle(data["rgb"], (x1, y1), (x2, y2), color=(0, 255, 0), thickness=2)
 
     res = data["rgb"]
     if "semantic" in data:
-        sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
+        sema_rgb = semantic_map_to_image(data["semantic"].argmax(-1), color_map)
         res = np.concatenate([data["rgb"], sema_rgb], axis=1)
 
     return res
@@ -39,7 +40,10 @@ def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
     parser.add_argument("video_path")
+    # yolo params
     parser.add_argument("--weights_path_yolo")
+    parser.add_argument("--yolo_confidence_threshold", default=0.75, type=float)
+    # phg-mae params
     parser.add_argument("--weights_path_phg")
     args = parser.parse_args()
     return args
@@ -50,10 +54,8 @@ def main(args: Namespace):
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
-    if args.weights_path_phg is not None:
-        supported_types.append("semantic")
-    if args.weights_path_yolo is not None:
-        supported_types.append("bbox")
+    supported_types = [*supported_types, "semantic"] if args.weights_path_phg is not None else supported_types
+    supported_types = [*supported_types, "bbox"] if args.weights_path_yolo is not None else supported_types
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
@@ -62,7 +64,8 @@ def main(args: Namespace):
     if args.weights_path_phg is not None:
         data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
     if args.weights_path_yolo is not None:
-        data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo)
+        data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
+                                         confidence_threshold=args.yolo_confidence_threshold)
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
     screen_displayer = ScreenDisplayer(data_channel, SCREEN_HEIGHT, screen_frame_callback=f_screen_frame_callback)

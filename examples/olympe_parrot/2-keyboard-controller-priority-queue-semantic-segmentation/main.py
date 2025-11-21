@@ -15,14 +15,14 @@ from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
 from drone_ioact.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
-from drone_ioact.utils import logger, ThreadGroup, colorize_semantic_segmentation
+from drone_ioact.utils import logger, ThreadGroup, semantic_map_to_image
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
 def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
-    sema_rgb = colorize_semantic_segmentation(data["semantic"].argmax(-1), color_map).astype(np.uint8)
+    sema_rgb = semantic_map_to_image(data["semantic"].argmax(-1), color_map).astype(np.uint8)
     combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
     return combined
 
