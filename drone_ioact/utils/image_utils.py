@@ -11,6 +11,16 @@ except ImportError:
     logger.error("OpenCV is not installed. Will use PIL for image_reisze")
     DEFAULT_RESIZE_BACKEND = "pil"
 
+Point = tuple[int, int]
+Color = tuple[int, int, int]
+
+def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[Color]) -> np.ndarray:
+    """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
+    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
+    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
+    assert len(semantic_map.shape) == 2, f"expected (H, W), got {semantic_map.shape}"
+    return np.array(color_map)[semantic_map].astype(np.uint8)
+
 def image_write(image: np.ndarray, path: str):
     """PIL image writer"""
     assert image.min() >= 0 and image.max() <= 255
@@ -65,11 +75,16 @@ def image_read(path: str) -> np.ndarray:
     img_np = np.repeat(img_np[..., None], repeats=3, axis=-1) if img_pil.mode == "L" else img_np
     return img_np[..., 0:3] # return RGB only
 
-def image_draw_rectangle(image: np.ndarray, top_left: tuple[int, int], bottom_right: tuple[int, int],
-                         color: tuple[int, int, int], thickness: int) -> np.ndarray:
+def image_draw_rectangle(image: np.ndarray, top_left: Point, bottom_right: Point,
+                         color: Color, thickness: int) -> np.ndarray:
     """Draws a rectangle (i.e. bounding box) over an image. Thinkness is in pixels."""
     assert image.dtype == np.uint8, f"{image.dtype=}"
     assert len(image.shape) == 3, image.shape
+
+    if top_left[0] > bottom_right[0]:
+        logger.debug2(f"{top_left=}, {bottom_right=}. Swapping.")
+        top_left, bottom_right = bottom_right, top_left
+
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
     draw.rectangle([*top_left, *bottom_right], outline=color, width=thickness)
@@ -77,17 +92,35 @@ def image_draw_rectangle(image: np.ndarray, top_left: tuple[int, int], bottom_ri
 
 def image_paste(image1: np.ndarray, image2: np.ndarray) -> np.ndarray:
     """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
-    assert image1.dtype == image2.dtype == np.uint8, f"{image1.dtype=}, {image1.dtype=}"
+    assert image1.dtype == image2.dtype == np.uint8, f"{image1.dtype=}, {image2.dtype=}"
     assert len(image1.shape) == len(image2.shape) == 3, (image1.shape, image2.shape)
     assert image1.shape == image2.shape, (image1.shape, image2.shape)
 
-    mask: np.ndarray = (image2.astype(int).sum(-1, keepdims=True) == 0).astype(np.uint8)
+    mask: np.ndarray = image2.astype(int).sum(-1, keepdims=True) == 0
     result = image1 * mask + image2 * (~mask)
     return result
 
-def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[tuple[int, int, int]]) -> np.ndarray:
-    """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
-    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
-    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
-    assert len(semantic_map.shape) == 2, f"expected (H, W), got {semantic_map.shape}"
-    return np.array(color_map)[semantic_map].astype(np.uint8)
+def image_draw_circle(image: np.ndarray, center: Point, radius: int, color: Color, thickness: int) -> np.ndarray:
+    """draw a circle at a given center with a radius"""
+    assert image.dtype == np.uint8, f"{image.dtype=}"
+    assert len(image.shape) == 3, image.shape
+    assert thickness > 0 or thickness == -1, "thinkness cannot be 0"
+    img_pil = Image.fromarray(image)
+    draw = ImageDraw.Draw(img_pil)
+    x, y = center
+    if thickness == -1:
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)
+    else:
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), outline=color)
+    return np.array(img_pil)
+
+def image_draw_polygon(image: np.ndarray, points: list[Point], color: Color, thickness: int) -> np.ndarray:
+    """draws a polygon given some points"""
+    assert image.dtype == np.uint8, f"{image.dtype=}"
+    assert len(image.shape) == 3, image.shape
+    assert len(points) >= 2, "at least 2 points needed"
+    img_pil = Image.fromarray(image)
+    draw = ImageDraw.Draw(img_pil)
+    for l, r in zip(points, [*points[1:], points[0]]):
+        draw.line((l[0], l[1], r[0], r[1]), fill=color, width=thickness)
+    return np.array(img_pil)

@@ -157,7 +157,7 @@ class MaskSplitterDataProducer(DataProducer):
         best_front = {"conf": 0.8, "idx": None, "masks_xy": []}
 
         if np.any(back_mask > 0):
-            contours_back, _ = cv2.findContours(back_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours_back, _ = cv2.findContours(back_mask * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours_back:
                 largest_contour_back = max(contours_back, key=cv2.contourArea)
                 masks_xy_back = largest_contour_back.squeeze().astype(np.int32)
@@ -166,7 +166,7 @@ class MaskSplitterDataProducer(DataProducer):
                     segmented_frame = cv2.fillPoly(segmented_frame, pts=[masks_xy_back], color=(255, 0, 0, 8))
 
         if np.any(front_mask > 0):
-            contours_front, _ = cv2.findContours(front_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours_front, _ = cv2.findContours(front_mask * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours_front:
                 largest_contour_front = max(contours_front, key=cv2.contourArea)
                 masks_xy_front = largest_contour_front.squeeze().astype(np.int32)
@@ -220,7 +220,7 @@ class MaskSplitterDataProducer(DataProducer):
             best_mask_xy_scaled = yolo_data["segmentation_xy"][0].astype(int)
             res = self.find_best_target(yolo_data["rgb"], best_mask, best_mask_xy_scaled)
             front_mask, back_mask = res.front_mask, res.back_mask
-            bbox_oriented = [res.bbox_oriented[0], res.bbox_oriented[2]]
+            bbox_oriented = res.bbox_oriented
             splitter_segmentation = res.segmented_frame
         return {**yolo_data, "front_mask": front_mask, "back_mask": back_mask, "bbox_oriented": bbox_oriented,
                 "splitter_segmentation": splitter_segmentation}

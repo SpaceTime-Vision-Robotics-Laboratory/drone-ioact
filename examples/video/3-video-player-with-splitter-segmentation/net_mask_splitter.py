@@ -128,7 +128,7 @@ class MaskSplitterNet(nn.Module):
             output = self(input_tensor)
             probs = torch.sigmoid(output)
             predictions = (probs > bbox_threshold).to(dtype=torch.uint8).squeeze(0)
-        return predictions[0].mul(255).cpu().numpy(), predictions[1].mul(255).cpu().numpy()
+        return predictions.cpu().numpy()
 
 if __name__ == "__main__":
     input_channels = 4  # RGB (3) + mask (1)

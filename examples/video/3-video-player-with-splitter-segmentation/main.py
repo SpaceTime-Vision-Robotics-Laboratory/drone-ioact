@@ -16,17 +16,21 @@ from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
-from drone_ioact.utils import (logger, ThreadGroup, image_draw_rectangle, image_resize, image_paste)
+from drone_ioact.utils import (logger, ThreadGroup, image_draw_rectangle, image_paste, image_draw_circle)
 
 Color = tuple[int, int, int]
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
+COLOR_RED = (255, 0, 0)
+COLOR_GREEN = (0, 255, 0)
+COLOR_BLUE = (0, 0, 255)
+COLOR_WHITE = (255, 255, 255)
+
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 SEGMENTATION_COLOR = (0, 200, 0)
-BBOX_COLOR = (0, 255, 0)
+BBOX_COLOR = COLOR_GREEN
 BBOX_THICKNESS = 2
-BBOX_ORIENTED_COLOR = (255, 0, 0)
 
 def screen_frame_callback(data: DataItem) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
@@ -36,24 +40,22 @@ def screen_frame_callback(data: DataItem) -> np.ndarray:
             x1, y1, x2, y2 = bbox
             res = image_draw_rectangle(res, (x1, y1), (x2, y2), color=BBOX_COLOR, thickness=BBOX_THICKNESS)
 
-    if data["segmentation"] is not None:
-        # merge all segmentation masks together (as bools)
-        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1)
-        all_segmentations = (all_segmentations * SEGMENTATION_COLOR).astype(np.uint8)
-        img_segmentations = image_resize(all_segmentations, *data["rgb"].shape[0:2])
-        res = image_paste(res, img_segmentations)
+    # if data["segmentation"] is not None:
+    #     all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * SEGMENTATION_COLOR
+    #     img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
+    #     res = image_paste(res, img_segmentations)
 
-    # if data["bbox_oriented"] is not None:
-    #     x1, y1, x2, y2 = (*data["bbox_oriented"][0], *data["bbox_oriented"][1])
-        # res = image_draw_rectangle(res, (x1, y1), (x2, y2), color=BBOX_ORIENTED_COLOR, thickness=BBOX_THICKNESS)
-        # segmented_bbox_frame = image_draw_rectangle(data["splitter_segmentation"], data["bbox_oriented"][0],
-        #                                             data["bbox_oriented"][1], BBOX_COLOR, BBOX_THICKNESS)
-        # res = np.concatenate([res, segmented_bbox_frame], axis=1)
+    if data["bbox_oriented"] is not None:
+        p1, p2, p3, p4 = data["bbox_oriented"]
+        res = image_draw_circle(res, p1, radius=5, color=COLOR_RED, thickness=-1)
+        res = image_draw_circle(res, p2, radius=5, color=COLOR_GREEN, thickness=-1)
+        res = image_draw_circle(res, p3, radius=5, color=COLOR_BLUE, thickness=-1)
+        res = image_draw_circle(res, p4, radius=5, color=COLOR_WHITE, thickness=-1)
 
-    splitter_segmentation = res * 0
-    if data["splitter_segmentation"] is not None:
-        splitter_segmentation = data["splitter_segmentation"]
-    res = np.concatenate([res, splitter_segmentation], axis=1)
+    if data["front_mask"] is not None:
+        res = image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * COLOR_RED).astype(np.uint8))
+    if data["back_mask"] is not None:
+        res = image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * COLOR_GREEN).astype(np.uint8))
 
     return res
 
