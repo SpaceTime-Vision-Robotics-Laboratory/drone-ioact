@@ -1,52 +1,53 @@
 """yolo_data_producer.py - produces bounding boxes using a yolo pre-trained checkpoint"""
+import logging
 from datetime import datetime
 import numpy as np
-import torch as tr
 from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
-from ultralytics.engine.results import Masks # pylint: disable=import-error
+from ultralytics.engine.results import Masks, Boxes # pylint: disable=import-error
 from drone_ioact import DataProducer, DataItem
 from drone_ioact.utils import log_debug_every_s
 
+logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
+
 Bbox = tuple[int, int, int, int]
+Segmentation = np.ndarray
 START = datetime.now()
 
 class YOLODataProducer(DataProducer):
     """Yolo data producer - returns only a bounding box"""
-    def __init__(self, rgb_data_producer: DataProducer, weights_path: str, bbox_threshold: float=0.75,
-                 mask_threshold: float=0.5):
+    def __init__(self, rgb_data_producer: DataProducer, weights_path: str, bbox_threshold: float):
         super().__init__(rgb_data_producer.data_channel)
         self.rgb_data_producer = rgb_data_producer
         self.yolo = YOLO(weights_path)
         assert self.yolo.model.task == "segment", "yolo model doesn't support segmentation amd we only use these."
         self.bbox_threshold = bbox_threshold
-        self.mask_threshold = mask_threshold
 
-    def _compute_yolo(self, rgb: np.ndarray) -> tuple[list[Bbox], np.ndarray] | None:
-        results = self.yolo.predict(rgb)
-        boxes = results[0].boxes
-        if not boxes or boxes.conf is None or len(boxes.conf) == 0:
-            log_debug_every_s(START, "No bounding box was produced.")
+    def _compute_yolo(self, rgb: np.ndarray) \
+            -> tuple[list[Bbox], list[Segmentation], list[float] | list[np.ndarray]] | None:
+        """returns 4 lists: bounding boxes (over thr), confidences of bboxes, segmentation masks and segmentations xy"""
+        results = self.yolo.predict(rgb)[0]
+        boxes = results.boxes
+        good_boxes: Boxes = boxes[boxes.conf > self.bbox_threshold]
+
+        if (boxes is None or boxes.conf is None or len(boxes.conf) == 0
+            or results.masks is None or len(results.masks.data) == 0 or len(good_boxes) == 0):
+            log_debug_every_s(START, f"No bounding box was produced or none above threshold {self.bbox_threshold}")
             return None
-
-        good_boxes: tr.Tensor = boxes.xyxy[boxes.conf > self.bbox_threshold]
-        if len(good_boxes) == 0:
-            log_debug_every_s(START, "No bounding box was produced.")
-            return None
-
-        good_segmentations: Masks = results[0].masks[boxes.conf > self.bbox_threshold]
-        good_segmentations_np = (good_segmentations.data > self.mask_threshold).cpu().numpy()
-
         log_debug_every_s(START, f"Kept {len(good_boxes)}/{len(boxes)} bounding boxes after applying threshold.")
-        return good_boxes.int().tolist(), good_segmentations_np
+
+        segmentations: Masks = results.masks[boxes.conf > self.bbox_threshold]
+        segmentatons_np = segmentations.data.cpu().numpy()
+        return good_boxes.xyxy.int().tolist(), good_boxes.conf.tolist(), segmentatons_np, segmentations.xy
 
     @overrides
     def get_raw_data(self) -> DataItem:
         """note: the segmentations are not resized as we may not care about all of them. You resize them!"""
         raw_data = self.rgb_data_producer.get_raw_data()
         yolo_res = self._compute_yolo(raw_data["rgb"])
-        bbox, segmentation = yolo_res if yolo_res is not None else (None, None)
-        return {**raw_data, "bbox": bbox, "segmentation": segmentation}
+        bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
+        return {**raw_data, "bbox": bbox, "bbox_confidence": bbox_confidence,
+                "segmentation": segmentation, "segmentation_xy": segmentation_xy}
 
     @overrides
     def is_streaming(self) -> bool:

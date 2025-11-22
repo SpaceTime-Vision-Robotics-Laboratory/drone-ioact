@@ -55,7 +55,6 @@ def get_args() -> Namespace:
     # yolo params
     parser.add_argument("--weights_path_yolo")
     parser.add_argument("--yolo_bbox_threshold", default=0.75, type=float)
-    parser.add_argument("--yolo_mask_threshold", default=0.5, type=float)
     # phg-mae params
     parser.add_argument("--weights_path_phg")
     args = parser.parse_args()
@@ -78,8 +77,7 @@ def main(args: Namespace):
         data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
     if args.weights_path_yolo is not None:
         data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
-                                         bbox_threshold=args.yolo_bbox_threshold,
-                                         mask_threshold=args.yolo_mask_threshold)
+                                         bbox_threshold=args.yolo_bbox_threshold)
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       segmentation_color=(0, 200, 0), bbox_color=(0, 255, 0), only_top1_bbox=True)
