@@ -16,7 +16,7 @@ from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
-from drone_ioact.utils import (logger, ThreadGroup, image_draw_rectangle, image_paste, image_draw_circle)
+from drone_ioact.utils import (logger, ThreadGroup, image_draw_rectangle, image_paste, image_draw_circle, image_resize)
 
 Color = tuple[int, int, int]
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
@@ -36,14 +36,15 @@ def screen_frame_callback(data: DataItem) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"]
     if data["bbox"] is not None:
+        data["bbox"] = data["bbox"][0:1]
         for bbox in data["bbox"]: # plot all bboxes
             x1, y1, x2, y2 = bbox
             res = image_draw_rectangle(res, (x1, y1), (x2, y2), color=BBOX_COLOR, thickness=BBOX_THICKNESS)
 
-    # if data["segmentation"] is not None:
-    #     all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * SEGMENTATION_COLOR
-    #     img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
-    #     res = image_paste(res, img_segmentations)
+    if data["segmentation"] is not None:
+        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * SEGMENTATION_COLOR
+        img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
+        res = image_paste(res, img_segmentations)
 
     if data["bbox_oriented"] is not None:
         p1, p2, p3, p4 = data["bbox_oriented"]

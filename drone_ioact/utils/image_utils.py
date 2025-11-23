@@ -1,8 +1,9 @@
 """generic utils for images manipulation"""
 from PIL import Image, ImageDraw
 import numpy as np
+from loggez import make_logger
 
-from .utils import logger
+logger = make_logger("IMAGE_UTILS")
 
 try:
     import cv2
@@ -13,6 +14,22 @@ except ImportError:
 
 Point = tuple[int, int]
 Color = tuple[int, int, int]
+
+# module utilities
+
+def _check_image(image: np.ndarray):
+    assert image.dtype == np.uint8, f"{image.dtype=}"
+    assert len(image.shape) == 3, image.shape
+
+def _scale(a: int, b: int, c: int) -> int:
+    return int(b / a * c)
+
+def _get_height_width(image_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
+    width = _scale(image_shape[0], height, image_shape[1]) if (width is None or width == -1) else width
+    height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
+    return height, width
+
+# public API
 
 def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[Color]) -> np.ndarray:
     """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
@@ -30,17 +47,7 @@ def image_write(image: np.ndarray, path: str):
 def image_resize(image: np.ndarray, height: int | None, width: int | None,
                  interpolation: str = "bilinear", backend: str = DEFAULT_RESIZE_BACKEND, **kwargs) -> np.ndarray:
     """Wrapper on top of Image(arr).resize((w, h), args) or cv2.resize. Sadly cv2 is faster so we cannot remove it."""
-
-    def _scale(a: int, b: int, c: int) -> int:
-        return int(b / a * c)
-
-    def _get_height_width(image_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
-        width = _scale(image_shape[0], height, image_shape[1]) if (width is None or width == -1) else width
-        height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
-        return height, width
-
-    assert image.dtype == np.uint8, f"{image.dtype=}"
-    assert len(image.shape) == 3, image.shape
+    _check_image(image)
     height, width = _get_height_width(image.shape, height, width)
     assert isinstance(height, int) and isinstance(width, int), (type(height), type(width))
     if image.shape[0:2] == (height, width):
@@ -78,8 +85,7 @@ def image_read(path: str) -> np.ndarray:
 def image_draw_rectangle(image: np.ndarray, top_left: Point, bottom_right: Point,
                          color: Color, thickness: int) -> np.ndarray:
     """Draws a rectangle (i.e. bounding box) over an image. Thinkness is in pixels."""
-    assert image.dtype == np.uint8, f"{image.dtype=}"
-    assert len(image.shape) == 3, image.shape
+    _check_image(image)
 
     if top_left[0] > bottom_right[0]:
         logger.debug2(f"{top_left=}, {bottom_right=}. Swapping.")
@@ -90,20 +96,24 @@ def image_draw_rectangle(image: np.ndarray, top_left: Point, bottom_right: Point
     draw.rectangle([*top_left, *bottom_right], outline=color, width=thickness)
     return np.array(img_pil)
 
-def image_paste(image1: np.ndarray, image2: np.ndarray) -> np.ndarray:
+def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: Point=(0, 0),
+                background_color: Color=(0, 0, 0)) -> np.ndarray:
     """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
-    assert image1.dtype == image2.dtype == np.uint8, f"{image1.dtype=}, {image2.dtype=}"
-    assert len(image1.shape) == len(image2.shape) == 3, (image1.shape, image2.shape)
-    assert image1.shape == image2.shape, (image1.shape, image2.shape)
+    _check_image(image1)
+    _check_image(image2)
+    assert image1.shape[0] - top_left[0] >= image2.shape[0]
+    assert image1.shape[1] - top_left[1] >= image2.shape[1]
+    # assert image1.shape == image2.shape, (image1.shape, image2.shape)
 
-    mask: np.ndarray = image2.astype(int).sum(-1, keepdims=True) == 0
-    result = image1 * mask + image2 * (~mask)
-    return result
+    res = image1.copy()
+    res_shifted = res[top_left[0]:top_left[0]+image2.shape[0], top_left[1]:top_left[1]+image2.shape[1]]
+    mask: np.ndarray = (image2 == background_color).sum(-1, keepdims=True) == 3
+    res_shifted[:] = res_shifted * mask + image2 * (~mask)
+    return res
 
 def image_draw_circle(image: np.ndarray, center: Point, radius: int, color: Color, thickness: int) -> np.ndarray:
     """draw a circle at a given center with a radius"""
-    assert image.dtype == np.uint8, f"{image.dtype=}"
-    assert len(image.shape) == 3, image.shape
+    _check_image(image)
     assert thickness > 0 or thickness == -1, "thinkness cannot be 0"
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
@@ -116,11 +126,10 @@ def image_draw_circle(image: np.ndarray, center: Point, radius: int, color: Colo
 
 def image_draw_polygon(image: np.ndarray, points: list[Point], color: Color, thickness: int) -> np.ndarray:
     """draws a polygon given some points"""
-    assert image.dtype == np.uint8, f"{image.dtype=}"
-    assert len(image.shape) == 3, image.shape
+    _check_image(image)
     assert len(points) >= 2, "at least 2 points needed"
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
-    for l, r in zip(points, [*points[1:], points[0]]):
+    for l, r in zip(points, [*points[1:], points[0]]): # noqa: E741
         draw.line((l[0], l[1], r[0], r[1]), fill=color, width=thickness)
     return np.array(img_pil)
