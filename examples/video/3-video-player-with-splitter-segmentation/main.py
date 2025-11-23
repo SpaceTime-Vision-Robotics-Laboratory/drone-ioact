@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""keyboard controller and display example with frames of a video + semantic segmentation"""
+"""
+yolo + mask splitter example with frames stored during a olympe simulator run
+Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n-seg_sim_car_bunker__all.pt --weights_path_mask_splitter_network mask_splitter-sim-high-quality-partition-v10-dropout_0-augmentations_multi_scenes.pt # pylint:disable=line-too-long
+"""
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from queue import Queue
