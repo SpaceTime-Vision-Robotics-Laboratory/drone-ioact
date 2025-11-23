@@ -6,13 +6,14 @@ from queue import Queue
 
 import olympe
 
-from drone_ioact import ActionsQueue, DataChannel
+from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
+SCREEN_HEIGHT = 480 # width is auto-scaled
 
 def main():
     """main fn"""
@@ -20,13 +21,14 @@ def main():
     assert drone.connect(), f"could not connect to '{ip}'"
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
     data_channel = DataChannel(supported_types=["rgb", "metadata"],
-                               eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+                               eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     # define the threads
     olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action)
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action,
+                                       screen_height=SCREEN_HEIGHT)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
                                                     actions_callback=olympe_actions_callback)
 

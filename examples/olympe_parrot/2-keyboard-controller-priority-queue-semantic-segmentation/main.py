@@ -28,7 +28,7 @@ def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]])
 
 class MyActionsPriorityQueue(ActionsQueue):
     """Wrapper on top of a priority queue for actions"""
-    @overrides
+    @overrides(check_signature=False)
     def put(self, item: tuple[int, Action], *args, **kwargs):
         self.queue.put(item, *args, **kwargs)
 
@@ -50,8 +50,8 @@ def main():
     drone = olympe.Drone(ip := sys.argv[1])
     assert drone.connect(), f"could not connect to '{ip}'"
     actions_queue = MyActionsPriorityQueue(PriorityQueue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
-    data_channel = DataChannel(supported_types=["rgb", "metadata", "semantic"],
-                               eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+    data_channel = DataChannel(supported_types=["rgb", "metadata", *(["semantic"] if len(sys.argv) == 3 else [])],
+                               eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
     screen_frame_callback = None
 
     # define the threads
