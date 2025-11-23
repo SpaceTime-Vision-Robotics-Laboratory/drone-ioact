@@ -60,8 +60,9 @@ def main():
         data_producer = PHGMAESemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
 
-    key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
-                     "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
+    key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
+                     "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
+                     "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,

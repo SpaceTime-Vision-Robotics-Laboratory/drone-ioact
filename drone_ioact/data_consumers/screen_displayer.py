@@ -18,7 +18,8 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
         ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self, daemon=True)
         self.initial_h = screen_height
-        self.key_to_action = key_to_action or {}
+        self.key_to_action = key_to_action = key_to_action or {}
+        assert all(v in actions_queue.actions for v in self.key_to_action.values()), (key_to_action, actions_queue)
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         # state of the canvas: initialized at startup time.
         self.root: tk.Tk | None = None

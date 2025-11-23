@@ -31,6 +31,9 @@ class ActionsQueue:
     def __len__(self):
         return self.queue.qsize()
 
+    def __repr__(self):
+        return f"[ActionsQueue] Actions: {self.actions}. Size: {len(self)}"
+
 class ActionsProducer(ABC):
     """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""
     def __init__(self, actions_queue: ActionsQueue):

@@ -17,15 +17,12 @@ from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact.utils import (logger, ThreadGroup, semantic_map_to_image, image_draw_rectangle,
-                               image_resize, image_paste)
+                               image_resize, image_paste, Color)
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
-Color = tuple[int, int, int]
 
-COLOR_GREEN = (0, 255, 0)
-COLOR_GREENISH = (0, 200, 0)
 BBOX_THICKNES = 1
 
 def screen_frame_callback(data: DataItem, color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
@@ -35,13 +32,13 @@ def screen_frame_callback(data: DataItem, color_map: list[Color], only_top1_bbox
         for bbox in data["bbox"]:
             x1, y1, x2, y2 = bbox
             data["rgb"] = image_draw_rectangle(data["rgb"], top_left=(y1, x1), bottom_right=(y2, x2),
-                                               color=COLOR_GREEN, thickness=BBOX_THICKNES)
+                                               color=Color.GREEN, thickness=BBOX_THICKNES)
 
     if "segmentation" in data and data["segmentation"] is not None:
         # merge all segmentation masks together (as bools)
         data["segmentation"] = data["segmentation"][0:1] if only_top1_bbox else data["segmentation"]
         all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1)
-        all_segmentations = (all_segmentations * COLOR_GREENISH).astype(np.uint8)
+        all_segmentations = (all_segmentations * Color.GREENISH).astype(np.uint8)
         img_segmentations = image_resize(all_segmentations, *data["rgb"].shape[0:2])
         data["rgb"] = image_paste(data["rgb"], img_segmentations)
 
