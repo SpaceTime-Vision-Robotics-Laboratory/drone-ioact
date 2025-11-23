@@ -14,7 +14,7 @@ DEVICE = "cuda" if tr.cuda.is_available() else "cpu"
 class PHGMAESemanticDataProducer(DataProducer):
     """PHGMAESemanticDataProducer - produces 'semantic' given a 'rgb' data producer which it composes over"""
     COLOR_MAP = [[0, 255, 0], [0, 127, 0], [255, 255, 0], [255, 255, 255],
-                [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
+                 [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
     CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
 
     def __init__(self, rgb_data_producer: DataProducer, weights_path: str):

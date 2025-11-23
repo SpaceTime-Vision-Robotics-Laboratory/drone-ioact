@@ -6,7 +6,7 @@ from queue import Queue
 
 import olympe
 
-from drone_ioact import ActionsQueue, DataChannel, DataItem
+from drone_ioact import ActionsQueue, DataChannel
 from drone_ioact.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
 from drone_ioact.data_consumers import ScreenDisplayer
@@ -25,8 +25,9 @@ def main():
 
     # define the threads
     olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
-    key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
-                     "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
+    key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
+                     "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
+                     "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action,
                                        screen_height=SCREEN_HEIGHT)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,

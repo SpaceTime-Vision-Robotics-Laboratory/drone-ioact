@@ -1,4 +1,5 @@
 """generic utils for images manipulation from gitlab.com/meehai/image_utils.py"""
+from __future__ import annotations
 from PIL import Image, ImageDraw
 import numpy as np
 from loggez import make_logger
@@ -13,8 +14,15 @@ except ImportError:
     DEFAULT_RESIZE_BACKEND = "pil"
 
 Point = tuple[int, int] # (U, V) coordinates
-Color = tuple[int, int, int] # RGB (0-255)
 U, V = 0, 1
+
+class Color(tuple):
+    """class for colors: tuples of 3 integers"""
+    RED      = (255, 0, 0)
+    GREEN    = (0, 255, 0)
+    GREENISH = (0, 200, 0)
+    BLUE     = (0, 0, 255)
+    WHITE    = (255, 255, 255)
 
 # module utilities
 
