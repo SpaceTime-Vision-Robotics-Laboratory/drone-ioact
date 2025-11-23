@@ -12,8 +12,9 @@ except ImportError:
     logger.error("OpenCV is not installed. Will use PIL for image_reisze")
     DEFAULT_RESIZE_BACKEND = "pil"
 
-Point = tuple[int, int]
-Color = tuple[int, int, int]
+Point = tuple[int, int] # (U, V) coordinates
+Color = tuple[int, int, int] # RGB (0-255)
+U, V = 0, 1
 
 # module utilities
 
@@ -25,8 +26,8 @@ def _scale(a: int, b: int, c: int) -> int:
     return int(b / a * c)
 
 def _get_height_width(image_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
-    width = _scale(image_shape[0], height, image_shape[1]) if (width is None or width == -1) else width
-    height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
+    width = _scale(image_shape[U], height, image_shape[V]) if (width is None or width == -1) else width
+    height = _scale(image_shape[V], width, image_shape[U]) if (height is None or height == -1) else height
     return height, width
 
 # public API
@@ -87,7 +88,7 @@ def image_draw_rectangle(image: np.ndarray, top_left: Point, bottom_right: Point
     """Draws a rectangle (i.e. bounding box) over an image. Thinkness is in pixels."""
     _check_image(image)
 
-    if top_left[0] > bottom_right[0]:
+    if top_left[U] > bottom_right[U]:
         logger.debug2(f"{top_left=}, {bottom_right=}. Swapping.")
         top_left, bottom_right = bottom_right, top_left
 
@@ -101,12 +102,12 @@ def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: Point=(0, 0),
     """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
     _check_image(image1)
     _check_image(image2)
-    assert image1.shape[0] - top_left[0] >= image2.shape[0]
-    assert image1.shape[1] - top_left[1] >= image2.shape[1]
+    assert image1.shape[U] - top_left[U] >= image2.shape[U]
+    assert image1.shape[V] - top_left[V] >= image2.shape[V]
     # assert image1.shape == image2.shape, (image1.shape, image2.shape)
 
     res = image1.copy()
-    res_shifted = res[top_left[0]:top_left[0]+image2.shape[0], top_left[1]:top_left[1]+image2.shape[1]]
+    res_shifted = res[top_left[U]:top_left[U]+image2.shape[U], top_left[V]:top_left[V]+image2.shape[V]]
     mask: np.ndarray = (image2 == background_color).sum(-1, keepdims=True) == 3
     res_shifted[:] = res_shifted * mask + image2 * (~mask)
     return res
@@ -117,7 +118,7 @@ def image_draw_circle(image: np.ndarray, center: Point, radius: int, color: Colo
     assert thickness > 0 or thickness == -1, "thinkness cannot be 0"
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
-    x, y = center
+    x, y = center[::-1]
     if thickness == -1:
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)
     else:
@@ -131,5 +132,5 @@ def image_draw_polygon(image: np.ndarray, points: list[Point], color: Color, thi
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)
     for l, r in zip(points, [*points[1:], points[0]]): # noqa: E741
-        draw.line((l[0], l[1], r[0], r[1]), fill=color, width=thickness)
+        draw.line((l[V], l[U], r[V], r[U]), fill=color, width=thickness)
     return np.array(img_pil)
