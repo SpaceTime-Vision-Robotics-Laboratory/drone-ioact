@@ -213,7 +213,7 @@ class MaskSplitterDataProducer(DataProducer):
     @overrides
     def get_raw_data(self) -> DataItem:
         yolo_data = self.yolo_data_producer.get_raw_data()
-        if yolo_data["segmentation"] is None:
+        if yolo_data["segmentation"] is None or len(yolo_data["segmentation"]) == 0:
             front_mask, back_mask, bbox_oriented, splitter_segmentation = None, None, None, None
         else:
             best_mask = yolo_data["segmentation"][0]

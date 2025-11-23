@@ -39,7 +39,7 @@ class YOLODataProducer(DataProducer):
         if no_segm := (masks is None or len(masks.data) == 0):
             log_debug_every_s(START, "No segmentation masks were produced.")
         else:
-            good_masks: Masks = results.masks[boxes.conf > self.threshold]
+            good_masks: Masks = masks[boxes.conf > self.threshold] if boxes.conf is not None else masks
             no_segm = no_segm and (len(good_masks) == 0)
 
         bbox = good_boxes.xyxy.int().tolist() if not no_bbox else None
