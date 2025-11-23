@@ -34,7 +34,7 @@ class YOLODataProducer(DataProducer):
             log_debug_every_s(START, f"No bounding box was produced or none above threshold {self.bbox_threshold}")
             return None
         if self.has_segmentation and (results.masks is None or len(results.masks.data) == 0):
-            log_debug_every_s(START, f"No segmentation masks were produced.")
+            log_debug_every_s(START, "No segmentation masks were produced.")
             return None
 
         log_debug_every_s(START, f"Kept {len(good_boxes)}/{len(boxes)} bounding boxes after applying threshold.")
