@@ -66,7 +66,7 @@ def get_args() -> Namespace:
     parser.add_argument("video_path")
     # yolo params
     parser.add_argument("--weights_path_yolo", required=True)
-    parser.add_argument("--yolo_bbox_threshold", default=0.75, type=float)
+    parser.add_argument("--yolo_threshold", default=0.75, type=float)
     # spliter network params
     parser.add_argument("--weights_path_mask_splitter_network", required=True)
     parser.add_argument("--mask_splitter_network_mask_threshold", default=0.5, type=float)
@@ -86,7 +86,7 @@ def main(args: Namespace):
     # define the threads of the app
     rgb_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
     yolo_data_producer = YOLODataProducer(rgb_data_producer, weights_path=args.weights_path_yolo,
-                                          bbox_threshold=args.yolo_bbox_threshold)
+                                          threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(yolo_data_producer, args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)

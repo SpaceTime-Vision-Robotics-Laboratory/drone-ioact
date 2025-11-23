@@ -58,7 +58,7 @@ def get_args() -> Namespace:
     parser.add_argument("video_path")
     # yolo params
     parser.add_argument("--weights_path_yolo")
-    parser.add_argument("--yolo_bbox_threshold", default=0.75, type=float)
+    parser.add_argument("--yolo_threshold", default=0.75, type=float, help="applied to both bbox and segmentation")
     parser.add_argument("--yolo_only_top1_bbox", action="store_true")
     # phg-mae params
     parser.add_argument("--weights_path_phg")
@@ -73,7 +73,7 @@ def main(args: Namespace):
     supported_types = ["rgb", "frame_ix"]
     supported_types = supported_types if args.weights_path_phg is None else [*supported_types, "semantic"]
     if args.weights_path_yolo:
-        supported_types.extend(["bbox", "bbox_confidence"])
+        supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
@@ -83,9 +83,7 @@ def main(args: Namespace):
         data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
     if args.weights_path_yolo is not None:
         data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
-                                         bbox_threshold=args.yolo_bbox_threshold)
-        if data_producer.has_segmentation:
-            data_channel.supported_types.update(["segmentation", "segmentation_xy"])
+                                         threshold=args.yolo_threshold)
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
