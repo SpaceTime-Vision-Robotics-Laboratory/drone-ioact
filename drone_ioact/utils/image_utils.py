@@ -1,5 +1,4 @@
 """generic utils for images manipulation from gitlab.com/meehai/image_utils.py"""
-from __future__ import annotations
 from PIL import Image, ImageDraw
 import numpy as np
 from loggez import make_logger
