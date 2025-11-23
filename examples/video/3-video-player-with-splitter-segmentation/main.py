@@ -23,40 +23,40 @@ logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 COLOR_RED = (255, 0, 0)
 COLOR_GREEN = (0, 255, 0)
+COLOR_GREENISH = (0, 200, 0)
 COLOR_BLUE = (0, 0, 255)
 COLOR_WHITE = (255, 255, 255)
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
-SEGMENTATION_COLOR = (0, 200, 0)
-BBOX_COLOR = COLOR_GREEN
-BBOX_THICKNESS = 2
+BBOX_THICKNESS = 0.75
+CIRCLE_RADIUS = 1
 
 def screen_frame_callback(data: DataItem) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
-    res = data["rgb"]
+    res = data["rgb"].copy()
     if data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1]
         for bbox in data["bbox"]: # plot all bboxes
             x1, y1, x2, y2 = bbox
-            res = image_draw_rectangle(res, (x1, y1), (x2, y2), color=BBOX_COLOR, thickness=BBOX_THICKNESS)
+            image_draw_rectangle(res, (y1, x1), (y2, x2), color=COLOR_GREEN, thickness=BBOX_THICKNESS, inplace=True)
 
     if data["segmentation"] is not None:
-        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * SEGMENTATION_COLOR
+        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * COLOR_GREENISH
         img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
-        res = image_paste(res, img_segmentations)
+        image_paste(res, img_segmentations, inplace=True)
 
     if data["bbox_oriented"] is not None:
-        p1, p2, p3, p4 = data["bbox_oriented"]
-        res = image_draw_circle(res, p1, radius=5, color=COLOR_RED, thickness=-1)
-        res = image_draw_circle(res, p2, radius=5, color=COLOR_GREEN, thickness=-1)
-        res = image_draw_circle(res, p3, radius=5, color=COLOR_BLUE, thickness=-1)
-        res = image_draw_circle(res, p4, radius=5, color=COLOR_WHITE, thickness=-1)
+        p1, p2, p3, p4 = [p[::-1] for p in data["bbox_oriented"]]
+        image_draw_circle(res, p1, radius=CIRCLE_RADIUS, color=COLOR_RED, thickness=-1, inplace=True)
+        image_draw_circle(res, p2, radius=CIRCLE_RADIUS, color=COLOR_GREEN, thickness=-1, inplace=True)
+        image_draw_circle(res, p3, radius=CIRCLE_RADIUS, color=COLOR_BLUE, thickness=-1, inplace=True)
+        image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=COLOR_WHITE, thickness=-1, inplace=True)
 
     if data["front_mask"] is not None:
-        res = image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * COLOR_RED).astype(np.uint8))
+        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * COLOR_RED).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
-        res = image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * COLOR_GREEN).astype(np.uint8))
+        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * COLOR_GREEN).astype(np.uint8), inplace=True)
 
     return res
 
