@@ -1,7 +1,6 @@
 # minimum requirements to run the core library
 loggez>=0.5.3
 numpy>=1.21
-pynput==1.8.1
 Pillow==11.3.0
 overrides==7.7.0
 vre-video>=0.4.3 # used in tests/CI

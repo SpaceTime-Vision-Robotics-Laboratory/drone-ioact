@@ -24,9 +24,8 @@ linters:
 unit_tests:
   script:
     - apt-get update
-    - apt install -y xvfb # for fake screen so pynput doesn't crash (TODO: get rid of it)
     - pip install pytest pytest-mock
-    - xvfb-run -a pytest test/unit
+    - pytest test/unit
 
 e2e_test_udp_screenshot:
   script:

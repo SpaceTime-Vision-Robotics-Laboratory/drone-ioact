@@ -9,7 +9,7 @@ import olympe
 from drone_ioact import ActionsQueue, DataChannel
 from drone_ioact.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
+from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact.utils import logger, ThreadGroup
 
 QUEUE_MAX_SIZE = 30
@@ -24,17 +24,14 @@ def main():
 
     # define the threads
     olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
-    screen_displayer = ScreenDisplayer(data_channel=data_channel)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    kb_controller = KeyboardController(data_channel=data_channel, actions_queue=actions_queue,
-                                       key_to_action=key_to_action)
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({
         "Olympe data producer": olympe_data_producer,
-        "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
         "Olympe actions consumer": olympe_actions_consumer,
     }).start()

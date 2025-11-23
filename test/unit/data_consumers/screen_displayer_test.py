@@ -1,5 +1,5 @@
 from pytest_mock import MockerFixture
-from drone_ioact.data_consumers import KeyboardController
+from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact import ActionsQueue, DataChannel
 from queue import Queue
 
@@ -7,14 +7,12 @@ def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
     actions_queue = ActionsQueue(q := Queue(), actions=list(key_to_action.values()))
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    kbc = KeyboardController(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
-    mocker.patch.object(kbc, "listener", mocker.Mock()) # Use mocker to fake the listener, so no real keyboard hooks
+    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
 
-    def make_keypress(char: str):
-        key = mocker.MagicMock()
-        key.char = char
-        key.__str__.return_value = char
-        kbc.on_release(key)
+    def make_keypress(keysym: str):
+        mock_event = mocker.Mock()
+        mock_event.keysym = keysym
+        sd._on_key_release(mock_event)
 
     make_keypress("a")
     assert len(q.queue) == 0
