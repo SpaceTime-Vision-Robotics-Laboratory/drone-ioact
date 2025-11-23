@@ -6,27 +6,41 @@ from typing import Callable
 from PIL import Image, ImageTk
 import numpy as np
 
-from drone_ioact import DataChannel, DataConsumer, DataItem
+from drone_ioact import DataChannel, DataConsumer, DataItem, ActionsProducer, ActionsQueue, Action
 from drone_ioact.utils import logger, image_resize, log_debug_every_s
 
-class ScreenDisplayer(DataConsumer, threading.Thread):
-    """ScreenDisplayer simply prints the current RGB frame with no action to be done."""
-    def __init__(self, data_channel: DataChannel, screen_height: int | None = None,
-                 screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None):
-        assert "rgb" in (st := data_channel.supported_types), f"'rgb' not in {st}"
+class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
+    """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
+    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, screen_height: int | None = None,
+                 screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,
+                 key_to_action: dict[str, Action] | None = None):
         DataConsumer.__init__(self, data_channel)
+        ActionsProducer.__init__(self, actions_queue)
         threading.Thread.__init__(self, daemon=True)
         self.initial_h = screen_height
+        self.key_to_action = key_to_action or {}
+        self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         # state of the canvas: initialized at startup time.
         self.root: tk.Tk | None = None
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
-        self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
 
     @staticmethod
     def rgb_only_displayer(data: DataItem) -> np.ndarray:
         """returns the final frame as RGB from the current data (rgb, semantic etc.)"""
         return data["rgb"]
+
+    def add_to_queue(self, action: Action):
+        """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
+        self.actions_queue.put(action, block=True)
+
+    def _on_key_release(self, event: tk.Event):
+        action: Action | None = self.key_to_action.get(key := event.keysym)
+        if action is None:
+            logger.debug(f"Unused char: {key}")
+            return
+        logger.debug(f"Pressed '{key}'. Pushing: {action} to the actions queue.")
+        self.add_to_queue(action)
 
     def _startup_tk(self, rgb_rsz: np.ndarray):
         """starts the tk window"""
@@ -35,6 +49,7 @@ class ScreenDisplayer(DataConsumer, threading.Thread):
         self.canvas = tk.Canvas(self.root, width=rgb_rsz.shape[1], height=rgb_rsz.shape[0])
         self.canvas.pack(fill="both", expand=True)
         self.canvas.focus_set()
+        self.root.bind("<KeyRelease>", self._on_key_release)
 
     def run(self):
         prev_ts = start = datetime.now()

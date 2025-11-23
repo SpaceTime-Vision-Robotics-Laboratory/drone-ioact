@@ -33,14 +33,13 @@ def main():
 
     # defines the threads of this application: all the data & actions producers and consumers.
     data_producer = XXXDataProducer(drone, data_channel) # populates the data channel with RGB & pose from drone
-    screen_displayer = ScreenDisplayer(data_channel) # example of data consumer (show rgb to screen)
-    kb_controller = KeyboardController(data_channel, actions_queue) # keyboard in -> action out
+    key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     actions_maker = XXXActionsConsumer(drone, actions_queue) # converts a generic action to an actual drone action
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Data producer": data_producer,
-        "Screen displayer": screen_displayer,
-        "Keyboard controller": kb_controller,
+        "Screen displayer (+keyboard)": screen_displayer,
         "Actions maker": actions_maker,
     }).start()
 

@@ -14,7 +14,7 @@ from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataP
 from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
 from drone_ioact.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import KeyboardController, ScreenDisplayer
+from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact.utils import logger, ThreadGroup, semantic_map_to_image
 
 QUEUE_MAX_SIZE = 30
@@ -36,7 +36,7 @@ class MyActionsPriorityQueue(ActionsQueue):
     def get(self, *args, **kwargs) -> Action:
         return self.queue.get(*args, **kwargs)[1]
 
-class PriorityKeyboardController(KeyboardController):
+class PriorityScreenDisplayer(ScreenDisplayer):
     """1 = low priority, 0 = high priority as per PriorityQueue rules: lower is better"""
     @overrides
     def add_to_queue(self, action: Action):
@@ -60,18 +60,15 @@ def main():
         data_producer = PHGMAESemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
 
-    screen_displayer = ScreenDisplayer(data_channel=data_channel, screen_height=SCREEN_HEIGHT,
-                                       screen_frame_callback=screen_frame_callback)
     key_to_action = {"q": "DISCONNECT", "t": "LIFT", "l": "LAND", "i": "FORWARD",
                      "o": "ROTATE", "w": "FORWARD_NOWAIT", "e": "ROTATE_NOWAIT"}
-    kb_controller = PriorityKeyboardController(data_channel=data_channel, actions_queue=actions_queue,
-                                               key_to_action=key_to_action)
+    screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+                                               screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({
         "Olympe data producer": data_producer,
-        "Keyboard controller": kb_controller,
         "Screen displayer": screen_displayer,
         "Olympe actions consumer": olympe_actions_consumer,
     }).start()

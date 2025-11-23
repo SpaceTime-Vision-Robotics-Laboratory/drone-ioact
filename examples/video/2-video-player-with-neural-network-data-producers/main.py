@@ -15,7 +15,7 @@ from drone_ioact.data_producers.object_detection import YOLODataProducer
 from drone_ioact import ActionsQueue, DataChannel, DataItem
 from drone_ioact.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import ScreenDisplayer, KeyboardController
+from drone_ioact.data_consumers import ScreenDisplayer
 from drone_ioact.utils import (logger, ThreadGroup, semantic_map_to_image, image_draw_rectangle,
                                image_resize, image_paste)
 
@@ -87,11 +87,10 @@ def main(args: Namespace):
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    screen_displayer = ScreenDisplayer(data_channel, SCREEN_HEIGHT, screen_frame_callback=f_screen_frame_callback)
-    key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
-                     "Key.left": "GO_BACK_ONE_SECOND"}
-    kb_controller = KeyboardController(data_channel=data_channel, actions_queue=actions_queue,
-                                       key_to_action=key_to_action)
+    key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
+                     "Left": "GO_BACK_ONE_SECOND"}
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+                                       screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
     video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
                                                   actions_callback=video_actions_callback)
 
@@ -99,7 +98,6 @@ def main(args: Namespace):
     threads = ThreadGroup({
         "Semantic data producer": data_producer,
         "Semantic screen displayer": screen_displayer,
-        "Keyboard controller": kb_controller,
         "Video actions consumer": video_actions_consumer,
     }).start()
 
