@@ -24,20 +24,24 @@ QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
 Color = tuple[int, int, int]
 
-def screen_frame_callback(data: DataItem, color_map: list[Color], segmentation_color: Color,
-                          bbox_color: Color, only_top1_bbox: bool) -> np.ndarray:
+COLOR_GREEN = (0, 255, 0)
+COLOR_GREENISH = (0, 200, 0)
+BBOX_THICKNES = 1
+
+def screen_frame_callback(data: DataItem, color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     if "bbox" in data and data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1] if only_top1_bbox else data["bbox"]
         for bbox in data["bbox"]:
             x1, y1, x2, y2 = bbox
-            data["rgb"] = image_draw_rectangle(data["rgb"], (x1, y1), (x2, y2), color=bbox_color, thickness=2)
+            data["rgb"] = image_draw_rectangle(data["rgb"], top_left=(y1, x1), bottom_right=(y2, x2),
+                                               color=COLOR_GREEN, thickness=BBOX_THICKNES)
 
     if "segmentation" in data and data["segmentation"] is not None:
         # merge all segmentation masks together (as bools)
         data["segmentation"] = data["segmentation"][0:1] if only_top1_bbox else data["segmentation"]
         all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1)
-        all_segmentations = (all_segmentations * segmentation_color).astype(np.uint8)
+        all_segmentations = (all_segmentations * COLOR_GREENISH).astype(np.uint8)
         img_segmentations = image_resize(all_segmentations, *data["rgb"].shape[0:2])
         data["rgb"] = image_paste(data["rgb"], img_segmentations)
 
@@ -55,6 +59,7 @@ def get_args() -> Namespace:
     # yolo params
     parser.add_argument("--weights_path_yolo")
     parser.add_argument("--yolo_bbox_threshold", default=0.75, type=float)
+    parser.add_argument("--yolo_only_top1_bbox", action="store_true")
     # phg-mae params
     parser.add_argument("--weights_path_phg")
     args = parser.parse_args()
@@ -67,7 +72,8 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
     supported_types = supported_types if args.weights_path_phg is None else [*supported_types, "semantic"]
-    supported_types = supported_types if args.weights_path_yolo is None else [*supported_types, "bbox", "segmentation"]
+    if args.weights_path_yolo:
+        supported_types.extend(["bbox", "bbox_confidence"])
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
@@ -78,9 +84,11 @@ def main(args: Namespace):
     if args.weights_path_yolo is not None:
         data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
                                          bbox_threshold=args.yolo_bbox_threshold)
+        if data_producer.has_segmentation:
+            data_channel.supported_types.update(["segmentation", "segmentation_xy"])
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
-                                      segmentation_color=(0, 200, 0), bbox_color=(0, 255, 0), only_top1_bbox=True)
+                                      only_top1_bbox=args.yolo_only_top1_bbox)
     screen_displayer = ScreenDisplayer(data_channel, SCREEN_HEIGHT, screen_frame_callback=f_screen_frame_callback)
     key_to_action = {"Key.space": "PLAY_PAUSE", "q": "DISCONNECT", "Key.right": "SKIP_AHEAD_ONE_SECOND",
                      "Key.left": "GO_BACK_ONE_SECOND"}
