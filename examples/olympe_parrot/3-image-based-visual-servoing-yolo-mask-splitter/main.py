@@ -47,10 +47,10 @@ def screen_frame_callback(data: DataItem) -> np.ndarray:
 
     if data["bbox_oriented"] is not None:
         p1, p2, p3, p4 = [p[::-1] for p in data["bbox_oriented"]]
-        image_draw_circle(res, p1, radius=CIRCLE_RADIUS, color=Color.RED, thickness=-1, inplace=True)
-        image_draw_circle(res, p2, radius=CIRCLE_RADIUS, color=Color.GREEN, thickness=-1, inplace=True)
-        image_draw_circle(res, p3, radius=CIRCLE_RADIUS, color=Color.BLUE, thickness=-1, inplace=True)
-        image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, thickness=-1, inplace=True)
+        image_draw_circle(res, p1, radius=CIRCLE_RADIUS, color=Color.RED, fill=True, inplace=True)
+        image_draw_circle(res, p2, radius=CIRCLE_RADIUS, color=Color.GREEN, fill=True, inplace=True)
+        image_draw_circle(res, p3, radius=CIRCLE_RADIUS, color=Color.BLUE, fill=True, inplace=True)
+        image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
     if data["front_mask"] is not None:
         front_mask = image_resize((data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), *shp)
