@@ -38,10 +38,15 @@ class MaskSplitterDataProducer(DataProducer):
         super().__init__(yolo_data_producer.data_channel)
         self.yolo_data_producer = yolo_data_producer
         self.splitter_model = MaskSplitterNet(in_channels=4, out_channels=2, base_channels=32, dropout_rate=0)
-        self.splitter_model.load_model(splitter_model_path).to(DEVICE).eval()
+        self._load_and_warmup_model(splitter_model_path)
 
         self.mask_threshold = mask_threshold
         self.bbox_threshold= bbox_threshold
+
+    def _load_and_warmup_model(self, model_path: str):
+        self.splitter_model.load_model(model_path).to(DEVICE).eval()
+        self.splitter_model.compile()
+        _ = self.splitter_model(torch.randn(1, 4, *IMAGE_SIZE_SPLITTER_NET).to(DEVICE))
 
     def _compute_bbox_oriented(self, frame: np.ndarray, xy_seg: np.ndarray) -> list[tuple[int, ...]]:
         """

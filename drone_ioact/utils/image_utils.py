@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import numpy as np
 from loggez import make_logger
 
-logger = make_logger("IMAGE_UTILS")
+logger = make_logger("IMAGE_UTILS", exists_ok=True)
 
 try:
     import cv2
@@ -27,7 +27,7 @@ class Color(tuple):
     GREENISH = (0, 200, 0)
     BLUE     = (0, 0, 255)
 
-# module utilities
+# Module utilities
 
 def _check_image(image: np.ndarray):
     assert image.dtype == np.uint8, f"{image.dtype=}"
@@ -37,6 +37,7 @@ def _scale(a: int, b: int, c: int) -> int:
     return int(b / a * c)
 
 def _get_height_width(image_shape: tuple[int, int], height: int | None, width: int | None) -> tuple[int, int]:
+    """used by image_resize to get height from width or vice-versa if one is missing while maintaining scale"""
     width = _scale(image_shape[0], height, image_shape[1]) if (width is None or width == -1) else width
     height = _scale(image_shape[1], width, image_shape[0]) if (height is None or height == -1) else height
     return height, width
@@ -48,7 +49,22 @@ def _get_px_from_perc(perc: float, image_shape: tuple[int, int]) -> int:
         logger.debug2(f"{min_shape=} below 1 pixel. Returning 1")
     return max(1, int(min_shape))
 
-# public API
+def _check_points(p1: PointUV, p2: PointUV, image_shape: tuple[int, int, int]) -> tuple[PointUV, PointUV]:
+    p1, p2 = (p1, p2) if p1[0] < p2[0] else ((p1, p2) if p1[0] == p2[0] and p1[1] < p2[1] else (p2, p1))
+    p1 = (min(p1[0], image_shape[0] - 1), min(p1[1], image_shape[1] - 1))
+    p2 = (min(p2[0], image_shape[0] - 1), min(p2[1], image_shape[1] - 1))
+    return PointUV(*p1), PointUV(*p2)
+
+def _update(res: np.ndarray, us: np.ndarray, vs: np.ndarray, color: tuple[int, int, int]):
+    """duplicate PIL's behavior of updating both sides of a sub-pixel (i.e. pos=2.35 -> color both pixels 2 and 3)"""
+    u_floor = us.astype(int).clip(0, res.shape[0] - 1)
+    v_floor = vs.astype(int).clip(0, res.shape[1] - 1)
+    u_ceil = np.ceil(us).astype(int).clip(0, res.shape[0] - 1)
+    v_ceil = np.ceil(vs).astype(int).clip(0, res.shape[1] - 1)
+    res[u_floor, v_floor] = color
+    res[u_ceil, v_ceil] = color
+
+# Public API
 
 def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[Color]) -> np.ndarray:
     """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
@@ -56,6 +72,8 @@ def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[Color]) -> n
     assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
     assert len(semantic_map.shape) == 2, f"expected (H, W), got {semantic_map.shape}"
     return np.array(color_map)[semantic_map].astype(np.uint8)
+
+# I/O
 
 def image_read(path: str) -> np.ndarray:
     """image reader from a path. Returns a RGB image even if the underlying image is grayscale. Removes any alpha."""
@@ -70,6 +88,12 @@ def image_write(image: np.ndarray, path: str):
     _check_image(image)
     img = Image.fromarray(image, "RGB")
     img.save(path)
+
+def image_display(image: np.ndarray):
+    """display image in a jupyter notebook"""
+    display(Image.fromarray(image)) # pylint: disable=all
+
+# Image manipulation functions (i.e. resizing).
 
 def image_resize(image: np.ndarray, height: int | None, width: int | None,
                  interpolation: str = "bilinear", backend: str = DEFAULT_RESIZE_BACKEND, **kwargs) -> np.ndarray:
@@ -100,7 +124,101 @@ def image_resize(image: np.ndarray, height: int | None, width: int | None,
         raise ValueError(str(backend))
     return res
 
-# drawing functions. All functions have an 'inplace' parameter which is set to False by default.
+def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: PointUV=(0, 0),
+                background_color: Color=(0, 0, 0), inplace: bool=False) -> np.ndarray:
+    """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
+    _check_image(image1)
+    _check_image(image2)
+    top_left = PointUV(*top_left)
+    assert image1.shape[0] - top_left.u >= image2.shape[0]
+    assert image1.shape[1] - top_left.v >= image2.shape[1]
+    res = image1 if inplace else image1.copy()
+
+    res_shifted = res[top_left.u:top_left.u + image2.shape[0], top_left.v:top_left.v + image2.shape[1]]
+    mask: np.ndarray = (image2 == background_color).sum(-1, keepdims=True) == 3
+    res_shifted[:] = res_shifted * mask + image2 * (~mask)
+    return res
+
+def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
+                    thickness: float, inplace: bool=False) -> np.ndarray:
+    """Draws a lines between two points with a given thickness"""
+    _check_image(image)
+    p1, p2 = _check_points(p1, p2, image.shape)
+    assert p1 != p2, f"p1 and p2 cannot be the same: {p1=} {p2=}"
+    thickness_px = _get_px_from_perc(thickness, image.shape)
+    res = image if inplace else image.copy()
+
+    m, b = 0, 0
+    if p1.u != p2.u:
+        m = (p1.v - p2.v) / (p1.u - p2.u)
+        b = p1.v - m * p1.u
+
+    if p1.u == p2.u: # horizontal
+        vs = np.arange(p1.v, p2.v + 1).astype(int)
+        us = vs * 0 + p1.u
+        if thickness_px == 1:
+            res[us, vs] = color
+            return res
+
+        # for i in range(thickness_px):
+        #     us_res[i * len(us): (i+1) * len(us)] = us + i - thickness_px // 2 + (thickness_px % 2 == 0)
+        #     vs_res[i * len(us): (i+1) * len(us)] = vs
+
+        # vectorized method  the above for loop
+        I = np.arange(thickness_px)[..., None].repeat(len(us), axis=1)
+        us_res = (us + I - thickness_px // 2 + (thickness_px % 2 == 0)).reshape(-1)
+        vs_res = np.tile(vs, thickness_px)
+
+        res[us_res, vs_res] = color
+    elif p1.v == p2.v: # vertical line
+        us = np.arange(p1.u, p2.u + 1).astype(int)
+        vs = us * 0 + p1.v
+
+        if thickness_px == 1:
+            res[us, vs] = color
+            return res
+
+        # for i in range(thickness_px):
+        #     us_res2[i * len(us): (i+1) * len(us)] = us
+        #     vs_res2[i * len(us): (i+1) * len(us)] = vs + i - thickness_px // 2 + (thickness_px % 2 == 0)
+
+        I = np.arange(thickness_px)[..., None].repeat(len(vs), axis=1)
+        us_res = np.tile(us, thickness_px)
+        vs_res = (vs + I - thickness_px // 2 + (thickness_px % 2 == 0)).reshape(-1)
+
+        res[us_res, vs_res] = color
+    else: # neither vertical nor horizontal line
+        assert m != 0, f"{p1=}, {p2=}, {m=}, {b=}"
+
+        skip_one = thickness_px == 2
+        us_mid = np.arange(p1.u + skip_one, p2.u + 1).astype(int)
+        vs_mid = m * us_mid + b
+        _update(res, us_mid, vs_mid, color)
+
+        if thickness_px == 1:
+            return res
+
+        us = np.arange(p1.u, p2.u + 1 - skip_one)
+        vs = m * us + b
+        n = 1 + thickness_px // 2
+
+        # for i in range(1, n):
+        #     # note: res[us_top, vs_top]=10+i here for debugging
+        #     us_res2[offset: offset + len(us)] = us - i // 2  # us_top
+        #     vs_res2[offset: offset + len(us)] = vs + i - (i // 2)  # top band starts to the right of middle
+        #     us_res2[offset + len(us): offset + 2 * len(us)] = us + i // 2  # bottom band starts one row below
+        #     vs_res2[offset + len(us): offset + 2 * len(us)] = vs - i + (i // 2)
+        #     offset += 2 * len(us)
+
+        I = np.arange(1, n)[..., None].repeat(len(us), axis=1)
+        us_top = (us - I // 2).reshape(-1) # us_top
+        vs_top = (vs + I - (I // 2)).reshape(-1) # vs top
+        us_bottom = (us + I // 2).reshape(-1) # us bottom
+        vs_bottom = (vs - I + (I // 2)).reshape(-1) # vs bottom
+        _update(res, us_top, vs_top, color)
+        _update(res, us_bottom, vs_bottom, color)
+
+    return res
 
 def image_draw_rectangle(image: np.ndarray, top_left: PointUV, bottom_right: PointUV,
                          color: Color, thickness: float, inplace: bool=False) -> np.ndarray:
@@ -121,6 +239,18 @@ def image_draw_rectangle(image: np.ndarray, top_left: PointUV, bottom_right: Poi
         image[:] = res
     return res
 
+def image_draw_polygon(image: np.ndarray, points: list[PointUV], color: Color, thickness: int,
+                       inplace: bool=False) -> np.ndarray:
+    """draws a polygon given some points"""
+    _check_image(image)
+    assert len(points) >= 2, "at least 2 points needed"
+    points = [PointUV(*p) for p in points]
+
+    res = image if inplace else image.copy()
+    for l, r in zip(points, [*points[1:], points[0]]): # noqa: E741
+        image_draw_line(res, p1=l, p2=r, color=color, thickness=thickness, inplace=True)
+    return res
+
 def image_draw_circle(image: np.ndarray, center: PointUV, radius: float, color: Color, fill: bool,
                       outline_thickness: int | None = None, inplace: bool=False) -> np.ndarray:
     """draw a circle at a given center with a radius (in percents). Outline thickness is also in percents (or none)"""
@@ -133,42 +263,11 @@ def image_draw_circle(image: np.ndarray, center: PointUV, radius: float, color: 
     center = PointUV(*center)
 
     if fill:
-        draw.ellipse((center.v - r_px, center.v - r_px, center.v + r_px, center.u + r_px), fill=color)
+        draw.ellipse((center.v - r_px, center.u - r_px, center.v + r_px, center.u + r_px), fill=color)
     else:
         draw.ellipse((center.v - r_px, center.u - r_px, center.v + r_px, center.u + r_px), outline=color,
                      width=outline_thickness_px)
     res = np.array(img_pil)
     if inplace:
         image[:] = res
-    return res
-
-def image_draw_polygon(image: np.ndarray, points: list[PointUV], color: Color, thickness: int,
-                       inplace: bool=False) -> np.ndarray:
-    """draws a polygon given some points"""
-    _check_image(image)
-    assert len(points) >= 2, "at least 2 points needed"
-    points = [PointUV(*p) for p in points]
-
-    img_pil = Image.fromarray(image)
-    draw = ImageDraw.Draw(img_pil)
-    for l, r in zip(points, [*points[1:], points[0]]): # noqa: E741
-        draw.line((l.v, l.u, r.v, r.u), fill=color, width=thickness)
-    res = np.array(img_pil)
-    if inplace:
-        image[:] = res
-    return res
-
-def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: PointUV=(0, 0),
-                background_color: Color=(0, 0, 0), inplace: bool=False) -> np.ndarray:
-    """Pastes two [0:255] images over each other. image  takes priority everywhere except where it's (0, 0, 0)"""
-    _check_image(image1)
-    _check_image(image2)
-    top_left = PointUV(*top_left)
-    assert image1.shape[0] - top_left.u >= image2.shape[0]
-    assert image1.shape[1] - top_left.v >= image2.shape[1]
-    res = image1 if inplace else image1.copy()
-
-    res_shifted = res[top_left.u:top_left.u + image2.shape[0], top_left.v:top_left.v + image2.shape[1]]
-    mask: np.ndarray = (image2 == background_color).sum(-1, keepdims=True) == 3
-    res_shifted[:] = res_shifted * mask + image2 * (~mask)
     return res
