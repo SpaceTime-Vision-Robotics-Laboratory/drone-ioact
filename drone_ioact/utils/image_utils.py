@@ -91,7 +91,7 @@ def image_write(image: np.ndarray, path: str):
 
 def image_display(image: np.ndarray):
     """display image in a jupyter notebook"""
-    display(Image.fromarray(image)) # pylint: disable=all
+    display(Image.fromarray(image)) # pylint: disable=all # noqa: F821
 
 # Image manipulation functions (i.e. resizing).
 
@@ -160,16 +160,9 @@ def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
             res[us, vs] = color
             return res
 
-        # for i in range(thickness_px):
-        #     us_res[i * len(us): (i+1) * len(us)] = us + i - thickness_px // 2 + (thickness_px % 2 == 0)
-        #     vs_res[i * len(us): (i+1) * len(us)] = vs
+        for i in range(thickness_px):
+            res[us + i - thickness_px // 2 + (thickness_px % 2 == 0), vs] = color
 
-        # vectorized method  the above for loop
-        I = np.arange(thickness_px)[..., None].repeat(len(us), axis=1)
-        us_res = (us + I - thickness_px // 2 + (thickness_px % 2 == 0)).reshape(-1)
-        vs_res = np.tile(vs, thickness_px)
-
-        res[us_res, vs_res] = color
     elif p1.v == p2.v: # vertical line
         us = np.arange(p1.u, p2.u + 1).astype(int)
         vs = us * 0 + p1.v
@@ -178,19 +171,13 @@ def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
             res[us, vs] = color
             return res
 
-        # for i in range(thickness_px):
-        #     us_res2[i * len(us): (i+1) * len(us)] = us
-        #     vs_res2[i * len(us): (i+1) * len(us)] = vs + i - thickness_px // 2 + (thickness_px % 2 == 0)
+        for i in range(thickness_px):
+            res[us, vs + i - thickness_px // 2 + (thickness_px % 2 == 0)] = color
 
-        I = np.arange(thickness_px)[..., None].repeat(len(vs), axis=1)
-        us_res = np.tile(us, thickness_px)
-        vs_res = (vs + I - thickness_px // 2 + (thickness_px % 2 == 0)).reshape(-1)
-
-        res[us_res, vs_res] = color
-    else: # neither vertical nor horizontal line
+    else: # diagonal line
         assert m != 0, f"{p1=}, {p2=}, {m=}, {b=}"
 
-        skip_one = thickness_px == 2
+        skip_one = thickness_px == 2 # 3 lines: 1 top, 1 middle, 1 bot. Middle one is reduced by one to look nicer.
         us_mid = np.arange(p1.u + skip_one, p2.u + 1).astype(int)
         vs_mid = m * us_mid + b
         _update(res, us_mid, vs_mid, color)
@@ -202,21 +189,9 @@ def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
         vs = m * us + b
         n = 1 + thickness_px // 2
 
-        # for i in range(1, n):
-        #     # note: res[us_top, vs_top]=10+i here for debugging
-        #     us_res2[offset: offset + len(us)] = us - i // 2  # us_top
-        #     vs_res2[offset: offset + len(us)] = vs + i - (i // 2)  # top band starts to the right of middle
-        #     us_res2[offset + len(us): offset + 2 * len(us)] = us + i // 2  # bottom band starts one row below
-        #     vs_res2[offset + len(us): offset + 2 * len(us)] = vs - i + (i // 2)
-        #     offset += 2 * len(us)
-
-        I = np.arange(1, n)[..., None].repeat(len(us), axis=1)
-        us_top = (us - I // 2).reshape(-1) # us_top
-        vs_top = (vs + I - (I // 2)).reshape(-1) # vs top
-        us_bottom = (us + I // 2).reshape(-1) # us bottom
-        vs_bottom = (vs - I + (I // 2)).reshape(-1) # vs bottom
-        _update(res, us_top, vs_top, color)
-        _update(res, us_bottom, vs_bottom, color)
+        for i in range(1, n):
+            _update(res, us - i // 2, vs + i - (i // 2), color) # top band starts to the right of middle
+            _update(res, us + i // 2, vs - i + (i // 2), color) # bottom band starts one row below
 
     return res
 
@@ -229,14 +204,15 @@ def image_draw_rectangle(image: np.ndarray, top_left: PointUV, bottom_right: Poi
     if top_left.u > bottom_right.u:
         logger.debug2(f"{top_left=}, {bottom_right=}. Swapping.")
         top_left, bottom_right = bottom_right, top_left
+    res = image if inplace else image.copy()
 
-    thickness_px = _get_px_from_perc(thickness, image.shape)
-    img_pil = Image.fromarray(image)
-    draw = ImageDraw.Draw(img_pil)
-    draw.rectangle([top_left.v, top_left.u, bottom_right.v, bottom_right.u], outline=color, width=thickness_px)
-    res = np.array(img_pil)
-    if inplace:
-        image[:] = res
+    image_draw_line(res, p1=top_left, p2=(top_right := PointUV(top_left.u, bottom_right.v)),
+                    color=color, thickness=thickness, inplace=True)
+    image_draw_line(res, top_right, bottom_right, color=color, thickness=thickness, inplace=True)
+    image_draw_line(res, p1=bottom_right, p2=(bottom_left := PointUV(bottom_right.u, top_left.v)),
+                    color=color, thickness=thickness, inplace=True)
+    image_draw_line(res, bottom_left, top_left, color=color, thickness=thickness, inplace=True)
+
     return res
 
 def image_draw_polygon(image: np.ndarray, points: list[PointUV], color: Color, thickness: int,
