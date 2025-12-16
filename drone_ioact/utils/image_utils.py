@@ -66,33 +66,6 @@ def _update(res: np.ndarray, us: np.ndarray, vs: np.ndarray, color: tuple[int, i
 
 # Public API
 
-def semantic_map_to_image(semantic_map: np.ndarray, color_map: list[Color]) -> np.ndarray:
-    """Colorize semantic segmentation maps. Must be argmaxed (H, W)."""
-    assert np.issubdtype(semantic_map.dtype, np.integer), semantic_map.dtype
-    assert (max_class := semantic_map.max()) <= len(color_map), (max_class, len(color_map))
-    assert len(semantic_map.shape) == 2, f"expected (H, W), got {semantic_map.shape}"
-    return np.array(color_map)[semantic_map].astype(np.uint8)
-
-# I/O
-
-def image_read(path: str) -> np.ndarray:
-    """image reader from a path. Returns a RGB image even if the underlying image is grayscale. Removes any alpha."""
-    img_pil = Image.open(path)
-    img_np = np.array(img_pil, dtype=np.uint8)
-    # grayscale -> 3 gray channels repeated.
-    img_np = np.repeat(img_np[..., None], repeats=3, axis=-1) if img_pil.mode == "L" else img_np
-    return img_np[..., 0:3] # return RGB only
-
-def image_write(image: np.ndarray, path: str):
-    """PIL image writer"""
-    _check_image(image)
-    img = Image.fromarray(image, "RGB")
-    img.save(path)
-
-def image_display(image: np.ndarray):
-    """display image in a jupyter notebook"""
-    display(Image.fromarray(image)) # pylint: disable=all # noqa: F821
-
 # Image manipulation functions (i.e. resizing).
 
 def image_resize(image: np.ndarray, height: int | None, width: int | None,
@@ -139,6 +112,8 @@ def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: PointUV=(0, 0)
     res_shifted[:] = res_shifted * mask + image2 * (~mask)
     return res
 
+# Drawing functions
+
 def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
                     thickness: float, inplace: bool=False) -> np.ndarray:
     """Draws a lines between two points with a given thickness"""
@@ -156,6 +131,8 @@ def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
     if p1.u == p2.u: # horizontal
         vs = np.arange(p1.v, p2.v + 1).astype(int)
         us = vs * 0 + p1.u
+        thickness_px = min(thickness_px, image.shape[0] - p1.u) # ensure we don't go out of border
+
         if thickness_px == 1:
             res[us, vs] = color
             return res
@@ -166,6 +143,7 @@ def image_draw_line(image: np.ndarray, p1: PointUV, p2: PointUV, color: Color,
     elif p1.v == p2.v: # vertical line
         us = np.arange(p1.u, p2.u + 1).astype(int)
         vs = us * 0 + p1.v
+        thickness_px = min(thickness_px, image.shape[1] - p1.v) # because they will shoot at us
 
         if thickness_px == 1:
             res[us, vs] = color
