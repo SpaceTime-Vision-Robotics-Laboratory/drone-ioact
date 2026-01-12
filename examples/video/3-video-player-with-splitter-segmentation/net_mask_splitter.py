@@ -114,7 +114,7 @@ class MaskSplitterNet(nn.Module):
 
     def preprocess(self, image: np.ndarray, mask: np.ndarray, image_size: tuple[int, int]) -> torch.Tensor:
         """Prepares the input 4-channel tensor from image and mask."""
-        image = cv2.resize(image, (image_size[1], image_size[0]))
+        image = cv2.resize(image[..., ::-1], (image_size[1], image_size[0])) # BGR!
         mask = cv2.resize(mask, (image_size[1], image_size[0]))
         image = torch.from_numpy(image).to(DEVICE).permute(2, 0, 1).float() / 255.0
         mask = torch.from_numpy(mask).to(DEVICE).unsqueeze(0).float() / 255.0
