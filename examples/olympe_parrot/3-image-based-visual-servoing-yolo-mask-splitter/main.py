@@ -11,16 +11,16 @@ import time
 import logging
 import numpy as np
 import olympe
+from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from drone_ioact.data_producers.object_detection import YOLODataProducer
-from drone_ioact import ActionsQueue, DataChannel, DataItem
-from drone_ioact.drones.olympe_parrot import (
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup
+from roboimpl.data_producers.object_detection import YOLODataProducer
+from roboimpl.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import ScreenDisplayer
-from drone_ioact.utils import (logger, ThreadGroup, image_draw_rectangle, image_paste,
-                               image_draw_circle, image_resize, Color)
+from roboimpl.data_consumers import ScreenDisplayer
+from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
@@ -109,7 +109,7 @@ def main(args: Namespace):
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()

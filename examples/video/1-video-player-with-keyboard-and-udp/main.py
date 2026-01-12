@@ -6,12 +6,12 @@ from queue import Queue
 from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
+from loggez import loggez_logger as logger
 
-from drone_ioact import ActionsQueue, DataChannel
-from drone_ioact.drones.video import (
+from robobase import ActionsQueue, DataChannel, ThreadGroup
+from roboimpl.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import ScreenDisplayer, UDPController
-from drone_ioact.utils import logger, ThreadGroup
+from roboimpl.data_consumers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
@@ -50,7 +50,7 @@ def main(args: Namespace):
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     video_player.stop_video()

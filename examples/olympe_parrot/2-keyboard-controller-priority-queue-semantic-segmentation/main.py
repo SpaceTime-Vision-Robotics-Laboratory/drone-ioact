@@ -5,17 +5,18 @@ import sys
 import time
 from queue import PriorityQueue
 from functools import partial
+from loggez import loggez_logger as logger
 
 from overrides import overrides
 import numpy as np
 import olympe
 
-from drone_ioact.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
-from drone_ioact import ActionsQueue, Action, DataItem, DataChannel
-from drone_ioact.drones.olympe_parrot import (
+from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup
+from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
+from roboimpl.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import ScreenDisplayer
-from drone_ioact.utils import logger, ThreadGroup, semantic_map_to_image
+from roboimpl.data_consumers import ScreenDisplayer
+from roboimpl.utils import semantic_map_to_image
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
@@ -75,7 +76,7 @@ def main():
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()

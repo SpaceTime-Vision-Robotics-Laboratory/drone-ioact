@@ -3,14 +3,14 @@
 import sys
 import time
 from queue import Queue
+from loggez import loggez_logger as logger
 
 import olympe
 
-from drone_ioact import ActionsQueue, DataChannel
-from drone_ioact.drones.olympe_parrot import (
+from robobase import ActionsQueue, DataChannel, ThreadGroup
+from roboimpl.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from drone_ioact.data_consumers import ScreenDisplayer
-from drone_ioact.utils import logger, ThreadGroup
+from roboimpl.data_consumers import ScreenDisplayer
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
@@ -40,7 +40,7 @@ def main():
     }).start()
 
     while not threads.is_any_dead():
-        logger.debug2(f"{data_channel}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     drone.disconnect()
