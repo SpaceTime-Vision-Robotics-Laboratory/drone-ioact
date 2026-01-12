@@ -10,7 +10,7 @@ try:
 except ImportError:
     from net_mask_splitter import MaskSplitterNet
 
-from drone_ioact import DataProducer, DataItem
+from robobase import DataProducer, DataItem
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_NUMBER_OF_POINTS = 2
