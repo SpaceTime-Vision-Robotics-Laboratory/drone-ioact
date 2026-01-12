@@ -1,14 +1,11 @@
 """actions_interfaces.py - Interfaces for interacting with the actions produced by a ActionProducers"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Callable
 from queue import Queue
 import threading
 
+from robobase.types import Action, ActionsCallback
 from robobase.utils import logger
-
-Action = str # actions are stored as simple strings for simplicity :)
-ActionsCallback = Callable[["ActionsConsumer", Action], bool]
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""

@@ -8,9 +8,8 @@ from datetime import datetime
 import threading
 import numpy as np
 
+from robobase.types import DataItem
 from robobase.utils import logger
-
-DataItem = dict[str, np.ndarray | int | str | float]
 
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
