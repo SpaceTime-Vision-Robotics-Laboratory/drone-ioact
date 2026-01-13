@@ -9,9 +9,10 @@ from roboimpl.utils import logger
 
 class VideoPlayer(threading.Thread):
     """video player implementation. Plays the video and defines the state of it (paused/current frame etc.)"""
-    def __init__(self, video: VREVideo):
+    def __init__(self, video: VREVideo, loop: bool=True):
         threading.Thread.__init__(self, daemon=True)
         self.video = video
+        self.loop = loop # if set to true, it will endlessly run, otherwise it stops after the video ends.
         self.fps = video.fps
         # video state
         self.is_paused = False
@@ -44,7 +45,10 @@ class VideoPlayer(threading.Thread):
                 now = datetime.now()
                 with self._current_frame_lock:
                     if not self.is_paused:
-                        self.frame_ix = (self.frame_ix + 1) % len(self.video)
+                        self.frame_ix = (self.frame_ix + 1)
+                        if self.frame_ix >= len(self.video) and not self.loop:
+                            self.is_done = True
+                        self.frame_ix = self.frame_ix % len(self.video)
                     self._current_frame = self.video[self.frame_ix]
                 if (diff := (1 / self.fps - (took_s := (datetime.now() - now).total_seconds()))) > 0:
                     time.sleep(diff)

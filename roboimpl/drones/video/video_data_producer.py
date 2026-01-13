@@ -11,4 +11,5 @@ class VideoDataProducer(DataProducer):
 
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
+        assert not self.video_player.is_done
         return self.video_player.get_current_frame()

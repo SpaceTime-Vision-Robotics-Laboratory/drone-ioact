@@ -1,4 +1,5 @@
 *.pt
 tmp/
 main_dbg.py
+log/
 
