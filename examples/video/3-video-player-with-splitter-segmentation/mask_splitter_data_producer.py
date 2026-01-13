@@ -218,17 +218,21 @@ class MaskSplitterDataProducer(DataProducer):
     @overrides
     def get_raw_data(self) -> DataItem:
         yolo_data = self.yolo_data_producer.get_raw_data()
+        res = {**yolo_data, "front_mask": None, "back_mask": None, "bbox_oriented": None, "splitter_segmentation": None}
         if yolo_data["segmentation"] is None or len(yolo_data["segmentation"]) == 0:
-            front_mask, back_mask, bbox_oriented, splitter_segmentation = None, None, None, None
-        else:
-            best_mask = yolo_data["segmentation"][0]
-            best_mask_xy_scaled = yolo_data["segmentation_xy"][0].astype(int)
-            res = self.find_best_target(yolo_data["rgb"], best_mask, best_mask_xy_scaled)
-            front_mask, back_mask = res.front_mask, res.back_mask
-            bbox_oriented = res.bbox_oriented
-            splitter_segmentation = res.segmented_frame
-        return {**yolo_data, "front_mask": front_mask, "back_mask": back_mask, "bbox_oriented": bbox_oriented,
-                "splitter_segmentation": splitter_segmentation}
+            return res
+
+        best_mask = yolo_data["segmentation"][0]
+        best_mask_xy_scaled = yolo_data["segmentation_xy"][0].astype(int)
+        target = self.find_best_target(yolo_data["rgb"], best_mask, best_mask_xy_scaled)
+        if target is None:
+            return res
+
+        res["front_mask"] = target.front_mask
+        res["back_mask"] = target.back_mask
+        res["sgemented_frame"] = target.segmented_frame
+        res["spliiter_segmentation"] = target.segmented_frame
+        return res
 
     @overrides
     def is_streaming(self) -> bool:
