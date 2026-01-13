@@ -17,10 +17,8 @@ class PHGMAESemanticDataProducer(DataProducer):
                  [255, 0, 0], [0, 0, 255], [0, 255, 255], [127, 127, 63]]
     CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
 
-    def __init__(self, rgb_data_producer: DataProducer, weights_path: str):
-        DataProducer.__init__(self, data_channel=rgb_data_producer.data_channel)
-        assert "rgb" in (st := self.data_channel.supported_types), f"'rgb' not in {st}"
-        self.rgb_data_producer = rgb_data_producer
+    def __init__(self, weights_path: str):
+        super().__init__(dependencies=["rgb"])
         self.weights_path = weights_path
 
         ckpt = tr.load(weights_path, map_location="cpu")
@@ -34,14 +32,9 @@ class PHGMAESemanticDataProducer(DataProducer):
         self.model = self.model.eval().to(DEVICE)
 
     @overrides
-    def get_raw_data(self) -> DataItem:
-        raw_data = self.rgb_data_producer.get_raw_data()
-        semantic = self._compute_sema(raw_data["rgb"])
-        return {**raw_data, "semantic": semantic}
-
-    @overrides
-    def is_streaming(self) -> bool:
-        return self.rgb_data_producer.is_streaming()
+    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
+        semantic = self._compute_sema(deps["rgb"])
+        return {"semantic": semantic}
 
     @tr.no_grad()
     def _compute_sema(self, rgb: np.ndarray) -> np.ndarray:

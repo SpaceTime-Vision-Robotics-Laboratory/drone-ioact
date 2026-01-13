@@ -11,7 +11,7 @@ from overrides import overrides
 import numpy as np
 import olympe
 
-from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup
+from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
@@ -21,7 +21,7 @@ from roboimpl.utils import semantic_map_to_image
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
-def screen_frame_semantic(data: DataItem, color_map: list[tuple[int, int, int]]) -> np.ndarray:
+def screen_frame_semantic(data: dict[str, DataItem], color_map: list[tuple[int, int, int]]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     sema_rgb = semantic_map_to_image(data["semantic"].argmax(-1), color_map).astype(np.uint8)
     combined = np.concatenate([data["rgb"], sema_rgb], axis=1)
@@ -56,10 +56,11 @@ def main():
     screen_frame_callback = None
 
     # define the threads
-    data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    dps = [OlympeDataProducer(drone=drone, data_channel=data_channel)]
     if len(sys.argv) == 3:
-        data_producer = PHGMAESemanticDataProducer(rgb_data_producer=data_producer, weights_path=sys.argv[2])
+        dps.append(PHGMAESemanticDataProducer(weights_path=sys.argv[2]))
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
+    data_producers = DataProducerList(data_channel=data_channel, data_producers=dps)
 
     key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
                      "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
@@ -70,7 +71,7 @@ def main():
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({
-        "Olympe data producer": data_producer,
+        "Data producers": data_producers,
         "Screen displayer": screen_displayer,
         "Olympe actions consumer": olympe_actions_consumer,
     }).start()

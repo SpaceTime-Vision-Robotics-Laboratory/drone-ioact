@@ -15,7 +15,7 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import (
     VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
@@ -29,7 +29,7 @@ SCREEN_HEIGHT = 480 # width is auto-scaled
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
 
-def screen_frame_callback(data: DataItem) -> np.ndarray:
+def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
     if data["bbox"] is not None:
@@ -81,12 +81,14 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    rgb_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
-    yolo_data_producer = YOLODataProducer(rgb_data_producer, weights_path=args.weights_path_yolo,
-                                          threshold=args.yolo_threshold)
-    mask_splitter_data_producer = MaskSplitterDataProducer(yolo_data_producer, args.weights_path_mask_splitter_network,
+    rgb_data_producer = VideoDataProducer(video_player=video_player)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
+    mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
+    data_producers = DataProducerList(data_channel=data_channel, data_producers=[rgb_data_producer, yolo_data_producer,
+                                                                                 mask_splitter_data_producer])
+
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
@@ -96,7 +98,7 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
-        "Data producer": mask_splitter_data_producer,
+        "Data producers": data_producers,
         "Screen displayer": screen_displayer,
         "Video actions consumer": video_actions_consumer,
     }).start()

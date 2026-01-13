@@ -15,10 +15,10 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.olympe_parrot import (
-    OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
+    OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer)
 from roboimpl.data_consumers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
@@ -29,7 +29,7 @@ SCREEN_HEIGHT = 480 # width is auto-scaled
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1
 
-def screen_frame_callback(data: DataItem) -> np.ndarray:
+def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
     shp = res.shape[0:2]
@@ -87,12 +87,14 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     # define the threads of the app
-    data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
-    yolo_data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
-                                          threshold=args.yolo_threshold)
-    mask_splitter_data_producer = MaskSplitterDataProducer(yolo_data_producer, args.weights_path_mask_splitter_network,
+    rgb_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
+    mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
+    data_producers = DataProducerList(data_channel=data_channel, data_producers=[rgb_data_producer, yolo_data_producer,
+                                                                                 mask_splitter_data_producer])
+
     key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
                      "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
@@ -103,7 +105,7 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
-        "Data producer": mask_splitter_data_producer,
+        "Data producers": data_producers,
         "Screen displayer": screen_displayer,
         "Video actions consumer": video_actions_consumer,
     }).start()

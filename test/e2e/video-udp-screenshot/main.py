@@ -8,7 +8,7 @@ from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
 
-from robobase import Action, ActionsQueue, DataChannel
+from robobase import Action, ActionsQueue, DataChannel, DataProducerList
 from robobase.utils import logger, ThreadGroup
 from roboimpl.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer
 from roboimpl.data_consumers import UDPController
@@ -50,14 +50,14 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    video_data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
+    data_producers = DataProducerList(data_channel, data_producers=[VideoDataProducer(video_player=video_player)])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
     video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
                                                   actions_callback=video_actions_callback)
 
     # start the threads
     threads = ThreadGroup({
-        "Video data producer": video_data_producer,
+        "Data producer": data_producers,
         "UDP controller": udp_controller,
         "Video actions consumer": video_actions_consumer,
     }).start()

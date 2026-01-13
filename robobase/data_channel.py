@@ -8,6 +8,8 @@ import numpy as np
 from robobase.types import DataItem
 from robobase.utils import logger
 
+class DataChannelIsClosed(ValueError): pass # pylint: disable=all # noqa
+
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
     def __init__(self, supported_types: list[str], eq_fn: Callable[[DataItem, DataItem], bool]):
@@ -17,35 +19,41 @@ class DataChannel:
         self.timestamp = "1900-01-01" # only used for debugging and logging. Don't use it for equality or logic!
 
         self._lock = threading.Lock()
-        self._data: DataItem = {}
+        self._data: dict[str, DataItem] = {}
         self._is_closed = False
 
-    def put(self, item: DataItem):
+    def is_open(self) -> bool:
+        """check is the channel is open. Used by other data producers to whether they can continue or not"""
+        return not self._is_closed
+
+    def put(self, item: dict[str, DataItem]):
         """Put data into the queue"""
         assert isinstance(item, dict), type(item)
         assert (ks := set(item.keys())) == (st := self.supported_types), f"Data keys: {ks} vs. Supported types: {st}"
         with self._lock:
-            assert not self._is_closed, "Cannot put data in a closed chanel"
+            if not self.is_open():
+                raise DataChannelIsClosed("Channel is closed, cannot put data.")
             if self._data == {} or not self.eq_fn(item, self._data):
                 self.timestamp = datetime.now().isoformat()
             self._data = item
             logger.trace("Received item: "
                          f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'")
 
-    def get(self) -> DataItem:
+    def get(self) -> dict[str, DataItem]:
         """Return the item from the channel"""
         with self._lock:
-            assert not self._is_closed, "Cannot get data from a closed chanel"
+            assert self.is_open(), "Cannot get data from a closed chanel"
             return deepcopy(self._data)
 
     def has_data(self) -> bool:
         """Checks if the channel has data"""
         with self._lock:
-            return len(self._data) > 0 and not self._is_closed
+            return len(self._data) > 0 and self.is_open()
 
     def close(self):
         """Closes the channel"""
-        assert self.has_data(), "cannot call close before any data was received"
+        if not self.has_data():
+            logger.warning("Does this matter?")
         with self._lock:
             self._is_closed = True
 
