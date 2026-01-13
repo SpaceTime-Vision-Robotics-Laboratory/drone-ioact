@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from robobase.data_channel import DataChannel
 
 def test_DataChannel_ctor():
@@ -8,6 +9,16 @@ def test_DataChannel_ctor():
     channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b)
     assert channel.supported_types == {"rgb"}
 
+def test_DataChannel_put():
+    channel = DataChannel(supported_types=["rgb", "hsv"], eq_fn=lambda a, b: a==b)
+    with pytest.raises(AssertionError):
+        channel.put({"rgb": 0})
+    with pytest.raises(AssertionError):
+        channel.put({"rgb": 0, "hsv": 0, "asdf": 0})
+    assert not channel.has_data()
+    channel.put({"rgb": 0, "hsv": 0})
+    assert channel.has_data()
+
 def test_DataChannel_eq_fn():
     channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b)
     d1 = {"rgb": 1}
@@ -15,3 +26,13 @@ def test_DataChannel_eq_fn():
     d3 = {"rgb": 1}
     assert not channel.eq_fn(d1, d2)
     assert channel.eq_fn(d1, d3)
+
+def test_DataChannel_data_storer(tmp_path: Path):
+    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path)
+    channel.put({"rgb": 0})
+    channel.put({"rgb": 0})
+    channel.put({"rgb": 1})
+    channel.put({"rgb": 1})
+    channel.put({"rgb": 2})
+    channel.close()
+    assert len(list(tmp_path.iterdir())) == 3
