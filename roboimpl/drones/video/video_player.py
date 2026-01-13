@@ -39,7 +39,7 @@ class VideoPlayer(threading.Thread):
         self.is_done = True
 
     def run(self):
-        self.is_paused = False
+        self.is_paused = self.is_paused
         while not self.is_done:
             try:
                 now = datetime.now()

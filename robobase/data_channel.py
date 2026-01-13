@@ -28,9 +28,9 @@ class _DataStorer(threading.Thread):
         self.data_queue = Queue(maxsize=DATA_STORER_QUEUE_MAXSIZE)
         self.data_channel = data_channel
 
-    def push(self, data: dict[str, DataItem], timestamp: datetime):
+    def push(self, data: dict[str, DataItem]):
         """push a data item to the data storer queue so it's later stored on disk"""
-        self.data_queue.put({"data": data, "timestamp": timestamp})
+        self.data_queue.put({"data": data, "timestamp": datetime.now().isoformat()})
 
     def run(self):
         while True:
@@ -54,8 +54,6 @@ class DataChannel:
         self.log_path = log_path or Path(logger.get_file_handler().baseFilename).parent / "DataChannel"
         self.store_logs = store_logs
 
-        self.timestamp = "1900-01-01" # only used for debugging and logging. Don't use it for equality or logic!
-
         self._lock = threading.Lock()
         self._data: dict[str, DataItem] = {}
         self._is_closed = False
@@ -77,10 +75,9 @@ class DataChannel:
         with self._lock:
             if not self.is_open():
                 raise DataChannelIsClosed("Channel is closed, cannot put data.")
-            if self._data == {} or not self.eq_fn(item, self._data):
-                self.timestamp = datetime.now().isoformat()
-                if self._data_storer is not None: # for logging
-                    self._data_storer.push(item, self.timestamp)
+            if self._data_storer is not None: # for logging
+                if self._data != {} and not self.eq_fn(item, self._data): # only push differnt items according to eq_fn
+                    self._data_storer.push(item)
             self._data = item
             logger.trace("Received item: "
                          f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'")
@@ -108,4 +105,4 @@ class DataChannel:
                 time.sleep(SLEEP_INTERVAL)
 
     def __repr__(self) -> str:
-        return f"[DataChannel] Types: {self.supported_types}. Timestamp: {self.timestamp}"
+        return f"[DataChannel] Types: {self.supported_types}"
