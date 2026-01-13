@@ -28,7 +28,7 @@ def test_DataChannel_eq_fn():
     assert channel.eq_fn(d1, d3)
 
 def test_DataChannel_data_storer(tmp_path: Path):
-    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path)
+    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path, store_logs=True)
     channel.put({"rgb": 0})
     channel.put({"rgb": 0})
     channel.put({"rgb": 1})

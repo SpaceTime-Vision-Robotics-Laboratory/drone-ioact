@@ -76,8 +76,8 @@ class DataChannel:
             if not self.is_open():
                 raise DataChannelIsClosed("Channel is closed, cannot put data.")
             if self._data_storer is not None: # for logging
-                if self._data != {} and not self.eq_fn(item, self._data): # only push differnt items according to eq_fn
-                    self._data_storer.push(item)
+                if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
+                    self._data_storer.push(item) # only push differnt items according to eq_fn
             self._data = item
             logger.trace("Received item: "
                          f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'")
