@@ -45,7 +45,7 @@ class VideoPlayer(threading.Thread):
                 now = datetime.now()
                 with self._current_frame_lock:
                     if not self.is_paused:
-                        self.frame_ix = (self.frame_ix + 1)
+                        self.frame_ix = self.frame_ix + 1
                         if self.frame_ix >= len(self.video) and not self.loop:
                             self.is_done = True
                         self.frame_ix = self.frame_ix % len(self.video)
