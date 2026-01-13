@@ -11,7 +11,7 @@ from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import (
@@ -25,7 +25,7 @@ SCREEN_HEIGHT = 480 # width is auto-scaled
 
 BBOX_THICKNES = 1
 
-def screen_frame_callback(data: DataItem, color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
+def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     if "bbox" in data and data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1] if only_top1_bbox else data["bbox"]
@@ -75,12 +75,12 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    data_producer = VideoDataProducer(video_player=video_player, data_channel=data_channel)
+    dps = [VideoDataProducer(video_player=video_player)]
     if args.weights_path_phg is not None:
-        data_producer = PHGMAESemanticDataProducer(data_producer, weights_path=args.weights_path_phg)
+        dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:
-        data_producer = YOLODataProducer(data_producer, weights_path=args.weights_path_yolo,
-                                         threshold=args.yolo_threshold)
+        dps.append(YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold))
+    data_producers = DataProducerList(data_channel, dps)
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
@@ -93,7 +93,7 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
-        "Semantic data producer": data_producer,
+        "Data producers": data_producers,
         "Semantic screen displayer": screen_displayer,
         "Video actions consumer": video_actions_consumer,
     }).start()

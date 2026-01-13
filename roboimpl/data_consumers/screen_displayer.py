@@ -27,7 +27,7 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
         self.photo: ImageTk.PhotoImage | None = None
 
     @staticmethod
-    def rgb_only_displayer(data: DataItem) -> np.ndarray:
+    def rgb_only_displayer(data: dict[str, DataItem]) -> np.ndarray:
         """returns the final frame as RGB from the current data (rgb, semantic etc.)"""
         return data["rgb"]
 
@@ -54,7 +54,7 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
 
     def run(self):
         prev_ts = start = datetime.now()
-        self.wait_for_initial_data()
+        self.wait_for_initial_data(timeout_s=10000)
         prev_data = curr_data = self.data_channel.get()
         self._startup_tk(image_resize(curr_data["rgb"], height=self.initial_h or curr_data["rgb"].shape[0], width=None))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())

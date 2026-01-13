@@ -3,5 +3,5 @@ from typing import Callable
 import numpy as np
 
 Action = str # actions are stored as simple strings for simplicity :)
-ActionsCallback = Callable[["ActionsConsumer", Action], bool]
-DataItem = dict[str, np.ndarray | int | str | float] # perception dictionary: {modality_name: modality_data}
+ActionsCallback = Callable[["ActionsConsumer", Action], bool] # noqa
+DataItem = np.ndarray | int | str | float # used for the DataChannel dictionary: {modality_name: dict[str, DataItem]}

@@ -40,15 +40,12 @@ class OlympeDataProducer(DataProducer):
         logger.info("Starting streaming...")
 
     @overrides
-    def get_raw_data(self) -> DataItem:
+    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
+        assert (A := self.drone.connected) and (B := self.drone.streaming.state == PdrawState.Playing), (A, B)
         self._wait_for_data()
         with self._current_frame_lock:
             return {"rgb": self._current_frame, "metadata": self._current_metadata}
-
-    @overrides
-    def is_streaming(self) -> bool:
-        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing
 
     def _wait_for_data(self):
         """wait for data at the beginning before anything was sent by the parrot drone"""

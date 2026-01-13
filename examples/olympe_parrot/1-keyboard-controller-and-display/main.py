@@ -7,7 +7,7 @@ from loggez import loggez_logger as logger
 
 import olympe
 
-from robobase import ActionsQueue, DataChannel, ThreadGroup
+from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.drones.olympe_parrot import (
     OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
 from roboimpl.data_consumers import ScreenDisplayer
@@ -25,6 +25,7 @@ def main():
 
     # define the threads
     olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    data_producers = DataProducerList(data_channel=data_channel, data_producers=[olympe_data_producer])
     key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
                      "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
@@ -34,7 +35,7 @@ def main():
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({
-        "Olympe data producer": olympe_data_producer,
+        "Data producers": data_producers,
         "Screen displayer": screen_displayer,
         "Olympe actions consumer": olympe_actions_consumer,
     }).start()

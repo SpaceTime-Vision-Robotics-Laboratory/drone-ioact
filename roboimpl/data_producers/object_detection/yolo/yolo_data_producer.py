@@ -16,9 +16,8 @@ START = datetime.now()
 
 class YOLODataProducer(DataProducer):
     """Yolo data producer - returns only a bounding box"""
-    def __init__(self, rgb_data_producer: DataProducer, weights_path: str, threshold: float):
-        super().__init__(rgb_data_producer.data_channel)
-        self.rgb_data_producer = rgb_data_producer
+    def __init__(self, weights_path: str, threshold: float):
+        super().__init__(dependencies=["rgb"])
         self.yolo = YOLO(weights_path)
         self.threshold = threshold
 
@@ -49,14 +48,9 @@ class YOLODataProducer(DataProducer):
         return bbox, bbox_confidennce, segmentation, segmentation_xy
 
     @overrides
-    def get_raw_data(self) -> DataItem:
+    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         """note: the segmentations are not resized as we may not care about all of them. You resize them!"""
-        raw_data = self.rgb_data_producer.get_raw_data()
-        yolo_res = self._compute_yolo(raw_data["rgb"])
+        yolo_res = self._compute_yolo(deps["rgb"])
         bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
-        return {**raw_data, "bbox": bbox, "bbox_confidence": bbox_confidence,
+        return {"bbox": bbox, "bbox_confidence": bbox_confidence,
                 "segmentation": segmentation, "segmentation_xy": segmentation_xy}
-
-    @overrides
-    def is_streaming(self) -> bool:
-        return self.rgb_data_producer.is_streaming()
