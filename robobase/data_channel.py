@@ -1,6 +1,7 @@
 """data_channel.py - Thread-safe channel to place perception data from the data modules"""
 from __future__ import annotations
 from copy import deepcopy
+import os
 from typing import Callable
 from datetime import datetime
 import threading
@@ -46,10 +47,13 @@ class _DataStorer(threading.Thread):
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
     def __init__(self, supported_types: list[str], eq_fn: Callable[[DataItem, DataItem], bool],
-                 log_path: Path | None = None):
+                 log_path: Path | None = None, store_logs: bool = os.getenv("DATA_CHANNEL_STORE_LOGS", "0") == "1"):
         assert len(supported_types) > 0, "cannot have a data channel that supports no data type (i.e. rgb, pose etc.)"
         self.supported_types = set(supported_types)
         self.eq_fn = eq_fn
+        self.log_path = log_path or Path(logger.get_file_handler().baseFilename).parent / "DataChannel"
+        self.store_logs = store_logs
+
         self.timestamp = "1900-01-01" # only used for debugging and logging. Don't use it for equality or logic!
 
         self._lock = threading.Lock()
@@ -57,9 +61,9 @@ class DataChannel:
         self._is_closed = False
 
         self._data_storer = None
-        if log_path is not None:
-            logger.info(f"Storing DataChannel data at '{log_path}'")
-            self._data_storer = _DataStorer(self, log_path)
+        if store_logs:
+            logger.info(f"Storing DataChannel logs at '{self.log_path}'")
+            self._data_storer = _DataStorer(self, self.log_path)
             self._data_storer.start()
 
     def is_open(self) -> bool:

@@ -4,13 +4,12 @@ from datetime import datetime
 import os
 from loggez import make_logger
 
-from .utils import get_project_root
+from robobase.utils import logger as base_logger
 
 LAST_DEBUG: dict[str, float] = {} # used by log_debug_every_s
 DEBUG_FREQ_S = float(os.getenv("DEBUG_FREQ_S", "2"))
 
-logger = make_logger("ROBOIMPL",
-                     log_file=Path.cwd() / f"{get_project_root()}/logs/{datetime.now().isoformat()[0:-6]}_ROBOIMPL.txt")
+logger = make_logger("ROBOIMPL", log_file=Path(base_logger.get_file_handler().baseFilename).parent / "ROBOIMPL.txt")
 
 def log_debug_every_s(start: datetime, msg: str):
     """logs only once every DEBUG_FREQ_S with logger.debug to avoid spam"""
