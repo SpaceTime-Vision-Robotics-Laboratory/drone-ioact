@@ -63,7 +63,7 @@ def main(args: Namespace):
     }).start()
 
     while not video_player.is_done and not threads.is_any_dead():
-        logger.trace(f"Data channel timestmap: {data_channel.timestamp}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"Data channel: {data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
     video_player.stop_video()
