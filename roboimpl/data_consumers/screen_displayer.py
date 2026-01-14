@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 import numpy as np
 
 from robobase import DataChannel, DataConsumer, DataItem, ActionsProducer, ActionsQueue, Action
-from roboimpl.utils import image_resize, logger, log_every_s
+from roboimpl.utils import image_resize, logger
 
 class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
@@ -53,15 +53,17 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
         self.root.bind("<KeyRelease>", self._on_key_release)
 
     def run(self):
-        prev_ts = start = datetime.now()
+        prev_ts = datetime.now()
         self.wait_for_initial_data(timeout_s=10000)
         prev_data = curr_data = self.data_channel.get()
         self._startup_tk(image_resize(curr_data["rgb"], height=self.initial_h or curr_data["rgb"].shape[0], width=None))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
-        fpss = []
+        fpss = [1/30]
         while self.data_channel.has_data():
             self.root.update()
+            fpss = fpss[-100:] if len(fpss) > 1000 else fpss
+            logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}")
 
             curr_data = self.data_channel.get()
             curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
@@ -82,8 +84,6 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
             prev_shape = curr_shape
             fpss.append((datetime.now() - prev_ts).total_seconds())
             prev_ts = datetime.now()
-            fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            log_every_s(start, f"FPS: {len(fpss) / sum(fpss):.2f}")
 
         self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")

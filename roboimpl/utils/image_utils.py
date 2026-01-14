@@ -2,7 +2,7 @@
 from typing import NamedTuple
 from PIL import Image, ImageDraw
 import numpy as np
-from loggez import make_logger2 as make_logger
+from loggez import make_logger as make_logger
 
 logger = make_logger("IMAGE_UTILS", exists_ok=True)
 

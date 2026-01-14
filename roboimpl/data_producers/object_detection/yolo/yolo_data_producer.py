@@ -1,18 +1,16 @@
 """yolo_data_producer.py - produces bounding boxes using a yolo pre-trained checkpoint"""
 import logging
-from datetime import datetime
 import numpy as np
 from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
 from ultralytics.engine.results import Masks, Boxes # pylint: disable=import-error
 from robobase import DataProducer, DataItem
-from roboimpl.utils import log_every_s
+from roboimpl.utils import logger
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 Bbox = tuple[int, int, int, int]
 Segmentation = np.ndarray
-START = datetime.now()
 
 class YOLODataProducer(DataProducer):
     """Yolo data producer - returns only a bounding box"""
@@ -29,14 +27,14 @@ class YOLODataProducer(DataProducer):
         masks = good_masks = results.masks
 
         if no_bbox := (boxes is None or boxes.conf is None or len(boxes.conf) == 0 or len(good_boxes) == 0):
-            log_every_s(START, f"No bounding box was produced or none above threshold {self.threshold}")
+            logger.log_every_s(f"No bounding box was produced or none above threshold {self.threshold}")
         else:
             good_boxes: Boxes = boxes[boxes.conf > self.threshold]
-            log_every_s(START, f"Kept {len(good_boxes)}/{len(boxes)} bounding boxes after applying threshold.")
+            logger.log_every_s(f"Kept {len(good_boxes)}/{len(boxes)} bounding boxes after applying threshold.")
             no_bbox = no_bbox and (len(good_boxes) == 0)
 
         if no_segm := (masks is None or len(masks.data) == 0):
-            log_every_s(START, "No segmentation masks were produced.")
+            logger.log_every_s("No segmentation masks were produced.")
         else:
             good_masks: Masks = masks[boxes.conf > self.threshold] if boxes.conf is not None else masks
             no_segm = no_segm and (len(good_masks) == 0)

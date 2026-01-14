@@ -1,5 +1,5 @@
 # minimum requirements to run the core library
-loggez>=0.7.1
+loggez>=0.7.2
 numpy>=1.21
 Pillow==11.3.0
 overrides==7.7.0
