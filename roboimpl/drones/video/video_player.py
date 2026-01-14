@@ -56,3 +56,6 @@ class VideoPlayer(threading.Thread):
             except Exception as e:
                 logger.error(e)
                 self.is_done = True
+
+    def __repr__(self):
+        return f"[VideoPlayer] {repr(self.video)}"

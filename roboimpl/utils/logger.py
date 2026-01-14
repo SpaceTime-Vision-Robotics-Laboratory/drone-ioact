@@ -2,14 +2,14 @@
 from pathlib import Path
 from datetime import datetime
 import os
-from loggez import make_logger
+from loggez import make_logger2 as make_logger
 
 from robobase.utils import logger as base_logger
 
 LAST_DEBUG: dict[str, float] = {} # used by log_debug_every_s
 DEBUG_FREQ_S = float(os.getenv("DEBUG_FREQ_S", "2"))
 
-logger = make_logger("ROBOIMPL", log_file=Path(base_logger.get_file_handler().baseFilename).parent / "ROBOIMPL.txt")
+logger = make_logger("ROBOIMPL", log_file=Path(base_logger.get_file_handler().file_path).parent / "ROBOIMPL.txt")
 
 def log_debug_every_s(start: datetime, msg: str):
     """logs only once every DEBUG_FREQ_S with logger.debug to avoid spam"""

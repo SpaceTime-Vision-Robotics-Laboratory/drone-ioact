@@ -36,10 +36,8 @@ class _DataStorer(threading.Thread):
         while True:
             try:
                 x = self.data_queue.get_nowait()
-                data: dict[str, DataItem] = x["data"]
-                ts: datetime = x["timestamp"]
-                np.save(pth := f"{self.path}/{ts}", data)
-                logger.debug(f"Stored at '{pth}'")
+                np.save(pth := f"{self.path}/{x['timestamp']}", x["data"])
+                logger.trace(f"Stored at '{pth}'")
             except Empty:
                 time.sleep(SLEEP_INTERVAL)
                 logger.trace("Empty queue on DataStorer")
@@ -51,7 +49,7 @@ class DataChannel:
         assert len(supported_types) > 0, "cannot have a data channel that supports no data type (i.e. rgb, pose etc.)"
         self.supported_types = set(supported_types)
         self.eq_fn = eq_fn
-        self.log_path = log_path or Path(logger.get_file_handler().baseFilename).parent / "DataChannel"
+        self.log_path = log_path or Path(logger.get_file_handler().file_path).parent / "DataChannel"
         self.store_logs = store_logs
 
         self._lock = threading.Lock()

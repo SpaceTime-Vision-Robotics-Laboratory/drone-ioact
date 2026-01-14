@@ -74,7 +74,8 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayer(VREVideo(args.video_path))).start() # start the video player
+    (video_player := VideoPlayer(VREVideo(args.video_path), loop=False)).start() # start the video player
+    logger.info(f"{video_player}")
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
