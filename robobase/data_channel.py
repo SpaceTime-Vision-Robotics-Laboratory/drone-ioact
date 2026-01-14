@@ -93,8 +93,6 @@ class DataChannel:
 
     def close(self):
         """Closes the channel"""
-        if not self.has_data():
-            logger.warning("Does this matter?")
         with self._lock:
             self._is_closed = True
         if self._data_storer is not None and (n := self._data_storer.data_queue.qsize()) > 0:

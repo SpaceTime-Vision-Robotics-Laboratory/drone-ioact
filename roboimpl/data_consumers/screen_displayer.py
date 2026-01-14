@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 import numpy as np
 
 from robobase import DataChannel, DataConsumer, DataItem, ActionsProducer, ActionsQueue, Action
-from roboimpl.utils import image_resize, logger, log_debug_every_s
+from roboimpl.utils import image_resize, logger, log_every_s
 
 class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
@@ -83,7 +83,7 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
             fpss.append((datetime.now() - prev_ts).total_seconds())
             prev_ts = datetime.now()
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            log_debug_every_s(start, f"FPS: {len(fpss) / sum(fpss):.2f}")
+            log_every_s(start, f"FPS: {len(fpss) / sum(fpss):.2f}")
 
         self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")
