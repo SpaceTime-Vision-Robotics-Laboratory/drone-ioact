@@ -1,6 +1,6 @@
 """generic utils file"""
 from pathlib import Path
+from loggez import make_logger
+from robobase.utils import logger as base_logger
 
-def get_project_root() -> Path:
-    """returns the project root"""
-    return Path(__file__).parents[2]
+logger = make_logger("ROBOIMPL", log_file=Path(base_logger.get_file_handler().file_path).parent / "ROBOIMPL.txt")
