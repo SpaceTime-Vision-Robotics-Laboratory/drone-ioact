@@ -32,17 +32,10 @@ CIRCLE_RADIUS = 1
 def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
-    shp = res.shape[0:2]
-
-    if data["bbox"] is not None:
-        data["bbox"] = data["bbox"][0:1] # plot just top-1 bbox
-        for bbox in data["bbox"]:
-            x1, y1, x2, y2 = bbox
-            image_draw_rectangle(res, (y1, x1), (y2, x2), color=Color.GREEN, thickness=BBOX_THICKNESS, inplace=True)
 
     if data["segmentation"] is not None:
         all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
-        img_segmentations = image_resize(all_segmentations.astype(np.uint8), *shp)
+        img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
         image_paste(res, img_segmentations, inplace=True)
 
     if data["bbox_oriented"] is not None:
@@ -53,11 +46,15 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
         image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
     if data["front_mask"] is not None:
-        front_mask = image_resize((data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), *shp)
-        image_paste(res, front_mask, inplace=True)
+        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
-        back_mask = image_resize((data["back_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), *shp)
-        image_paste(res, back_mask, inplace=True)
+        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
+
+    if data["bbox"] is not None:
+        data["bbox"] = data["bbox"][0:1]
+        for bbox in data["bbox"]: # plot all bboxes
+            x1, y1, x2, y2 = bbox
+            image_draw_rectangle(res, (y1, x1), (y2, x2), color=Color.BLACK, thickness=BBOX_THICKNESS, inplace=True)
 
     return res
 

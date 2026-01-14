@@ -32,11 +32,6 @@ CIRCLE_RADIUS = 1.25
 def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
-    if data["bbox"] is not None:
-        data["bbox"] = data["bbox"][0:1]
-        for bbox in data["bbox"]: # plot all bboxes
-            x1, y1, x2, y2 = bbox
-            image_draw_rectangle(res, (y1, x1), (y2, x2), color=Color.GREEN, thickness=BBOX_THICKNESS, inplace=True)
 
     if data["segmentation"] is not None:
         all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
@@ -54,6 +49,12 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
         image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
         image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
+
+    if data["bbox"] is not None:
+        data["bbox"] = data["bbox"][0:1]
+        for bbox in data["bbox"]: # plot all bboxes
+            x1, y1, x2, y2 = bbox
+            image_draw_rectangle(res, (y1, x1), (y2, x2), color=Color.BLACK, thickness=BBOX_THICKNESS, inplace=True)
 
     return res
 
