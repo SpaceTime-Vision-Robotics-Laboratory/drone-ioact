@@ -15,16 +15,16 @@ def test_i_data_producer_list_basic():
             return {"rgb_rev": deps["rgb"][::-1]}
 
     channel = DataChannel(supported_types=["rgb", "rgb_rev"], eq_fn=lambda a, b: np.allclose(a["rgb"], b["rgb"]))
-    data_producers = [RGB(modalities=["rgb"]), RGBReverse(modalities=["rgb_rev"])]
+    data_producers = [RGB(modalities=["rgb"]), RGBReverse(modalities=["rgb_rev"], dependencies=["rgb"])]
     dp_list = DataProducerList(channel, data_producers) # topo-sort calling of produce() is done automatically
 
-    assert channel._data is not None
+    assert not channel.has_data()
+    # dp_list.produce_all() # do this instead if the test fails with no error from the other thread
     dp_list.start()
-
     time.sleep(1)
     channel.close()
 
-    assert channel._data is not None
+    assert len(channel._data) > 0
     assert (channel._data["rgb"] != 0).all() # unclear where the iteration will stop but we expect at least 2 iterations
 
 if __name__ == "__main__":

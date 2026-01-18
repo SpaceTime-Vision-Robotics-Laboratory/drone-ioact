@@ -16,7 +16,7 @@ from robobase.utils import logger
 DATA_STORER_QUEUE_MAXSIZE = 100
 SLEEP_INTERVAL = 0.01
 
-class DataChannelIsClosed(ValueError): pass # pylint: disable=all # noqa
+class DataChannelClosedError(ValueError): pass # pylint: disable=all # noqa
 
 class _DataStorer(threading.Thread):
     """internal thread for storing DataChannel data"""
@@ -72,7 +72,7 @@ class DataChannel:
         assert (ks := set(item.keys())) == (st := self.supported_types), f"Data keys: {ks} vs. Supported types: {st}"
         with self._lock:
             if not self.is_open():
-                raise DataChannelIsClosed("Channel is closed, cannot put data.")
+                raise DataChannelClosedError("Channel is closed, cannot put data.")
             if self._data_storer is not None: # for logging
                 if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
                     self._data_storer.push(item) # only push differnt items according to eq_fn

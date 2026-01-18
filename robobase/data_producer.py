@@ -3,12 +3,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from robobase.types import DataItem
+from robobase.utils import parsed_str_type
 
 class DataProducer(ABC):
     """DataProducer - interface for a single data producer. It has a produce() method and a list of dependencies"""
     def __init__(self, modalities: list[str], dependencies: list[str] | None = None):
         assert isinstance(modalities, list) and len(modalities) > 0, type(modalities)
-        assert dependencies is None or (isinstance(dependencies, list) and len(dependencies) > 0), type(dependencies)
+        assert dependencies is None or isinstance(dependencies, list), type(dependencies)
         self._dependencies = dependencies or []
         self._modalities = modalities
 
@@ -25,3 +26,6 @@ class DataProducer(ABC):
     def dependencies(self) -> list[str]:
         """The list of dependencies for this data producer"""
         return self._dependencies
+
+    def __repr__(self):
+        return f"[{parsed_str_type(self)}] Modalities: {self.modalities}. Deps: {self.dependencies}"
