@@ -43,7 +43,7 @@ expected="OK"
 test "$res" == "$expected" || ( echo -e "Expected $expected.\nGot $res."; kill $PID_MAIN $$; )
 
 [[ -f frame.png && $(head -c 4 frame.png) == $'\x89PNG' ]] \
-  && echo "Valid PNG" || ( echo "Invalid or missing PNG"; kill $PID_MAIN $$; rm -f frame.png)
+  && echo "OK: Valid PNG" || ( echo "Invalid or missing PNG"; kill $PID_MAIN $$; rm -f frame.png )
 
 kill $PID_MAIN
 rm -f frame.png

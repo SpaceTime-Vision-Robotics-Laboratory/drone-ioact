@@ -15,7 +15,8 @@ def test_i_data_producer_list_basic():
             return {"rgb_rev": deps["rgb"][::-1]}
 
     channel = DataChannel(supported_types=["rgb", "rgb_rev"], eq_fn=lambda a, b: np.allclose(a["rgb"], b["rgb"]))
-    dp_list = DataProducerList(channel, [RGB(), RGBReverse()]) # topo-sort calling of produce() is done automatically
+    data_producers = [RGB(modalities=["rgb"]), RGBReverse(modalities=["rgb_rev"])]
+    dp_list = DataProducerList(channel, data_producers) # topo-sort calling of produce() is done automatically
 
     assert channel._data is not None
     dp_list.start()

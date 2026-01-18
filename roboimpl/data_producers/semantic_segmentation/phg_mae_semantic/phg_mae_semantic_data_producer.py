@@ -18,7 +18,7 @@ class PHGMAESemanticDataProducer(DataProducer):
     CLASSES = ["land", "forest", "residential", "road", "little-objects", "water", "sky", "hill"]
 
     def __init__(self, weights_path: str):
-        super().__init__(dependencies=["rgb"])
+        super().__init__(modalities=["semantic"], dependencies=["rgb"])
         self.weights_path = weights_path
 
         ckpt = tr.load(weights_path, map_location="cpu")

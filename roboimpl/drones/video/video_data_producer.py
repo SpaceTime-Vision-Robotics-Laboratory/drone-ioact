@@ -6,7 +6,7 @@ from .video_player import VideoPlayer
 class VideoDataProducer(DataProducer):
     """VideoDataProducer implementation"""
     def __init__(self, video_player: VideoPlayer):
-        DataProducer.__init__(self)
+        super().__init__(modalities=["rgb", "frame_ix"])
         self.video_player = video_player
 
     @overrides

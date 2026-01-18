@@ -15,7 +15,8 @@ Segmentation = np.ndarray
 class YOLODataProducer(DataProducer):
     """Yolo data producer - returns only a bounding box"""
     def __init__(self, weights_path: str, threshold: float):
-        super().__init__(dependencies=["rgb"])
+        super().__init__(modalities=["bbox", "bbox_confidence", "segmentation", "segmentation_xy"],
+                         dependencies=["rgb"])
         self.yolo = YOLO(weights_path)
         self.threshold = threshold
 

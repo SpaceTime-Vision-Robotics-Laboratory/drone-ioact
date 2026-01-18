@@ -56,7 +56,7 @@ def main():
     screen_frame_callback = None
 
     # define the threads
-    dps = [OlympeDataProducer(drone=drone, data_channel=data_channel)]
+    dps = [OlympeDataProducer(drone=drone)]
     if len(sys.argv) == 3:
         dps.append(PHGMAESemanticDataProducer(weights_path=sys.argv[2]))
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)

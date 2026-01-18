@@ -10,28 +10,12 @@ from vre_video import VREVideo
 
 from robobase import Action, ActionsQueue, DataChannel, DataProducerList
 from robobase.utils import logger, ThreadGroup
-from roboimpl.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer
+from roboimpl.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback
 from roboimpl.data_consumers import UDPController
 from roboimpl.utils import image_write
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
-
-def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) -> bool:
-    """the actions callback from generic actions to video-specific ones"""
-    video_player = actions_maker.video_player
-    if action == "DISCONNECT":
-        video_player.stop_video()
-    if action == "PLAY_PAUSE":
-        video_player.is_paused = not video_player.is_paused
-    if action == "SKIP_AHEAD_ONE_SECOND":
-        video_player.increment_frame(video_player.fps)
-    if action == "GO_BACK_ONE_SECOND":
-        video_player.increment_frame(-video_player.fps)
-    if action == "TAKE_SCREENSHOT":
-        image_write(video_player.get_current_frame()["rgb"], pth := f"{Path.cwd()}/frame.png")
-        logger.debug(f"Stored screenshot at '{pth}'")
-    return True
 
 def get_args() -> Namespace:
     """cli args"""
@@ -53,7 +37,7 @@ def main(args: Namespace):
     data_producers = DataProducerList(data_channel, data_producers=[VideoDataProducer(video_player=video_player)])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
     video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
-                                                  actions_callback=video_actions_callback)
+                                                  actions_callback=video_actions_callback, write_path=Path.cwd())
 
     # start the threads
     threads = ThreadGroup({

@@ -84,7 +84,7 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     # define the threads of the app
-    rgb_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    rgb_data_producer = OlympeDataProducer(drone=drone)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,

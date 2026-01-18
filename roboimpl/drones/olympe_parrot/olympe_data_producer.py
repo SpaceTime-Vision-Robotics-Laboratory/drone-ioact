@@ -8,7 +8,7 @@ import cv2
 import olympe
 from olympe.video.pdraw import PdrawState
 
-from robobase import DataProducer, DataChannel, DataItem
+from robobase import DataProducer, DataItem
 from roboimpl.utils import logger
 
 class OlympeDataProducer(DataProducer):
@@ -20,8 +20,8 @@ class OlympeDataProducer(DataProducer):
     SAVE_EVERY_N_METADATA = 100
     WAIT_FOR_DATA_SECONDS = 5
 
-    def __init__(self, drone: olympe.Drone, data_channel: DataChannel):
-        DataProducer.__init__(self, data_channel)
+    def __init__(self, drone: olympe.Drone):
+        super().__init__(modalities=["rgb", "metadata"])
         assert drone.connected, f"{drone} is not connected"
         assert drone.streaming is not None, f"{drone} drone.streaming is None"
         self.drone = drone

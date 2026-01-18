@@ -24,7 +24,7 @@ def main():
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     # define the threads
-    olympe_data_producer = OlympeDataProducer(drone=drone, data_channel=data_channel)
+    olympe_data_producer = OlympeDataProducer(drone=drone)
     data_producers = DataProducerList(data_channel=data_channel, data_producers=[olympe_data_producer])
     key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
                      "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
