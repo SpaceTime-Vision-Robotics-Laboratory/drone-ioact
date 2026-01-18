@@ -11,6 +11,7 @@ class DataProducerList(threading.Thread):
     def __init__(self, data_channel: DataChannel, data_producers: list[DataProducer]):
         threading.Thread.__init__(self, daemon=True)
         assert isinstance(data_channel, DataChannel), f"data_channel is of wrong type: {type(data_channel)}"
+        assert (A:=data_channel.supported_types) == (B:=set(sum([d.modalities for d in data_producers], []))), (A, B)
         self._data_channel = data_channel
         self.data_producers = data_producers
 
@@ -19,12 +20,20 @@ class DataProducerList(threading.Thread):
         """The data queue where the data is inserted"""
         return self._data_channel
 
+    def produce_all(self) -> dict[str, DataItem]:
+        """Calls all the producers in topological order and synchronous"""
+        data: dict[str, DataItem] = {}
+        for data_producer in self.data_producers: # TODO: topo-sort
+            producer_data = data_producer.produce(deps=data)
+            if (A := set(producer_data.keys())) != set(B := data_producer.modalities):
+                raise KeyError(f"Producer {data_producer} with modalities {B} produced {A}.")
+            data |= producer_data
+        return data
+
     def run(self):
         while True:
             try:
-                data: dict[str, DataItem] = {}
-                for data_producer in self.data_producers: # TODO: topo-sort
-                    data |= data_producer.produce(deps=data)
+                data = self.produce_all()
                 self.data_channel.put(data)
             except DataChannelIsClosed: # in case it closes between is_open() check and put(data)
                 break

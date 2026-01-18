@@ -101,4 +101,4 @@ class DataChannel:
                 time.sleep(SLEEP_INTERVAL)
 
     def __repr__(self) -> str:
-        return f"[DataChannel] Types: {self.supported_types}"
+        return f"[DataChannel] Types: {self.supported_types}. Has data: {self.has_data()}. Open: {self.is_open()}."
