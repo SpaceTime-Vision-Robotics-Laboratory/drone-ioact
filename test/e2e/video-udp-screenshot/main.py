@@ -8,11 +8,10 @@ from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
 
-from robobase import Action, ActionsQueue, DataChannel, DataProducerList
+from robobase import ActionsQueue, DataChannel, DataProducerList
 from robobase.utils import logger, ThreadGroup
 from roboimpl.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback
 from roboimpl.data_consumers import UDPController
-from roboimpl.utils import image_write
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
