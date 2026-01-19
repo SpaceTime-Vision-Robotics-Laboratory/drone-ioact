@@ -9,6 +9,9 @@ import numpy as np
 from robobase import DataChannel, DataItem, Controller, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
+TIMEOUT_S = 10
+SLEEP_DURATION_S = 0.1
+
 class ScreenDisplayer(Controller):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, screen_height: int | None = None,
@@ -52,8 +55,8 @@ class ScreenDisplayer(Controller):
 
     @overrides
     def run(self):
+        self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
         prev_ts = datetime.now()
-        self.wait_for_initial_data(timeout_s=10000)
         prev_data = curr_data = self.data_channel.get()
         self._startup_tk(image_resize(curr_data["rgb"], height=self.initial_h or curr_data["rgb"].shape[0], width=None))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
