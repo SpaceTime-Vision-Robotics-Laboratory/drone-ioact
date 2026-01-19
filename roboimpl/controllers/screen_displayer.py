@@ -1,22 +1,20 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
-import threading
 from datetime import datetime
 import tkinter as tk
 from typing import Callable
 from PIL import Image, ImageTk
+from overrides import overrides
 import numpy as np
 
-from robobase import DataChannel, DataConsumer, DataItem, ActionsProducer, ActionsQueue, Action
+from robobase import DataChannel, DataItem, Controller, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
-class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
+class ScreenDisplayer(Controller):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, screen_height: int | None = None,
                  screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,
                  key_to_action: dict[str, Action] | None = None):
-        DataConsumer.__init__(self, data_channel)
-        ActionsProducer.__init__(self, actions_queue)
-        threading.Thread.__init__(self, daemon=True)
+        super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.initial_h = screen_height
         self.key_to_action = key_to_action = key_to_action or {}
         assert all(v in actions_queue.actions for v in self.key_to_action.values()), (key_to_action, actions_queue)
@@ -52,6 +50,7 @@ class ScreenDisplayer(DataConsumer, ActionsProducer, threading.Thread):
         self.canvas.focus_set()
         self.root.bind("<KeyRelease>", self._on_key_release)
 
+    @overrides
     def run(self):
         prev_ts = datetime.now()
         self.wait_for_initial_data(timeout_s=10000)

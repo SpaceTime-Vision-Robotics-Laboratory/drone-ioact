@@ -1,7 +1,7 @@
 from pytest_mock import MockerFixture
 from queue import Queue
 from robobase import ActionsQueue, DataChannel
-from roboimpl.data_consumers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer
 
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}

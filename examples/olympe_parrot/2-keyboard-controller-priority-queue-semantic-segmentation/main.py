@@ -14,8 +14,8 @@ import olympe
 from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.drones.olympe_parrot import (
-    OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from roboimpl.data_consumers import ScreenDisplayer
+    OlympeDataProducer, OlympeActionConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
+from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image
 
 QUEUE_MAX_SIZE = 30
@@ -67,7 +67,7 @@ def main():
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
+    olympe_actions_consumer = OlympeActionConsumer(drone=drone, actions_queue=actions_queue,
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({

@@ -1,13 +1,13 @@
 """udp_controller.py - Converts a UDP message to a generic action. Useful for end-to-end tests."""
-import threading
 import socket
+from overrides import overrides
 
-from robobase import DataProducer, DataConsumer, ActionsProducer, ActionsQueue, Action
+from robobase import DataProducer, Controller, ActionsQueue, Action
 from roboimpl.utils import logger
 
 HOST = "127.0.0.1"
 
-class UDPController(DataConsumer, ActionsProducer, threading.Thread):
+class UDPController(Controller):
     """
     Converts a UDP message to a generic action.
     Parameters:
@@ -16,9 +16,7 @@ class UDPController(DataConsumer, ActionsProducer, threading.Thread):
     - port The UDP port where this controller listens for commands from
     """
     def __init__(self, data_channel: DataProducer, actions_queue: ActionsQueue, port: int):
-        DataConsumer.__init__(self, data_channel)
-        ActionsProducer.__init__(self, actions_queue)
-        threading.Thread.__init__(self, daemon=True)
+        super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.port = port
         self.actions = set(actions_queue.actions)
 
@@ -26,6 +24,7 @@ class UDPController(DataConsumer, ActionsProducer, threading.Thread):
         """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
         self.actions_queue.put(action, block=True)
 
+    @overrides
     def run(self):
         self.wait_for_initial_data()
         (s := socket.socket(socket.AF_INET, socket.SOCK_DGRAM)).bind((HOST, self.port))
@@ -37,9 +36,9 @@ class UDPController(DataConsumer, ActionsProducer, threading.Thread):
             logger.debug(f"Received from '{addr[0]}:{addr[1]}', message: '{message}'")
 
             if message not in self.actions:
-                logger.debug(msg := f"Unknown message: {message}")
+                logger.warning(msg := f"Unknown message: {message}")
+                logger.debug(msg)
             else:
-                logger.debug(f"Recevied '{message}'. Pushing to the actions queue.")
                 msg = "OK"
                 self.add_to_queue(message)
 

@@ -3,9 +3,9 @@
 try:
     from .video_player import VideoPlayer
     from .video_data_producer import VideoDataProducer
-    from .video_actions_consumer import VideoActionsConsumer
+    from .video_actions_consumer import VideoActionConsumer
     from .video_actions import video_actions_callback, VIDEO_SUPPORTED_ACTIONS
-    __all__ = ["VideoPlayer", "VideoDataProducer", "VideoActionsConsumer",
+    __all__ = ["VideoPlayer", "VideoDataProducer", "VideoActionConsumer",
                "video_actions_callback", "VIDEO_SUPPORTED_ACTIONS"]
 except ImportError as e:
     from roboimpl.utils import logger

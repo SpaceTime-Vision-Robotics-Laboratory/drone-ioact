@@ -18,8 +18,8 @@ from mask_splitter_data_producer import MaskSplitterDataProducer
 from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import (
-    VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
-from roboimpl.data_consumers import ScreenDisplayer
+    VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
+from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
@@ -95,7 +95,7 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
+    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
                                                   actions_callback=video_actions_callback)
 
     # start the threads

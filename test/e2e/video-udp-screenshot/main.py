@@ -10,8 +10,8 @@ from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, DataProducerList
 from robobase.utils import logger, ThreadGroup
-from roboimpl.drones.video import VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback
-from roboimpl.data_consumers import UDPController
+from roboimpl.drones.video import VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback
+from roboimpl.controllers import UDPController
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
@@ -35,7 +35,7 @@ def main(args: Namespace):
     # define the threads of the app
     data_producers = DataProducerList(data_channel, data_producers=[VideoDataProducer(video_player=video_player)])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
+    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
                                                   actions_callback=video_actions_callback, write_path=Path.cwd())
 
     # start the threads

@@ -1,25 +1,13 @@
 """actions_interfaces.py - Interfaces for interacting with the actions produced by a ActionProducers"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from queue import Queue
 import threading
 
 from robobase.types import Action, ActionsCallback
 from robobase.utils import logger
 from robobase.actions_queue import ActionsQueue
 
-class ActionsProducer(ABC):
-    """Interface defining the requirements of an actions producer (i.e. sending to a ActionsConsumer)"""
-    def __init__(self, actions_queue: ActionsQueue):
-        assert isinstance(actions_queue, ActionsQueue), f"queue must inherit ActionsQueue: {type(actions_queue)}"
-        self._actions_queue = actions_queue
-
-    @property
-    def actions_queue(self) -> Queue:
-        """The actions queue where the actions are inserted"""
-        return self._actions_queue
-
-class ActionsConsumer(ABC, threading.Thread):
+class ActionConsumer(ABC, threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to receive an action & apply it to the drone"""
     def __init__(self, actions_queue: ActionsQueue, actions_callback: ActionsCallback):
         threading.Thread.__init__(self, daemon=True)

@@ -34,7 +34,8 @@ class TargetIBVS:
 
 class MaskSplitterDataProducer(DataProducer):
     def __init__(self, splitter_model_path: str, mask_threshold: float, bbox_threshold: float):
-        super().__init__(dependencies=["rgb", "segmentation_xy", "segmentation"])
+        super().__init__(modalities=["front_mask", "back_mask", "bbox_oriented", "splitter_segmentation"],
+                         dependencies=["rgb", "segmentation_xy", "segmentation"])
         self.splitter_model = MaskSplitterNet(in_channels=4, out_channels=2, base_channels=32, dropout_rate=0)
         self._load_and_warmup_model(splitter_model_path)
 

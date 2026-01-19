@@ -3,9 +3,9 @@ import olympe
 from olympe.video.pdraw import PdrawState
 from overrides import overrides
 
-from robobase import ActionsConsumer, ActionsQueue, ActionsCallback
+from robobase import ActionConsumer, ActionsQueue, ActionsCallback
 
-class OlympeActionsConsumer(ActionsConsumer):
+class OlympeActionConsumer(ActionConsumer):
     """OlympeActionsMaker: Takes generic actions and converts them to olympe-specific commands."""
     def __init__(self, drone: olympe.Drone, actions_queue: ActionsQueue, actions_callback: ActionsCallback):
         super().__init__(actions_queue, actions_callback)

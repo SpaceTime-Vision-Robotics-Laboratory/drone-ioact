@@ -1,13 +1,13 @@
 """video_actions.py - defines all the supported actions of an video player from our generic ones to the video's"""
 from robobase import Action
 from roboimpl.utils import logger, image_write
-from .video_actions_consumer import VideoActionsConsumer
+from .video_actions_consumer import VideoActionConsumer
 
 VIDEO_SUPPORTED_ACTIONS: set[str] = {
     "DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"
 }
 
-def video_actions_callback(actions_maker: VideoActionsConsumer, action: Action) -> bool:
+def video_actions_callback(actions_maker: VideoActionConsumer, action: Action) -> bool:
     """the actions callback from generic actions to video-specific ones"""
     video_player = actions_maker.video_player
     if action == "DISCONNECT":

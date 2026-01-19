@@ -9,8 +9,8 @@ import olympe
 
 from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.drones.olympe_parrot import (
-    OlympeDataProducer, OlympeActionsConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
-from roboimpl.data_consumers import ScreenDisplayer
+    OlympeDataProducer, OlympeActionConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
+from roboimpl.controllers import ScreenDisplayer
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
@@ -31,7 +31,7 @@ def main():
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action,
                                        screen_height=SCREEN_HEIGHT)
-    olympe_actions_consumer = OlympeActionsConsumer(drone=drone, actions_queue=actions_queue,
+    olympe_actions_consumer = OlympeActionConsumer(drone=drone, actions_queue=actions_queue,
                                                     actions_callback=olympe_actions_callback)
 
     threads = ThreadGroup({

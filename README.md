@@ -14,11 +14,11 @@ The usual flow is like this:
 
  Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Actions Consumer -- raw action --> Drone
 (robot)                                       (rgb, pose...)     (LIFT, MOVE...)                                       (robot)
-               |                ↑                   ↓                   ↑
-               |-------> pose                [Data Consumer1 ~ Actions Producer1]
-                         rgb -> semantic     [Data Consumer2 ~         n/a      ]
-                             -> depth        [Data Consumer3 ~ Actions Producer3]
-                                  -> normals [Data Consumer4 ~         n/a      ]
+               |                ↑                  |                    ↑
+               |-------> pose                      |-> [Controller 1] --|
+                         rgb -> semantic           |-- [Controller 2] --|
+                             -> depth              |       ...          |
+                                  -> normals       |-- [Controller n] --|
 ```
 
 Every `main` script will contain the following logic:
@@ -31,19 +31,19 @@ def main():
     actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
-    # defines the threads of this application: all the data & actions producers and consumers.
-    raw_data_producer = XXXDataProducer(drone) # populates the data channel with RGB & pose from drone
+    # define the data producers. XXXDataProducer is low-level while the rest are higher level (i.e. semantic segmentation)
+    drone2data = XXXDataProducer(drone) # populates the data channel with RGB & pose from drone
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
-    data_producers = DataProducerList(channel, [raw_data_producer, semantic_data_producer, ...]) # 'perception' data
-
+    data_producers = DataProducerList(channel, [drone2data, semantic_data_producer, ...]) # data structure for all data
+    # define the controllers
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
-    actions_maker = XXXActionsConsumer(drone, actions_queue) # converts a generic action to an actual drone action
+    action2drone = XXXActionConsumer(drone, actions_queue) # converts a generic action to an actual drone action
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Data producers": data_producers,
         "Screen displayer (+keyboard)": screen_displayer,
-        "Actions maker": actions_maker,
+        "Actions Consumer": action2drone,
     }).start()
 
     while not threads.is_any_dead(): # wait for any of them to die or drone to disconnect

@@ -10,8 +10,8 @@ from loggez import loggez_logger as logger
 
 from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.drones.video import (
-    VideoPlayer, VideoActionsConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
-from roboimpl.data_consumers import ScreenDisplayer, UDPController
+    VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
+from roboimpl.controllers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
@@ -38,7 +38,7 @@ def main(args: Namespace):
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    video_actions_consumer = VideoActionsConsumer(video_player=video_player, actions_queue=actions_queue,
+    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
                                                   actions_callback=video_actions_callback)
 
     # start the threads
