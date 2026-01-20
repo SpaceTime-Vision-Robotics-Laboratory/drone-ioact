@@ -35,15 +35,18 @@ def main():
     drone2data = XXXDataProducer(drone) # populates the data channel with RGB & pose from drone
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducerList(channel, [drone2data, semantic_data_producer, ...]) # data structure for all data
-    # define the controllers
+    # define the controllers (only screen displayer + keyboard controls here)
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
-    action2drone = XXXActionConsumer(drone, actions_queue) # converts a generic action to an actual drone action
+    # action->drone converts a generic action to an actual drone action
+    def XXXactions_fn(action: Action) -> bool:
+        return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
+    action2drone = ActionConsumer(drone, actions_queue, actions_fn=XXXactions_fn, termination_fn=lambda: drone.is_alive)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
-        "Data producers": data_producers,
+        "Drone -> Data": data_producers,
         "Screen displayer (+keyboard)": screen_displayer,
-        "Actions Consumer": action2drone,
+        "Action -> Drone": action2drone,
     }).start()
 
     while not threads.is_any_dead(): # wait for any of them to die or drone to disconnect
