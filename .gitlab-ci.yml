@@ -27,9 +27,9 @@ unit_tests:
     - pip install pytest pytest-mock
     - pytest test/robobase/unit test/roboimpl/unit
 
-e2e_test_udp_screenshot:
+e2e_tests:
   script:
     - apt-get update
     - apt install -y lsof netcat ffmpeg
     - wget https://gitlab.com/video-representations-extractor/video-representations-extractor/-/raw/master/resources/test_video.mp4 -P test/e2e/video-udp-screenshot 2>/dev/null
-    - bash test/e2e/video-udp-screenshot/run.sh
+    - bash test/e2e/run_all.sh
