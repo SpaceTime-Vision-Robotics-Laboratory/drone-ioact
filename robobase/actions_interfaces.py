@@ -42,4 +42,4 @@ class ActionConsumer(threading.Thread):
             if res is False:
                 logger.warning(f"Could not perform action '{action}'")
 
-        logger.info(f"Stopping {self}. {self.termination_fn()=}")
+        logger.debug(f"Stopping {self}. {self.termination_fn()=}")
