@@ -12,7 +12,7 @@ from robobase.actions_queue import ActionsQueue
 
 INITIAL_DATA_MAX_DURATION_S = 5
 INITIAL_DATA_SLEEP_DURATION_S = 0.1
-DATA_POLLING_INTERVAL_S = 1
+DATA_POLLING_INTERVAL_S = 0.01
 
 class Controller(threading.Thread):
     """
@@ -62,12 +62,13 @@ class Planner(Controller):
     def run(self):
         """default data polling scheduling"""
         super().wait_for_initial_data(self.initial_data_sleep_duration_s, self.initial_data_sleep_duration_s)
-        prev_data = curr_data = self.data_channel.get()
+        prev_data = None
         while self.data_channel.has_data():
             curr_data = self.data_channel.get()
-            if self.data_channel.eq_fn(prev_data, curr_data):
-                logger.log_every_s("Previous data equals to current data. Skipping.")
+            if prev_data is not None and self.data_channel.eq_fn(prev_data, curr_data):
+                logger.log_every_s("Previous data equals to current data. Skipping.", level="DEBUG")
                 time.sleep(self.data_polling_interval_s)
                 continue
             action: Action = self.planner_fn(curr_data)
             self.actions_queue.put(action)
+            prev_data = curr_data

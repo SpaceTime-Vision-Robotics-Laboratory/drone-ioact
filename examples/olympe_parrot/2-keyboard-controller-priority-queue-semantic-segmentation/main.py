@@ -14,7 +14,7 @@ import olympe
 from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.drones.olympe_parrot import (
-    OlympeDataProducer, OlympeActionConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS)
+    OlympeDataProducer, OlympeActionConsumer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS)
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image
 
@@ -68,7 +68,7 @@ def main():
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     olympe_actions_consumer = OlympeActionConsumer(drone=drone, actions_queue=actions_queue,
-                                                    actions_callback=olympe_actions_callback)
+                                                    actions_fn=olympe_actions_fn)
 
     threads = ThreadGroup({
         "Data producers": data_producers,

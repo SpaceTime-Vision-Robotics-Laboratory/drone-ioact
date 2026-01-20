@@ -11,7 +11,7 @@ OLYMPE_SUPPORTED_ACTIONS: set[str] = {
     "INCREASE_HEIGHT", "DECREASE_HEIGHT"
 }
 
-def olympe_actions_callback(actions_consumer: OlympeActionConsumer, action: Action) -> bool:
+def olympe_actions_fn(actions_consumer: OlympeActionConsumer, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
     drone: olympe.Drone = actions_consumer.drone
     if action == "DISCONNECT":

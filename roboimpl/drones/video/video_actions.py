@@ -1,15 +1,16 @@
 """video_actions.py - defines all the supported actions of an video player from our generic ones to the video's"""
+from pathlib import Path
 from robobase import Action
 from roboimpl.utils import logger, image_write
-from .video_actions_consumer import VideoActionConsumer
+from .video_player import VideoPlayer
 
 VIDEO_SUPPORTED_ACTIONS: set[str] = {
     "DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"
 }
 
-def video_actions_callback(actions_maker: VideoActionConsumer, action: Action) -> bool:
+def video_actions_fn(action: Action, video_player: VideoPlayer, write_path: Path | None = None) -> bool:
     """the actions callback from generic actions to video-specific ones"""
-    video_player = actions_maker.video_player
+    write_path = write_path or Path.cwd()
     if action == "DISCONNECT":
         video_player.stop_video()
     if action == "PLAY_PAUSE":
@@ -19,6 +20,6 @@ def video_actions_callback(actions_maker: VideoActionConsumer, action: Action) -
     if action == "GO_BACK_ONE_SECOND":
         video_player.increment_frame(-video_player.fps)
     if action == "TAKE_SCREENSHOT":
-        image_write(video_player.get_current_frame()["rgb"], pth := f"{actions_maker.write_path}/frame.png")
+        image_write(video_player.get_current_frame()["rgb"], pth := f"{write_path}/frame.png")
         logger.debug(f"Stored screenshot at '{pth}'")
     return True
