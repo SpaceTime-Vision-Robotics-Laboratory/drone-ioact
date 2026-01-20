@@ -7,6 +7,7 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
+from functools import partial
 import time
 import logging
 from vre_video import VREVideo
@@ -15,10 +16,9 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import (
-    VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
+from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
@@ -95,14 +95,14 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
-                                                  actions_callback=video_actions_callback)
+    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  actions_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({
-        "Data producers": data_producers,
+        "Video -> Data": data_producers,
         "Screen displayer": screen_displayer,
-        "Video actions consumer": video_actions_consumer,
+        "Action -> Video": action2video,
     }).start()
 
     while not threads.is_any_dead():

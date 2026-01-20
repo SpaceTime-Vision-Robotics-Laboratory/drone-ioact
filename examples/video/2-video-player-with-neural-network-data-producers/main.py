@@ -11,11 +11,10 @@ from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import (
-    VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
+from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_resize, image_paste, Color
 
@@ -88,14 +87,14 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
-    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
-                                                  actions_callback=video_actions_callback)
+    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  actions_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({
-        "Data producers": data_producers,
+        "Video -> Data": data_producers,
         "Semantic screen displayer": screen_displayer,
-        "Video actions consumer": video_actions_consumer,
+        "Action -> Video": action2video,
     }).start()
 
     while not threads.is_any_dead():

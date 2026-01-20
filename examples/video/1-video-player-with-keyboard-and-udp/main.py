@@ -4,13 +4,13 @@
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
+from functools import partial
 import time
 from vre_video import VREVideo
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList
-from roboimpl.drones.video import (
-    VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback, VIDEO_SUPPORTED_ACTIONS)
+from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList, ActionConsumer
+from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30
@@ -38,15 +38,15 @@ def main(args: Namespace):
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
-                                                  actions_callback=video_actions_callback)
+    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  actions_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({
-        "Video data producer": data_producers,
+        "Video -> Data": data_producers,
         "Screen displayer": screen_displayer,
         "UDP controller": udp_controller,
-        "Video actions consumer": video_actions_consumer,
+        "Action -> Video": action2video,
     }).start()
 
     while not threads.is_any_dead():

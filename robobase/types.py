@@ -2,6 +2,7 @@
 from typing import Callable
 import numpy as np
 
-Action = str # actions are stored as simple strings for simplicity :)
-ActionsCallback = Callable[["ActionConsumer", Action], bool] # noqa
 DataItem = np.ndarray | int | str | float # used for the DataChannel dictionary: {modality_name: dict[str, DataItem]}
+Action = str # actions are stored as simple strings for simplicity :)
+ActionsFn = Callable[[Action], bool] # noqa
+TerminationFn = Callable[[], bool]

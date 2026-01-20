@@ -3,14 +3,14 @@
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from queue import Queue
-from pathlib import Path
+from functools import partial
 from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
 
-from robobase import ActionsQueue, DataChannel, DataProducerList
+from robobase import ActionsQueue, DataChannel, DataProducerList, ActionConsumer
 from robobase.utils import logger, ThreadGroup
-from roboimpl.drones.video import VideoPlayer, VideoActionConsumer, VideoDataProducer, video_actions_callback
+from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn
 from roboimpl.controllers import UDPController
 
 QUEUE_MAX_SIZE = 30
@@ -35,18 +35,18 @@ def main(args: Namespace):
     # define the threads of the app
     data_producers = DataProducerList(data_channel, data_producers=[VideoDataProducer(video_player=video_player)])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    video_actions_consumer = VideoActionConsumer(video_player=video_player, actions_queue=actions_queue,
-                                                  actions_callback=video_actions_callback, write_path=Path.cwd())
+    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  actions_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({
-        "Data producer": data_producers,
+        "Video -> Data": data_producers,
         "UDP controller": udp_controller,
-        "Video actions consumer": video_actions_consumer,
+        "Action -> Video": action2video,
     }).start()
 
     while not video_player.is_done and not threads.is_any_dead():
-        logger.trace(f"Data channel: {data_channel}. Actions queue size: {len(actions_queue)}")
+        logger.trace(f"\n-{data_channel}\n-{actions_queue}")
         time.sleep(1)
 
     video_player.stop_video()

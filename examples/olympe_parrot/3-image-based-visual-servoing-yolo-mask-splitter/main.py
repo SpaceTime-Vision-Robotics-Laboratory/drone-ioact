@@ -18,7 +18,7 @@ from mask_splitter_data_producer import MaskSplitterDataProducer
 from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.olympe_parrot import (
-    OlympeActionConsumer, olympe_actions_callback, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer)
+    OlympeActionConsumer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer)
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
@@ -97,14 +97,13 @@ def main(args: Namespace):
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    video_actions_consumer = OlympeActionConsumer(drone=drone, actions_queue=actions_queue,
-                                                  actions_callback=olympe_actions_callback)
+    action2drone = OlympeActionConsumer(drone=drone, actions_queue=actions_queue, actions_fn=olympe_actions_fn)
 
     # start the threads
     threads = ThreadGroup({
-        "Data producers": data_producers,
+        "Drone -> Data": data_producers,
         "Screen displayer": screen_displayer,
-        "Video actions consumer": video_actions_consumer,
+        "Action -> Drone": action2drone,
     }).start()
 
     while not threads.is_any_dead():

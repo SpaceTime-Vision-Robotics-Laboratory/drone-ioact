@@ -76,9 +76,11 @@ class DataChannel:
             if self._data_storer is not None: # for logging
                 if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
                     self._data_storer.push(item) # only push differnt items according to eq_fn
+                    logger.trace(
+                        "Received new item: "
+                        f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'"
+                    )
             self._data = item
-            logger.trace("Received item: "
-                         f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'")
 
     def get(self) -> dict[str, DataItem]:
         """Return the item from the channel"""
