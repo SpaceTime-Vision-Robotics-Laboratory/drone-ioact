@@ -44,7 +44,7 @@ class MaskSplitterDataProducer(DataProducer):
 
     def _load_and_warmup_model(self, model_path: str):
         self.splitter_model.load_model(model_path).to(DEVICE).eval()
-        self.splitter_model.compile()
+        # self.splitter_model.compile()
         _ = self.splitter_model(torch.randn(1, 4, *IMAGE_SIZE_SPLITTER_NET).to(DEVICE))
 
     def _compute_bbox_oriented(self, frame: np.ndarray, xy_seg: np.ndarray) -> list[tuple[int, ...]]:
