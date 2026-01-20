@@ -10,11 +10,11 @@ from loggez import loggez_logger as logger
 from overrides import overrides
 import numpy as np
 import olympe
+from olympe.video.pdraw import PdrawState
 
-from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList
+from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList, ActionConsumer
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
-from roboimpl.drones.olympe_parrot import (
-    OlympeDataProducer, OlympeActionConsumer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS)
+from roboimpl.drones.olympe_parrot import OlympeDataProducer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image
 
@@ -67,13 +67,14 @@ def main():
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    olympe_actions_consumer = OlympeActionConsumer(drone=drone, actions_queue=actions_queue,
-                                                    actions_fn=olympe_actions_fn)
+    termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
+    actions_fn = partial(olympe_actions_fn, drone=drone)
+    action2drone = ActionConsumer(actions_queue, actions_fn=actions_fn, termination_fn=termination_fn)
 
     threads = ThreadGroup({
-        "Data producers": data_producers,
+        "Drone -> Data": data_producers,
         "Screen displayer": screen_displayer,
-        "Olympe actions consumer": olympe_actions_consumer,
+        "Action -> Drone": action2drone,
     }).start()
 
     while not threads.is_any_dead():

@@ -7,18 +7,19 @@ Usage: ./main.py DRONE_IP --weights_path_yolo 29_05_best__yolo11n-seg_sim_car_bu
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
+from functools import partial
 import time
 import logging
 import numpy as np
-import olympe
 from loggez import loggez_logger as logger
+import olympe
+from olympe.video.pdraw import PdrawState
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.olympe_parrot import (
-    OlympeActionConsumer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer)
+from roboimpl.drones.olympe_parrot import olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
 
@@ -97,7 +98,9 @@ def main(args: Namespace):
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2drone = OlympeActionConsumer(drone=drone, actions_queue=actions_queue, actions_fn=olympe_actions_fn)
+    termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
+    actions_fn = partial(olympe_actions_fn, drone=drone)
+    action2drone = ActionConsumer(actions_queue, actions_fn=actions_fn, termination_fn=termination_fn)
 
     # start the threads
     threads = ThreadGroup({
