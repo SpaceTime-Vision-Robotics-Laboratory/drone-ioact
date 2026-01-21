@@ -81,7 +81,6 @@ class Maze:
         char_maze = np.vectorize(maze_entries_ix.get)(self.maze)
         char_maze[*self.exit_pos] = ENTRY_TO_CHAR[EXIT]
         char_maze[*self.player_pos] = ENTRY_TO_CHAR[PLAYER]
-        print("\n" * 20)
         print(f"Moves: {self.n_moves}")
         for row in char_maze:
             print(" ".join(row))

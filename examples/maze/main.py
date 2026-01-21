@@ -3,6 +3,7 @@
 from __future__ import annotations
 import time
 import sys
+import os
 from functools import partial
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,7 @@ MAZE_SIZE = (10, 10)
 MAZE_WALLS_PROB = 0.2
 MAZE_MAX_TRIES = 100
 INF = 2**31
-PRINT = False
+PRINT = os.getenv("PRINT", "0") == "1"
 
 class MazeDataProducer(DataProducer):
     """maze data producer"""
@@ -108,6 +109,7 @@ class Strategy1:
 def actions_fn(action: Action, maze: Maze):
     maze.move_player(action)
     if PRINT:
+        print("\n" * 20)
         maze.print_maze()
 
 def main():
@@ -139,7 +141,6 @@ def main():
         time.sleep(1) # important to not throttle everything with this main thread
     threads.join(timeout=1) # stop all the threads
 
-    maze.print_maze()
     logger.info(f"Maze {'finished in' if maze.is_finished() else 'not finished after'} {maze.n_moves} moves.")
 
 if __name__ == "__main__":
