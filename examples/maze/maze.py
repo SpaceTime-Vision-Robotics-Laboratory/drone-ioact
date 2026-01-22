@@ -17,7 +17,7 @@ ENTRY_TO_CHAR = {
     PLAYER: "P",
     EXIT: "o",
 }
-FREQUENCY = 30
+FREQUENCY = 100
 
 logger = make_logger("MAZE")
 
@@ -35,9 +35,10 @@ class PointIJ(NamedTuple):
 
 class Maze:
     """Maze implementation"""
-    def __init__(self, maze_size: tuple[int, int], walls_prob: float, max_tries: int, random_seed: int | None = None):
+    def __init__(self, maze_size: tuple[int, int], walls_prob: float, max_tries: int, random_seed: int):
         self.maze_size = maze_size
         np.random.seed(random_seed)
+        logger.info(f"Random seed: {random_seed}")
         self.maze = (np.random.random(size=maze_size) < walls_prob).astype(int)
         exit_pos, player_pos = np.random.choice(range(np.prod(maze_size)), 2, replace=False).tolist()
         self.player_pos: PointIJ = PointIJ(player_pos // maze_size[1], player_pos % maze_size[1])

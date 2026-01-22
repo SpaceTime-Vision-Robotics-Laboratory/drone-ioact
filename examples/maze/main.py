@@ -9,18 +9,22 @@ from dataclasses import dataclass
 from pathlib import Path
 import random
 from queue import Queue
+from loggez import make_logger
 
 from robobase import (DataProducer, DataChannel, ActionsQueue, ThreadGroup,
                       DataProducerList, Planner, DataItem, ActionConsumer, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
-from maze import Maze, logger, PointIJ # pylint: disable=all
+from maze import Maze, PointIJ # pylint: disable=all
+
+logger = make_logger("MAZE_SOLVER")
 
 MAZE_SIZE = (10, 10)
 MAZE_WALLS_PROB = 0.2
-MAZE_MAX_TRIES = 100
+MAZE_MAX_TRIES = 200
 INF = 2**31
 PRINT = os.getenv("PRINT", "0") == "1"
+SEED = random.randint(0, 10000)
 
 class MazeDataProducer(DataProducer):
     """maze data producer"""
@@ -82,29 +86,31 @@ class Strategy1:
             # mark that position as inf and revert to previous one
             self.pos_to_distance[self.state.position] = INF
             self.state = prev_state
-            logger.debug("> Hit wall, reverting")
+            logger.debug("> Hit wall, reverting state")
 
         # pick first unexplored move
         self.pos_to_distance[self.state.position] = curr_distance
         n_walls = 0
-        potential = None
+        potential_moves, potential_scores = [], []
         for potential_move in moves:
             potential_position = self.state.position + move_to_delta[potential_move]
             if potential_position not in self.pos_to_distance:
                 logger.debug("> Go in first unexplored move")
                 return self.move(potential_move)
-            if self.pos_to_distance[potential_position] == INF:
-                n_walls += 1
-            else:
-                potential = potential_move
+            else: # was previously explored
+                potential_moves.append(potential_move)
+                potential_scores.append(self.pos_to_distance[potential_position])
+                if self.pos_to_distance[potential_position] == INF:
+                    n_walls += 1
 
+        assert n_walls < 4, "stuck?"
         if n_walls == 3:
             self.pos_to_distance[self.state.position] = INF
             logger.debug("> 3 walls, going back")
-            return self.move(potential)
-
-        logger.debug(f"Position: {self.state.position}. Distance: {self.state.distance}.")
-        raise ValueError("stuck?")
+        logger.debug(f"> {n_walls} walls. Picking smallest distance path. If >1, pick at random")
+        min_score = min(potential_scores)
+        potential_moves = [move for i, move in enumerate(potential_moves) if potential_scores[i] == min_score]
+        return self.move(random.choice(potential_moves))
 
 def actions_fn(action: Action, maze: Maze):
     maze.move_player(action)
@@ -118,7 +124,7 @@ def main():
         "random": random_planner_fn,
         "strategy1": Strategy1(),
     }[sys.argv[1]]
-    maze = Maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB, max_tries=MAZE_MAX_TRIES, random_seed=42)
+    maze = Maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB, max_tries=MAZE_MAX_TRIES, random_seed=SEED)
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
@@ -141,6 +147,7 @@ def main():
         time.sleep(1) # important to not throttle everything with this main thread
     threads.join(timeout=1) # stop all the threads
 
+    maze.print_maze()
     logger.info(f"Maze {'finished in' if maze.is_finished() else 'not finished after'} {maze.n_moves} moves.")
 
 if __name__ == "__main__":
