@@ -7,6 +7,7 @@ import os
 from functools import partial
 from dataclasses import dataclass
 from pathlib import Path
+from argparse import ArgumentParser, Namespace
 import random
 from queue import Queue
 from loggez import make_logger
@@ -24,7 +25,6 @@ MAZE_WALLS_PROB = 0.2
 MAZE_MAX_TRIES = 200
 INF = 2**31
 PRINT = os.getenv("PRINT", "0") == "1"
-SEED = random.randint(0, 10000)
 
 class MazeDataProducer(DataProducer):
     """maze data producer"""
@@ -50,7 +50,7 @@ class State:
 
 class Strategy1:
     def __init__(self):
-        self.pos_to_distance: dict[PointIJ, float] = {} # {relative position: score], -inf if wall or empty path
+        self.pos_to_distance: dict[PointIJ, float] = {} # {relative position: score}, -inf if wall or empty path
         self.state = State(position=PointIJ(0, 0), distance=2**31, move=None, prev_state=None)
 
     def move(self, move: str) -> str:
@@ -118,13 +118,21 @@ def actions_fn(action: Action, maze: Maze):
         print("\n" * 20)
         maze.print_maze()
 
-def main():
+def get_args() -> Namespace:
+    """cli args"""
+    parser = ArgumentParser()
+    parser.add_argument("strategy")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+    return args
+
+def main(args: Namespace):
     """main fn"""
     planner_fn = {
         "random": random_planner_fn,
         "strategy1": Strategy1(),
-    }[sys.argv[1]]
-    maze = Maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB, max_tries=MAZE_MAX_TRIES, random_seed=SEED)
+    }[args.strategy]
+    maze = Maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB, max_tries=MAZE_MAX_TRIES, random_seed=args.seed)
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
@@ -145,10 +153,11 @@ def main():
 
     while not threads.is_any_dead():
         time.sleep(1) # important to not throttle everything with this main thread
-    threads.join(timeout=1) # stop all the threads
 
     maze.print_maze()
     logger.info(f"Maze {'finished in' if maze.is_finished() else 'not finished after'} {maze.n_moves} moves.")
+    open(Path.cwd() / "results.csv", "a").write(f"{args.seed},{args.strategy},{maze.n_moves}\n")
+    threads.join(timeout=0) # stop all the threads
 
 if __name__ == "__main__":
-    main()
+    main(get_args())
