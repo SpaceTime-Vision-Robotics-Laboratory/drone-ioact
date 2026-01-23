@@ -6,7 +6,7 @@ import threading
 from overrides import overrides
 
 from robobase.utils import logger
-from robobase.types import DataItem, Action
+from robobase.types import PlannerFn, Action
 from robobase.data_channel import DataChannel
 from robobase.actions_queue import ActionsQueue
 
@@ -47,7 +47,7 @@ class Controller(threading.Thread):
 class Planner(Controller):
     """small wrapper on top of a generic controller for 'planner' kind of controllers with a planner_fn callback."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
-                planner_fn: Callable[[dict[str, DataItem]], Action] = None,
+                planner_fn: PlannerFn = None,
                 initial_data_max_duration_s: float = INITIAL_DATA_MAX_DURATION_S,
                 initial_data_sleep_duration_s: float = INITIAL_DATA_SLEEP_DURATION_S,
                 data_polling_interval_s: float = DATA_POLLING_INTERVAL_S):
@@ -61,7 +61,7 @@ class Planner(Controller):
     @overrides
     def run(self):
         """default data polling scheduling"""
-        super().wait_for_initial_data(self.initial_data_sleep_duration_s, self.initial_data_sleep_duration_s)
+        super().wait_for_initial_data(self.initial_data_max_duration_s, self.initial_data_sleep_duration_s)
         prev_data = None
         while self.data_channel.has_data():
             curr_data = self.data_channel.get()
@@ -69,6 +69,7 @@ class Planner(Controller):
                 logger.log_every_s("Previous data equals to current data. Skipping.", level="DEBUG")
                 time.sleep(self.data_polling_interval_s)
                 continue
-            action: Action = self.planner_fn(curr_data)
-            self.actions_queue.put(action)
+            action: Action | None = self.planner_fn(curr_data) # the planner may also return an "IDK" action so we skip
+            if action is not None:
+                self.actions_queue.put(action)
             prev_data = curr_data
