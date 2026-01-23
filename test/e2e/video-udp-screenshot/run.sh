@@ -4,6 +4,9 @@ export CWD=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 export PROJ_ROOT=$CWD/../../../
 PORT=9999
 
+export ROBOBASE_LOGLEVEL=2
+export ROBOIMPL_LOGLEVEL=2
+
 function wait_for_start {
     n_tries=$1
     port=$2
@@ -26,7 +29,7 @@ echo "-- cleanup"
 ( kill $(lsof -i udp:$PORT -t) 2>/dev/null ) || echo "no server to kill"
 rm -f frame.png # uses "cwd" of the user
 
-ROBOBASE_LOGLEVEL=2 ROBOIMPL_LOGLEVEL=2 $CWD/main.py $CWD/test_video.mp4 --port $PORT &
+$CWD/main.py $CWD/test_video.mp4 --port $PORT &
 PID_MAIN=$!
 wait_for_start 100 $PORT
 

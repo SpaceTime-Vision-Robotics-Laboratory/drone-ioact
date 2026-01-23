@@ -3,8 +3,8 @@
 export CWD=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 export PROJ_ROOT=$CWD/../../../
 
-export ROBOBASE_LOGLEVEL=2
-export ROBOIMPL_LOGLEVEL=2
+export ROBOBASE_LOGLEVEL=1
+export ROBOIMPL_LOGLEVEL=1
 
 seed=$(shuf -i 1-1000 -n 1)
 python $PROJ_ROOT/examples/maze/main.py random --seed=${seed} --results_path $CWD/results.csv
