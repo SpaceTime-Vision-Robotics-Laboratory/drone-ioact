@@ -149,8 +149,7 @@ class MaskSplitterDataProducer(DataProducer):
         - best_mask The float [0:1] mask which we threshold. Unscaled.
         - best_mask_xy_scaled: The contour points of the best mask scaled to the original frame size.
         """
-        mask_rsz: np.ndarray = cv2.resize(best_mask, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
-        mask_bool: np.ndarray = mask_rsz > self.mask_threshold
+        mask_bool: np.ndarray = best_mask > self.mask_threshold
         mask_rgb = mask_bool.astype(np.uint8) * 255
 
         front_mask, back_mask = self.splitter_model.infer(

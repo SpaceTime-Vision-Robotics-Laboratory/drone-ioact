@@ -35,8 +35,7 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
 
     if data["segmentation"] is not None:
         all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
-        img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
-        image_paste(res, img_segmentations, inplace=True)
+        image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
 
     if data["bbox_oriented"] is not None:
         p1, p2, p3, p4 = [p[::-1] for p in data["bbox_oriented"]]
@@ -84,7 +83,8 @@ def main(args: Namespace):
 
     # define the threads of the app
     rgb_data_producer = VideoDataProducer(video_player=video_player)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold,
+                                          resize_segmentation=True)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)

@@ -4,6 +4,7 @@ import numpy as np
 from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
 from ultralytics.engine.results import Masks, Boxes # pylint: disable=import-error
+from torch.nn import functional as F
 from robobase import DataProducer, DataItem
 from roboimpl.utils import logger
 
@@ -13,12 +14,13 @@ Bbox = tuple[int, int, int, int]
 Segmentation = np.ndarray
 
 class YOLODataProducer(DataProducer):
-    """Yolo data producer - returns only a bounding box"""
-    def __init__(self, weights_path: str, threshold: float):
+    """Yolo data producer - Returns bbox and/or segmentations. We can also optionally resize segmentations."""
+    def __init__(self, weights_path: str, threshold: float, resize_segmentations: bool = True):
         super().__init__(modalities=["bbox", "bbox_confidence", "segmentation", "segmentation_xy"],
                          dependencies=["rgb"])
         self.yolo = YOLO(weights_path)
         self.threshold = threshold
+        self.resize_segmentations = resize_segmentations
 
     def _compute_yolo(self, rgb: np.ndarray) \
             -> tuple[list[Bbox], list[float], list[Segmentation] | None, list[np.ndarray] | None] | None:
@@ -42,13 +44,17 @@ class YOLODataProducer(DataProducer):
 
         bbox = good_boxes.xyxy.int().tolist() if not no_bbox else None
         bbox_confidennce = good_boxes.conf.tolist() if not no_bbox else None
-        segmentation = good_masks.data.cpu().numpy() if not no_segm else None
+        segmentation = None
+        if not no_segm and len(good_masks) > 0:
+            segmentation = good_masks.data
+            if self.resize_segmentations:
+                segmentation = F.interpolate(good_masks.data[None], size=good_masks.orig_shape)[0]
+            segmentation = segmentation.cpu().numpy()
         segmentation_xy = good_masks.xy if not no_segm else None
         return bbox, bbox_confidennce, segmentation, segmentation_xy
 
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
-        """note: the segmentations are not resized as we may not care about all of them. You resize them!"""
         yolo_res = self._compute_yolo(deps["rgb"])
         bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
         return {"bbox": bbox, "bbox_confidence": bbox_confidence,
