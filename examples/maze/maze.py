@@ -35,21 +35,34 @@ class PointIJ(NamedTuple):
 
 class Maze:
     """Maze implementation"""
-    def __init__(self, maze_size: tuple[int, int], walls_prob: float, max_tries: int, random_seed: int):
-        self.maze_size = maze_size
-        np.random.seed(random_seed)
-        logger.info(f"Random seed: {random_seed}")
-        self.maze = (np.random.random(size=maze_size) < walls_prob).astype(int)
-        exit_pos, player_pos = np.random.choice(range(np.prod(maze_size)), 2, replace=False).tolist()
-        self.player_pos: PointIJ = PointIJ(player_pos // maze_size[1], player_pos % maze_size[1])
-        self.exit_pos: PointIJ = PointIJ(exit_pos // maze_size[1], exit_pos % maze_size[1])
-        self.maze[*self.player_pos] = EMPTY # make sure this is empty so we don't have weird behavior
-        self.maze[*self.exit_pos] = EMPTY # make sure this is empty so we don't have weird behavior
-
+    def __init__(self, maze: np.ndarray, player_pos: PointIJ, exit_pos: PointIJ, max_tries: int):
+        assert len(maze.shape) == 2, maze.shape
+        self.maze_size = tuple(maze.shape)
+        self.maze = maze
+        self.player_pos = player_pos
+        self.exit_pos = exit_pos
         self.max_tries = max_tries
+
+        self.random_seed = None
         self.n_moves = 0
         self.initial_distance = np.linalg.norm(self.exit_pos - self.player_pos, ord=1).item()
         self._prev_time = datetime(1900, 1, 1)
+
+    @staticmethod
+    def build_random_maze(maze_size: tuple[int, int], walls_prob: float, random_seed: int | None, **kwargs) -> Maze:
+        """builds a random maze given a maze size, walls probabilities and an optional seed"""
+        random_seed = random_seed or np.random.randint(0, 10000)
+        np.random.seed(random_seed)
+        logger.info(f"Random seed: {random_seed}")
+        maze = (np.random.random(size=maze_size) < walls_prob).astype(int)
+        exit_pos, player_pos = np.random.choice(range(np.prod(maze_size)), 2, replace=False).tolist()
+        player_pos: PointIJ = PointIJ(player_pos // maze_size[1], player_pos % maze_size[1])
+        exit_pos: PointIJ = PointIJ(exit_pos // maze_size[1], exit_pos % maze_size[1])
+        maze[*player_pos] = EMPTY # make sure this is empty so we don't have weird behavior
+        maze[*exit_pos] = EMPTY # make sure this is empty so we don't have weird behavior
+        res = Maze(maze, player_pos, exit_pos, **kwargs)
+        res.random_seed = random_seed
+        return res
 
     def is_finished(self) -> bool:
         """returns true if the maze is finished"""

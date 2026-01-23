@@ -122,7 +122,8 @@ def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
     parser.add_argument("strategy")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--results_path", type=Path, default=Path.cwd() / "results.csv")
     args = parser.parse_args()
     return args
 
@@ -132,7 +133,8 @@ def main(args: Namespace):
         "random": random_planner_fn,
         "strategy1": Strategy1(),
     }[args.strategy]
-    maze = Maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB, max_tries=MAZE_MAX_TRIES, random_seed=args.seed)
+    maze = Maze.build_random_maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB,
+                                  random_seed=args.seed, max_tries=MAZE_MAX_TRIES)
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
@@ -156,7 +158,7 @@ def main(args: Namespace):
 
     maze.print_maze()
     logger.info(f"Maze {'finished in' if maze.is_finished() else 'not finished after'} {maze.n_moves} moves.")
-    open(Path.cwd() / "results.csv", "a").write(f"{args.seed},{args.strategy},{maze.n_moves}\n")
+    open(args.results_path, "a").write(f"{maze.random_seed},{args.strategy},{maze.n_moves}\n")
     threads.join(timeout=0) # stop all the threads
 
 if __name__ == "__main__":
