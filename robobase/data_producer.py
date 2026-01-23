@@ -1,6 +1,8 @@
 """data_producer.py - interface for DataProducer which are used to produce data to be stored in a DataChannel"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Callable
+from overrides import overrides
 
 from robobase.types import DataItem
 from robobase.utils import parsed_str_type
@@ -29,3 +31,14 @@ class DataProducer(ABC):
 
     def __repr__(self):
         return f"[{parsed_str_type(self)}] Modalities: {self.modalities}. Deps: {self.dependencies}"
+
+class LambdaDataProducer(DataProducer):
+    """wrapper for a DataProducer with a lambda function so we don't have to inherit it"""
+    def __init__(self, produce_fn: Callable[[dict[str, DataItem] | None], dict[str, DataItem]],
+                 modalities: list[str], dependencies: list[str] | None = None):
+        super().__init__(modalities=modalities, dependencies=dependencies)
+        self.produce_fn = produce_fn
+
+    @overrides
+    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
+        return self.produce_fn(deps)
