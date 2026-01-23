@@ -12,7 +12,7 @@ import numpy as np
 import olympe
 from olympe.video.pdraw import PdrawState
 
-from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, Action, DataItem, DataChannel, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.drones.olympe_parrot import OlympeDataProducer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -69,7 +69,7 @@ def main():
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
     actions_fn = partial(olympe_actions_fn, drone=drone)
-    action2drone = ActionConsumer(actions_queue, actions_fn=actions_fn, termination_fn=termination_fn)
+    action2drone = Actions2Robot(actions_queue, action_fn=actions_fn, termination_fn=termination_fn)
 
     threads = ThreadGroup({
         "Drone -> Data": data_producers,

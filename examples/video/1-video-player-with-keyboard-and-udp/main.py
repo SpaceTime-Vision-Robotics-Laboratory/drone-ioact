@@ -9,7 +9,7 @@ import time
 from vre_video import VREVideo
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
@@ -38,8 +38,8 @@ def main(args: Namespace):
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  actions_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  action_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({

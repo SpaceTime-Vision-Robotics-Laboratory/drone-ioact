@@ -17,7 +17,7 @@ from olympe.video.pdraw import PdrawState
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.olympe_parrot import olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer
 from roboimpl.controllers import ScreenDisplayer
@@ -100,7 +100,7 @@ def main(args: Namespace):
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
     actions_fn = partial(olympe_actions_fn, drone=drone)
-    action2drone = ActionConsumer(actions_queue, actions_fn=actions_fn, termination_fn=termination_fn)
+    action2drone = Actions2Robot(actions_queue, action_fn=actions_fn, termination_fn=termination_fn)
 
     # start the threads
     threads = ThreadGroup({

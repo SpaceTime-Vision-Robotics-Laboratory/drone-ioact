@@ -16,7 +16,7 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -83,8 +83,7 @@ def main(args: Namespace):
 
     # define the threads of the app
     rgb_data_producer = VideoDataProducer(video_player=video_player)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold,
-                                          resize_segmentation=True)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
@@ -95,8 +94,8 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  actions_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  action_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({

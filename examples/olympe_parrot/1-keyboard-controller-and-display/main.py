@@ -9,7 +9,7 @@ from loggez import loggez_logger as logger
 import olympe
 from olympe.video.pdraw import PdrawState
 
-from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.drones.olympe_parrot import OlympeDataProducer, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 
@@ -34,7 +34,7 @@ def main():
                                        screen_height=SCREEN_HEIGHT)
     termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
     actions_fn = partial(olympe_actions_fn, drone=drone)
-    action2drone = ActionConsumer(actions_queue, actions_fn=actions_fn, termination_fn=termination_fn)
+    action2drone = Actions2Robot(actions_queue, action_fn=actions_fn, termination_fn=termination_fn)
 
     threads = ThreadGroup({
         "Drone -> Data": data_producers,

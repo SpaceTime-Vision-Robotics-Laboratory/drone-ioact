@@ -1,19 +1,19 @@
-"""actions_interfaces.py - Interfaces for interacting with the actions produced by a ActionProducers"""
+"""action2robot.py - the module that interfaces bewteen the action and the robot/drone"""
 from __future__ import annotations
 import threading
 from queue import Empty
 
-from robobase.types import Action, ActionsFn, TerminationFn
+from robobase.types import Action, ActionFn, TerminationFn
 from robobase.utils import logger
 from robobase.actions_queue import ActionsQueue
 
-class ActionConsumer(threading.Thread):
-    """Interface defining the requirements of a drone (real, sym, mock) to receive an action & apply it to the drone"""
-    def __init__(self, actions_queue: ActionsQueue, actions_fn: ActionsFn, termination_fn: TerminationFn):
+class Actions2Robot(threading.Thread):
+    """Interface defining the requirements of a robot (real, sym, mock) to receive an action & apply it to the robot"""
+    def __init__(self, actions_queue: ActionsQueue, action_fn: ActionFn, termination_fn: TerminationFn):
         threading.Thread.__init__(self, daemon=True)
         assert isinstance(actions_queue, ActionsQueue), f"queue must inherit ActionsQueue: {type(actions_queue)}"
         self._actions_queue = actions_queue
-        self._actions_fn = actions_fn
+        self._action_fn = action_fn
         self._termination_fn = termination_fn
 
     @property
@@ -22,9 +22,9 @@ class ActionConsumer(threading.Thread):
         return self._actions_queue
 
     @property
-    def actions_fn(self) -> ActionsFn:
-        """Given a generic action, communicates it to the drone"""
-        return self._actions_fn
+    def action_fn(self) -> ActionFn:
+        """Given a generic action, communicates it to the robot"""
+        return self._action_fn
 
     @property
     def termination_fn(self) -> TerminationFn:
@@ -38,7 +38,7 @@ class ActionConsumer(threading.Thread):
             except Empty:
                 continue
             logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
-            res = self.actions_fn(action)
+            res = self.action_fn(action)
             if res is False:
                 logger.warning(f"Could not perform action '{action}'")
 

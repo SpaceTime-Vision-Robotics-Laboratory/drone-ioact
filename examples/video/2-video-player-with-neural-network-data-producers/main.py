@@ -11,7 +11,7 @@ from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, ActionConsumer
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
@@ -86,8 +86,8 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
-    action2video = ActionConsumer(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  actions_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
+                                  action_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({

@@ -1,6 +1,6 @@
 import pytest
 from queue import Queue
-from robobase.actions_interfaces import ActionsQueue
+from robobase.actions2robot import ActionsQueue
 
 def test_ActionsQueue_ctor():
     with pytest.raises(AssertionError):

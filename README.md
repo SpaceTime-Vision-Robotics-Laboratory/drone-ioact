@@ -12,8 +12,8 @@ The two 'core' components of any robotics application are: the *data channel* an
 The usual flow is like this:
 ```
 
- Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Actions Consumer -- raw action --> Drone
-(robot)                                       (rgb, pose...)     (LIFT, MOVE...)                                       (robot)
+ Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Actions2Robot -- raw action --> Drone
+(robot)                                       (rgb, pose...)     (LIFT, MOVE...)                                   (robot)
                |                ↑                  |                    ↑
                |-------> pose                      |-> [Controller 1] --|
                          rgb -> semantic           |-- [Controller 2] --|
@@ -39,9 +39,9 @@ def main():
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
-    def XXXactions_fn(action: Action) -> bool:
+    def XXXaction_fn(action: Action) -> bool:
         return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
-    action2drone = ActionConsumer(drone, actions_queue, actions_fn=XXXactions_fn, termination_fn=lambda: drone.is_alive)
+    action2drone = Actions2Robot(drone, actions_queue, action_fn=XXXaction_fn, termination_fn=lambda: drone.is_alive)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Drone -> Data": data_producers,
