@@ -79,7 +79,8 @@ def test_i_multiple_data_producer_list():
         "Action -> Video": action2video,
     }).start()
 
-    while not threads.is_any_dead(): pass
+    while not threads.is_any_dead():
+        pass
 
     threads.join(timeout=1)
     assert N1 > 20, N1
