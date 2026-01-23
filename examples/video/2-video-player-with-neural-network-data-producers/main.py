@@ -16,7 +16,7 @@ from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProd
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
-from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_resize, image_paste, Color
+from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30

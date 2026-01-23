@@ -20,7 +20,7 @@ from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProdu
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
-from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
+from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
