@@ -13,7 +13,7 @@ from queue import Queue
 from loggez import make_logger
 
 from robobase import (DataProducer, DataChannel, ActionsQueue, ThreadGroup,
-                      DataProducerList, Planner, DataItem, Actions2Robot, Action)
+                      DataProducers2Channels, Planner, DataItem, Actions2Robot, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
 from maze import Maze, PointIJ # pylint: disable=all
@@ -148,7 +148,7 @@ def main(args: Namespace):
                                  termination_fn=lambda: maze.is_finished() or maze.n_moves >= maze.max_tries)
 
     threads = ThreadGroup({
-        "Maze -> Data": DataProducerList(data_channel, data_producers=[maze2data]),
+        "Maze -> Data": DataProducers2Channels(data_channels=[data_channel], data_producers=[maze2data]),
         "Planner": planner,
         "Action -> Maze": action2maze,
     }).start()
