@@ -6,13 +6,13 @@ from PIL import Image, ImageTk
 from overrides import overrides
 import numpy as np
 
-from robobase import DataChannel, DataItem, Controller, ActionsQueue, Action
+from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
 TIMEOUT_S = 10
 SLEEP_DURATION_S = 0.1
 
-class ScreenDisplayer(Controller):
+class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, screen_height: int | None = None,
                  screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,

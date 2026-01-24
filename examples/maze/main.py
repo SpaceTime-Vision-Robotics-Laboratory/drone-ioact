@@ -13,7 +13,7 @@ from queue import Queue
 from loggez import make_logger
 
 from robobase import (DataProducer, DataChannel, ActionsQueue, ThreadGroup,
-                      DataProducers2Channels, Planner, DataItem, Actions2Robot, Action)
+                      DataProducers2Channels, Controller, DataItem, Actions2Robot, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
 from maze import Maze, PointIJ # pylint: disable=all
@@ -35,7 +35,7 @@ class MazeDataProducer(DataProducer):
     def produce(self, deps = None) -> dict[str, DataItem]:
         return self.maze.get_state()
 
-def random_planner_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=unused-argument
+def random_controller_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=unused-argument
     """random planner"""
     res = random.choice(["up", "down", "left", "right"])
     logger.debug(f"Doing action: {res}")
@@ -129,8 +129,8 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    planner_fn = {
-        "random": random_planner_fn,
+    controller_fn = {
+        "random": random_controller_fn,
         "strategy1": Strategy1(),
     }[args.strategy]
     maze = Maze.build_random_maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB,
@@ -143,13 +143,13 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
-    planner = Planner(data_channel, actions_queue, planner_fn=planner_fn)
+    maze_planner = Controller(data_channel, actions_queue, controller_fn=controller_fn)
     action2maze = Actions2Robot(actions_queue, action_fn=partial(actions_fn, maze=maze),
                                  termination_fn=lambda: maze.is_finished() or maze.n_moves >= maze.max_tries)
 
     threads = ThreadGroup({
         "Maze -> Data": DataProducers2Channels(data_channels=[data_channel], data_producers=[maze2data]),
-        "Planner": planner,
+        "Mazez Planner": maze_planner,
         "Action -> Maze": action2maze,
     }).start()
 

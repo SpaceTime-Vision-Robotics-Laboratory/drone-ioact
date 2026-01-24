@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
-                      Actions2Robot, LambdaDataProducer, Planner, Action)
+                      Actions2Robot, LambdaDataProducer, Controller, Action)
 
 N_FRAMES = 60
 N1 = 0
@@ -39,12 +39,12 @@ def rgb_rev_produce_fn(deps: dict[str, DataItem] | None = None) -> dict[str, Dat
     time.sleep(0.5)
     return {"rgb_rev": deps["rgb"][:, ::-1]}
 
-def planner_fn1(data: dict[str, DataItem]) -> Action:
+def controller_fn1(data: dict[str, DataItem]) -> Action:
     global N1
     N1 += 1
     return None
 
-def planner_fn2(data: dict[str, DataItem]) -> Action:
+def controller_fn2(data: dict[str, DataItem]) -> Action:
     global N2
     N2 += 1
     return None
@@ -61,8 +61,8 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     video_dp = LambdaDataProducer(lambda deps: video_player.get(), modalities=["rgb", "frame_ix"], dependencies=[])
     rgb_rev_dp = LambdaDataProducer(rgb_rev_produce_fn, modalities=["rgb_rev"], dependencies=["rgb"])
     dpl = DataProducers2Channels(data_producers=[video_dp, rgb_rev_dp], data_channels=[dc1, dc2])
-    ctrl1 = Planner(dc1, actions_queue, planner_fn1)
-    ctrl2 = Planner(dc2, actions_queue, planner_fn2)
+    ctrl1 = Controller(dc1, actions_queue, controller_fn1)
+    ctrl2 = Controller(dc2, actions_queue, controller_fn2)
     action2video = Actions2Robot(actions_queue=actions_queue, action_fn=lambda : None,
                                  termination_fn=lambda: video_player._frame_ix < len(frames))
 

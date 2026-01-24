@@ -2,14 +2,14 @@
 import socket
 from overrides import overrides
 
-from robobase import DataProducer, Controller, ActionsQueue, Action
+from robobase import DataProducer, BaseController, ActionsQueue, Action
 from roboimpl.utils import logger
 
 HOST = "127.0.0.1"
 TIMEOUT_S = 10
 SLEEP_DURATION_S = 0.1
 
-class UDPController(Controller):
+class UDPController(BaseController):
     """
     Converts a UDP message to a generic action.
     Parameters:

@@ -6,7 +6,7 @@ import threading
 from overrides import overrides
 
 from robobase.utils import logger
-from robobase.types import PlannerFn, Action
+from robobase.types import ControllerFn, Action
 from robobase.data_channel import DataChannel
 from robobase.actions_queue import ActionsQueue
 
@@ -14,7 +14,7 @@ INITIAL_DATA_MAX_DURATION_S = 5
 INITIAL_DATA_SLEEP_DURATION_S = 0.1
 DATA_POLLING_INTERVAL_S = 0.01
 
-class Controller(threading.Thread):
+class BaseController(threading.Thread):
     """
     Interface defining the requirements of a data consumer getting data from a DataProducer.
     Users can extend this class and define their scheduling but the default behavior is to provide a controller fn
@@ -44,16 +44,16 @@ class Controller(threading.Thread):
             if n_waits > timeout_s / sleep_duration_s:
                 raise ValueError(f"Data was not produced for {timeout_s} seconds")
 
-class Planner(Controller):
-    """small wrapper on top of a generic controller for 'planner' kind of controllers with a planner_fn callback."""
+class Controller(BaseController):
+    """small wrapper on top of a generic controller for 'planner' kind of controllers with a controller_fn callback."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
-                planner_fn: PlannerFn = None,
+                controller_fn: ControllerFn = None,
                 initial_data_max_duration_s: float = INITIAL_DATA_MAX_DURATION_S,
                 initial_data_sleep_duration_s: float = INITIAL_DATA_SLEEP_DURATION_S,
                 data_polling_interval_s: float = DATA_POLLING_INTERVAL_S):
         super().__init__(data_channel, actions_queue)
-        assert isinstance(planner_fn, Callable), type(planner_fn)
-        self.planner_fn = planner_fn
+        assert isinstance(controller_fn, Callable), type(controller_fn)
+        self.controller_fn = controller_fn
         self.initial_data_max_duration_s = initial_data_max_duration_s
         self.initial_data_sleep_duration_s = initial_data_sleep_duration_s
         self.data_polling_interval_s = data_polling_interval_s
@@ -69,7 +69,7 @@ class Planner(Controller):
                 logger.log_every_s("Previous data equals to current data. Skipping.", level="DEBUG")
                 time.sleep(self.data_polling_interval_s)
                 continue
-            action: Action | None = self.planner_fn(curr_data) # the planner may also return an "IDK" action so we skip
+            action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
                 self.actions_queue.put(action)
             prev_data = curr_data
