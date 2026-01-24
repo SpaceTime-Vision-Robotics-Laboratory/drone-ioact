@@ -1,9 +1,9 @@
 import numpy as np
 import time
 from robobase import DataChannel, DataProducer
-from robobase.data_producers2channels import _DataProducerList as DataProducerList
+from robobase.data_producers2channels import DataProducers2Channels
 
-def test_i_data_producer_list_basic():
+def test_i_DataProducers2Channels_basic():
     class RGB(DataProducer):
         i = 0
         def produce(self, deps = None):
@@ -17,11 +17,11 @@ def test_i_data_producer_list_basic():
 
     channel = DataChannel(supported_types=["rgb", "rgb_rev"], eq_fn=lambda a, b: np.allclose(a["rgb"], b["rgb"]))
     data_producers = [RGB(modalities=["rgb"]), RGBReverse(modalities=["rgb_rev"], dependencies=["rgb"])]
-    dp_list = DataProducerList(channel, data_producers) # topo-sort calling of produce() is done automatically
+    data2channels = DataProducers2Channels(data_producers, [channel])
 
     assert not channel.has_data()
-    # dp_list.produce_all() # do this instead if the test fails with no error from the other thread
-    dp_list.start()
+    # data2channels._data_producer_lists[0].produce_all() # use this if it fails and the thread code is undebuggable.
+    data2channels.start()
     time.sleep(1)
     channel.close()
 
@@ -29,4 +29,4 @@ def test_i_data_producer_list_basic():
     assert (channel._data["rgb"] != 0).all() # unclear where the iteration will stop but we expect at least 2 iterations
 
 if __name__ == "__main__":
-    test_i_data_producer_list_basic()
+    test_i_DataProducers2Channels_basic()

@@ -49,7 +49,7 @@ def planner_fn2(data: dict[str, DataItem]) -> Action:
     N2 += 1
     return None
 
-def test_i_DataProducers2Channels():
+def test_i_DataProducers2Channels_two_channels_two_controllers():
     """main fn"""
     frames = np.random.randint(0, 255, size=(N_FRAMES, 30, 30, 3), dtype=np.uint8)
     (video_player := FakeVideo(frames, fps=30)).start() # start the video player
@@ -83,4 +83,4 @@ def test_i_DataProducers2Channels():
     print(f"{N1=} {N2=}")
 
 if __name__ == "__main__":
-    test_i_DataProducers2Channels()
+    test_i_DataProducers2Channels_two_channels_two_controllers()
