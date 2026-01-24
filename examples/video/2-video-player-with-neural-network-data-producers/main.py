@@ -11,17 +11,17 @@ from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot
+from robobase import (
+    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer)
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 480 # width is auto-scaled
-
 BBOX_THICKNES = 1
 
 def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
@@ -73,7 +73,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    dps = [VideoDataProducer(video_player=video_player)]
+    dps = [LambdaDataProducer(lambda d: video_player.get_current_frame(), modalities=["rgb", "frame_ix"])]
     if args.weights_path_phg is not None:
         dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:

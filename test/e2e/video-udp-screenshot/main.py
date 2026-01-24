@@ -8,9 +8,9 @@ from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
 
-from robobase import ActionsQueue, DataChannel, DataProducers2Channels, Actions2Robot
+from robobase import ActionsQueue, DataChannel, DataProducers2Channels, Actions2Robot, LambdaDataProducer
 from robobase.utils import logger, ThreadGroup
-from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn
+from roboimpl.drones.video import VideoPlayer, video_actions_fn
 from roboimpl.controllers import UDPController
 
 QUEUE_MAX_SIZE = 30
@@ -33,11 +33,11 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    video2data = DataProducers2Channels(data_channels=[data_channel],
-                                        data_producers=[VideoDataProducer(video_player=video_player)])
+    video_dp = LambdaDataProducer(lambda deps: video_player.get_current_frame(), modalities=["rgb", "frame_ix"])
+    video2data = DataProducers2Channels(data_channels=[data_channel], data_producers=[video_dp])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
     action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  action_fn=partial(video_actions_fn, video_player=video_player))
+                                 action_fn=partial(video_actions_fn, video_player=video_player))
 
     # start the threads
     threads = ThreadGroup({

@@ -34,7 +34,7 @@ def _topo_sort_producers(producers: list[DataProducer]) -> list[DataProducer]:
 
 class _DataProducerList:
     """
-    _DataProducerList implement a 1 channel : M producers (assumed topo-sorted) graph where all M write to it.
+    _DataProducerList implements a 1 channel : M producers (assumed topo-sorted) graph where all M write to it.
     Note: this class can be used to debug programs as produce_all can be ran without any threading, if i.e. one data
     producer is misbehaving, like crashing mid (multi-threaded) execution for some data.
     """
