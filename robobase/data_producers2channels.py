@@ -41,13 +41,8 @@ class _DataProducerList(threading.Thread):
         assert isinstance(data_channel, DataChannel), f"data_channel is of wrong type: {type(data_channel)}"
         assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), (A, B)
         assert len(B) == len(set(B)), f"One or more DataProducers provide the same modality! {B}"
-        self._data_channel = data_channel
+        self.data_channel = data_channel
         self.data_producers = data_producers
-
-    @property
-    def data_channel(self) -> DataChannel:
-        """The data queue where the data is inserted"""
-        return self._data_channel
 
     def produce_all(self) -> dict[str, DataItem]:
         """Calls all the producers in topological order and synchronous"""
