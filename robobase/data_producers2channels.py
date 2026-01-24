@@ -95,3 +95,13 @@ class DataProducers2Channels(threading.Thread):
         self.dp_lists_tg.start()
         while not self.dp_lists_tg.is_any_dead():
             time.sleep(1)
+
+    def close(self):
+        self._close_all_channels()
+
+    def _close_all_channels(self):
+        for ch in self.data_channels:
+            try:
+                ch.close()
+            except Exception:
+                pass
