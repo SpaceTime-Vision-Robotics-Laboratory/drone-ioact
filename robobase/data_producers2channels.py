@@ -32,12 +32,13 @@ def _topo_sort_producers(producers: list[DataProducer]) -> list[DataProducer]:
         raise ValueError("couldn't solve")
     return res
 
-
-# Note: reimplementation here as we want to merge the two implementations.
-class _DataProducerList(threading.Thread):
-    """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
+class _DataProducerList:
+    """
+    _DataProducerList implement a 1 channel : M producers (assumed topo-sorted) graph where all M write to it.
+    Note: this class can be used to debug programs as produce_all can be ran without any threading, if i.e. one data
+    producer is misbehaving, like crashing mid (multi-threaded) execution for some data.
+    """
     def __init__(self, data_channel: DataChannel, data_producers: list[DataProducer]):
-        threading.Thread.__init__(self, daemon=True)
         assert isinstance(data_channel, DataChannel), f"data_channel is of wrong type: {type(data_channel)}"
         assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), (A, B)
         assert len(B) == len(set(B)), f"One or more DataProducers provide the same modality! {B}"
@@ -54,17 +55,6 @@ class _DataProducerList(threading.Thread):
             data |= producer_data
         return data
 
-    def run(self):
-        while True:
-            try:
-                data = self.produce_all()
-                self.data_channel.put(data)
-            except DataChannelClosedError: # in case it closes between is_open() check and put(data)
-                break
-            except Exception as e:
-                logger.error(e)
-                break
-
 class DataProducers2Channels(threading.Thread):
     """
     DataProducers2Channels is a generalization of DataProducerList from 1 channel : M producers to N : M.
@@ -75,18 +65,34 @@ class DataProducers2Channels(threading.Thread):
         super().__init__(daemon=True)
         self.data_channels = data_channels
         self.data_producers = _topo_sort_producers(data_producers)
+        self._data_producer_lists: list[_DataProducerList] = []
 
-        dp_lists = {}
+        self.workers = ThreadGroup()
         for i, data_channel in enumerate(data_channels):
             channel_dps = []
-            for dp in data_producers:
+            for dp in self.data_producers:
                 if any(dp_mod in data_channel.supported_types for dp_mod in dp.modalities):
                     channel_dps.append(dp)
-            dp_lists[str(i)] = _DataProducerList(data_channel=data_channel, data_producers=channel_dps)
-
-        self.dp_lists_tg = ThreadGroup(dp_lists)
+            self._data_producer_lists.append(_DataProducerList(data_channel=data_channel, data_producers=channel_dps))
+            self.workers[f"DPList-{i}"] = threading.Thread(
+                target=self._worker_fn,
+                args=(self._data_producer_lists[-1], ),
+                daemon=True,
+                name=f"DPList-{i}",
+            )
 
     def run(self):
-        self.dp_lists_tg.start()
-        while not self.dp_lists_tg.is_any_dead():
+        self.workers.start()
+        while not self.workers.is_any_dead():
             time.sleep(1)
+
+    def _worker_fn(self, dp_list: _DataProducerList):
+        while True:
+            try:
+                data = dp_list.produce_all()
+                dp_list.data_channel.put(data)
+            except DataChannelClosedError: # in case it closes between is_open() check and put(data)
+                break
+            except Exception as e:
+                logger.error(e)
+                break
