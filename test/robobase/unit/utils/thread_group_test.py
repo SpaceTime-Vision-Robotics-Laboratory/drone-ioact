@@ -4,9 +4,6 @@ import pytest
 import time
 
 def test_ThreadGroup_ctor():
-    with pytest.raises(AssertionError, match="no threads provided"):
-        _ = ThreadGroup({})
-
     with pytest.raises(AssertionError, match="Not all are threads"):
         _ = ThreadGroup({"a": "B"})
 

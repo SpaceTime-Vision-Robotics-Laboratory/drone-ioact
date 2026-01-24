@@ -6,14 +6,14 @@ from .utils import logger
 
 class ThreadGroup(dict):
     """Thread group is a utility dictionary container (str->thread) for managing many threads at once"""
-    def __init__(self, threads: dict[str, threading.Thread]):
-        super().__init__(**threads)
+    def __init__(self, threads: dict[str, threading.Thread] | None = None):
+        super().__init__(**(threads or {}))
         assert all(isinstance(v, threading.Thread) for v in self.values()), f"Not all are threads: {self.items()}"
-        assert len(self) > 0, "no threads provided"
 
     def start(self) -> ThreadGroup:
         """starts all the threads"""
         for k, v in self.items():
+            assert isinstance(v, threading.Thread), f"{k=}, {type(v)=}"
             if not v.daemon:
                 logger.warning(f"Thread '{k}' is not a daemon. This is needed to kill it from main. Setting to true")
                 v.daemon = True
@@ -34,6 +34,8 @@ class ThreadGroup(dict):
         logger.debug(f"Joining threads:\n{self}")
         for k, v in self.items():
             logger.debug(f"Joining thread '{k}' (timeout: {timeout})")
+            if hasattr(v, "close"):
+                v.close()
             v.join(timeout)
 
     def items(self) -> list[tuple[str, threading.Thread]]:
