@@ -7,6 +7,32 @@ from .types import DataItem
 from .data_producer import DataProducer
 from .data_channel import DataChannel, DataChannelClosedError
 
+def _topo_sort_producers(producers: list[DataProducer]) -> list[DataProducer]:
+    """does a topological sort of the data producers given their dependencies and their modalities"""
+    consumers: dict[str, list[int]] = {} # Map dependency string -> list of consumer indices
+    degrees: list[int] = [len(p.dependencies) for p in producers]
+
+    for i, p in enumerate(producers):
+        for dep in p.dependencies:
+            consumers.setdefault(dep, []).append(i)
+
+    queue: list[int] = [i for i, d in enumerate(degrees) if d == 0]
+    res: list[DataProducer] = []
+
+    while len(queue) > 0:
+        curr_idx = queue.pop()
+        res.append(producers[curr_idx])
+        for mod in producers[curr_idx].modalities:
+            for c_idx in consumers.get(mod, []):
+                degrees[c_idx] -= 1
+                if degrees[c_idx] == 0:
+                    queue.append(c_idx)
+
+    if len(res) != len(producers):
+        raise ValueError("couldn't solve")
+    return res
+
+
 # Note: reimplementation here as we want to merge the two implementations.
 class _DataProducerList(threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
@@ -16,33 +42,7 @@ class _DataProducerList(threading.Thread):
         assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), (A, B)
         assert len(B) == len(set(B)), f"One or more DataProducers provide the same modality! {B}"
         self._data_channel = data_channel
-        self.data_producers = _DataProducerList.topo_sort(data_producers)
-
-    @staticmethod
-    def topo_sort(producers: list[DataProducer]) -> list[DataProducer]:
-        """does a topological sort of the data producers given their dependencies and their modalities"""
-        consumers: dict[str, list[int]] = {} # Map dependency string -> list of consumer indices
-        degrees: list[int] = [len(p.dependencies) for p in producers]
-
-        for i, p in enumerate(producers):
-            for dep in p.dependencies:
-                consumers.setdefault(dep, []).append(i)
-
-        queue: list[int] = [i for i, d in enumerate(degrees) if d == 0]
-        res: list[DataProducer] = []
-
-        while len(queue) > 0:
-            curr_idx = queue.pop()
-            res.append(producers[curr_idx])
-            for mod in producers[curr_idx].modalities:
-                for c_idx in consumers.get(mod, []):
-                    degrees[c_idx] -= 1
-                    if degrees[c_idx] == 0:
-                        queue.append(c_idx)
-
-        if len(res) != len(producers):
-            raise ValueError("couldn't solve")
-        return res
+        self.data_producers = data_producers
 
     @property
     def data_channel(self) -> DataChannel:
@@ -78,6 +78,9 @@ class DataProducers2Channels(threading.Thread):
     """
     def __init__(self, data_producers: list[DataProducer], data_channels: list[DataChannel]):
         super().__init__(daemon=True)
+        self.data_channels = data_channels
+        self.data_producers = _topo_sort_producers(data_producers)
+
         dp_lists = {}
         for i, data_channel in enumerate(data_channels):
             channel_dps = []
@@ -86,8 +89,6 @@ class DataProducers2Channels(threading.Thread):
                     channel_dps.append(dp)
             dp_lists[str(i)] = _DataProducerList(data_channel=data_channel, data_producers=channel_dps)
 
-        self.data_channels = data_channels
-        self.data_producers = data_producers
         self.dp_lists_tg = ThreadGroup(dp_lists)
 
     def run(self):
