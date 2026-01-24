@@ -34,7 +34,7 @@ def main():
     # define the data producers. XXXDataProducer is low-level while the rest are higher level (i.e. semantic segmentation)
     drone2data = XXXDataProducer(drone) # populates the data channel with RGB & pose from drone
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
-    data_producers = DataProducerList(channel, [drone2data, semantic_data_producer, ...]) # data structure for all data
+    data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here)
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)

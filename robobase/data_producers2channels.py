@@ -1,12 +1,14 @@
-"""data_producer_list.py - data structure to manage a list of data producers as a thread"""
+"""data_producers2channels.py implements the mapping between a list of producers and a list of channels"""
 import threading
+import time
 
-from .utils import logger
+from .utils import ThreadGroup, logger
 from .types import DataItem
 from .data_producer import DataProducer
 from .data_channel import DataChannel, DataChannelClosedError
 
-class DataProducerList(threading.Thread):
+# Note: reimplementation here as we want to merge the two implementations.
+class _DataProducerList(threading.Thread):
     """Interface defining the requirements of a drone (real, sym, mock) to produce data for a consumer"""
     def __init__(self, data_channel: DataChannel, data_producers: list[DataProducer]):
         threading.Thread.__init__(self, daemon=True)
@@ -14,7 +16,7 @@ class DataProducerList(threading.Thread):
         assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), (A, B)
         assert len(B) == len(set(B)), f"One or more DataProducers provide the same modality! {B}"
         self._data_channel = data_channel
-        self.data_producers = DataProducerList.topo_sort(data_producers)
+        self.data_producers = _DataProducerList.topo_sort(data_producers)
 
     @staticmethod
     def topo_sort(producers: list[DataProducer]) -> list[DataProducer]:
@@ -67,3 +69,28 @@ class DataProducerList(threading.Thread):
             except Exception as e:
                 logger.error(e)
                 break
+
+class DataProducers2Channels(threading.Thread):
+    """
+    DataProducers2Channels is a generalization of DataProducerList from 1 channel : M producers to N : M.
+    The end-goal is to have a async-based where we actually have one thread per DataProducer. Right now this is just
+    a generalization of the (sync) DataProducerList, so each underlying may do the same work multiple times.
+    """
+    def __init__(self, data_producers: list[DataProducer], data_channels: list[DataChannel]):
+        super().__init__(daemon=True)
+        dp_lists = {}
+        for i, data_channel in enumerate(data_channels):
+            channel_dps = []
+            for dp in data_producers:
+                if any(dp_mod in data_channel.supported_types for dp_mod in dp.modalities):
+                    channel_dps.append(dp)
+            dp_lists[str(i)] = _DataProducerList(data_channel=data_channel, data_producers=channel_dps)
+
+        self.data_channels = data_channels
+        self.data_producers = data_producers
+        self.dp_lists_tg = ThreadGroup(dp_lists)
+
+    def run(self):
+        self.dp_lists_tg.start()
+        while not self.dp_lists_tg.is_any_dead():
+            time.sleep(1)

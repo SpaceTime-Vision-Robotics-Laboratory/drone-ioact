@@ -11,7 +11,7 @@ from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
@@ -78,7 +78,7 @@ def main(args: Namespace):
         dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:
         dps.append(YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold))
-    data_producers = DataProducerList(data_channel, dps)
+    data_producers = DataProducers2Channels(data_producers=dps, data_channels=[data_channel])
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)

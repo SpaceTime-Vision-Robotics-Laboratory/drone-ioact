@@ -16,7 +16,7 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
+from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayer, VideoDataProducer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -87,8 +87,8 @@ def main(args: Namespace):
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
-    data_producers = DataProducerList(data_channel=data_channel, data_producers=[rgb_data_producer, yolo_data_producer,
-                                                                                 mask_splitter_data_producer])
+    data_producers = [rgb_data_producer, yolo_data_producer, mask_splitter_data_producer]
+    video2data = DataProducers2Channels(data_producers=data_producers, data_channels=[data_channel])
 
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
@@ -99,7 +99,7 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
-        "Video -> Data": data_producers,
+        "Video -> Data": video2data,
         "Screen displayer": screen_displayer,
         "Action -> Video": action2video,
     }).start()
