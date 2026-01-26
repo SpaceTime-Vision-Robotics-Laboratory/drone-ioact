@@ -2,6 +2,7 @@
 import threading
 from datetime import datetime
 import time
+import traceback
 import numpy as np
 from vre_video import VREVideo
 
@@ -54,7 +55,7 @@ class VideoPlayer(threading.Thread):
                     time.sleep(diff)
                 logger.trace(f"Frame: {self.frame_ix}. FPS: {self.fps:.2f}. Took: {took_s:.5f}. Diff: {diff:.5f}")
             except Exception as e:
-                logger.error(e)
+                logger.error(f"Error {e}\nTraceback: {traceback.format_exc()}")
                 self.is_done = True
 
     def __repr__(self):

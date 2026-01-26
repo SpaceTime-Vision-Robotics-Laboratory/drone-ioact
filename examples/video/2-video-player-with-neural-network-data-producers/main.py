@@ -21,8 +21,8 @@ from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_pa
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 QUEUE_MAX_SIZE = 30
-SCREEN_HEIGHT = 480 # width is auto-scaled
 BBOX_THICKNES = 1
+DEFAULT_SCREEN_RESOLUTION = (600, 800)
 
 def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
@@ -51,6 +51,8 @@ def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
     parser.add_argument("video_path")
+    parser.add_argument("--frame_resolution", type=int, nargs=2, help="optional, only for video_path='-'")
+    parser.add_argument("--fps", type=float, help="optional only for video_path='-'")
     # yolo params
     parser.add_argument("--weights_path_yolo")
     parser.add_argument("--yolo_threshold", default=0.75, type=float, help="applied to both bbox and segmentation")
@@ -62,7 +64,8 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayer(VREVideo(args.video_path))).start() # start the video player
+    reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
+    (video_player := VideoPlayer(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
@@ -84,7 +87,7 @@ def main(args: Namespace):
                                       only_top1_bbox=args.yolo_only_top1_bbox)
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
     action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
                                   action_fn=partial(video_actions_fn, video_player=video_player))

@@ -26,7 +26,7 @@ from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle,
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 QUEUE_MAX_SIZE = 30
-SCREEN_HEIGHT = 480 # width is auto-scaled
+DEFAULT_SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
 
@@ -93,7 +93,7 @@ def main(args: Namespace):
 
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
                                   action_fn=partial(video_actions_fn, video_player=video_player))

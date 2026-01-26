@@ -14,7 +14,7 @@ from roboimpl.drones.video import VideoPlayer, video_actions_fn, VIDEO_SUPPORTED
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30
-SCREEN_HEIGHT = 420
+DEFAULT_SCREEN_RESOLUTION = (420, 640)
 
 def get_args() -> Namespace:
     """cli args"""
@@ -36,7 +36,7 @@ def main(args: Namespace):
     data_producers = DataProducers2Channels(data_channels=[data_channel], data_producers=[video_data_producer])
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
     action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,

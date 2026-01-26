@@ -14,11 +14,12 @@ SLEEP_DURATION_S = 0.1
 
 class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
-    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, screen_height: int | None = None,
+    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
+                 resolution: tuple[int, int] | None = None,
                  screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,
                  key_to_action: dict[str, Action] | None = None):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
-        self.initial_h = screen_height
+        self.initial_resolution = resolution
         self.key_to_action = key_to_action = key_to_action or {}
         assert all(v in actions_queue.actions for v in self.key_to_action.values()), (key_to_action, actions_queue)
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
@@ -58,7 +59,9 @@ class ScreenDisplayer(BaseController):
         self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
         prev_ts = datetime.now()
         prev_data = curr_data = self.data_channel.get()
-        self._startup_tk(image_resize(curr_data["rgb"], height=self.initial_h or curr_data["rgb"].shape[0], width=None))
+        height = self.initial_resolution[0] if self.initial_resolution is not None else curr_data["rgb"].shape[0]
+        width = self.initial_resolution[1] if self.initial_resolution is not None else curr_data["rgb"].shape[1]
+        self._startup_tk(image_resize(curr_data["rgb"], height=height, width=width))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
         fpss = [1/30]
