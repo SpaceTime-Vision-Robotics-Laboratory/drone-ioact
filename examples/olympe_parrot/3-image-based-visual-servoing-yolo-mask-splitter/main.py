@@ -7,26 +7,24 @@ Usage: ./main.py DRONE_IP --weights_path_yolo 29_05_best__yolo11n-seg_sim_car_bu
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
-from functools import partial
 import time
 import logging
 import numpy as np
 from loggez import loggez_logger as logger
-import olympe
-from olympe.video.pdraw import PdrawState
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducerList, Actions2Robot
+from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup,
+                      DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.olympe_parrot import olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS, OlympeDataProducer
+from roboimpl.drones.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
-from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, image_resize, Color
+from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 QUEUE_MAX_SIZE = 30
-SCREEN_HEIGHT = 480 # width is auto-scaled
+RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1
 
@@ -34,10 +32,9 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
 
-    if data["segmentation"] is not None:
-        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
-        img_segmentations = image_resize(all_segmentations.astype(np.uint8), *res.shape[0:2])
-        image_paste(res, img_segmentations, inplace=True)
+    # if data["segmentation"] is not None:
+    #     all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
+    #     image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
 
     if data["bbox_oriented"] is not None:
         p1, p2, p3, p4 = [p[::-1] for p in data["bbox_oriented"]]
@@ -75,8 +72,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    drone = olympe.Drone(args.drone_ip)
-    assert drone.connect(), f"could not connect to '{args.drone_ip}'"
+    env = OlympeEnv(ip=args.drone_ip)
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
     supported_types = ["bbox", "rgb", "splitter_segmentation", "metadata", "front_mask",
@@ -85,26 +81,24 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     # define the threads of the app
-    rgb_data_producer = OlympeDataProducer(drone=drone)
+    raw_data_producer = RawDataProducer(env=env)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
-    data_producers = DataProducerList(data_channel=data_channel, data_producers=[rgb_data_producer, yolo_data_producer,
-                                                                                 mask_splitter_data_producer])
+    data_producers = [raw_data_producer, yolo_data_producer, mask_splitter_data_producer]
+    drone2data = DataProducers2Channels(data_producers=data_producers, data_channels=[data_channel])
 
     key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
                      "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
                      "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, screen_height=SCREEN_HEIGHT,
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    termination_fn = lambda: drone.connected and drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
-    actions_fn = partial(olympe_actions_fn, drone=drone)
-    action2drone = Actions2Robot(actions_queue, action_fn=actions_fn, termination_fn=termination_fn)
+    action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)
 
     # start the threads
     threads = ThreadGroup({
-        "Drone -> Data": data_producers,
+        "Drone -> Data": drone2data,
         "Screen displayer": screen_displayer,
         "Action -> Drone": action2drone,
     }).start()
@@ -113,7 +107,7 @@ def main(args: Namespace):
         logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
         time.sleep(1)
 
-    drone.disconnect()
+    env.drone.disconnect()
     threads.join(timeout=1)
 
 if __name__ == "__main__":

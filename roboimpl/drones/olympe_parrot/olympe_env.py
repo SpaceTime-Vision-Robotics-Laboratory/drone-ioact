@@ -1,5 +1,4 @@
 """olympe_data_producer.py - Data producer for an olympe drone."""
-# TODO: refactor this as olympe environment.
 from datetime import datetime
 import threading
 import time
@@ -9,10 +8,10 @@ import cv2
 import olympe
 from olympe.video.pdraw import PdrawState
 
-from robobase import DataProducer, DataItem
+from robobase import Environment
 from roboimpl.utils import logger
 
-class OlympeDataProducer(DataProducer):
+class OlympeEnv(Environment):
     """
     Handler for drone video streams that processes frames and manages metadata.
     This class handles the streaming of video from a drone, converting frames to OpenCV
@@ -21,11 +20,10 @@ class OlympeDataProducer(DataProducer):
     SAVE_EVERY_N_METADATA = 100
     WAIT_FOR_DATA_SECONDS = 5
 
-    def __init__(self, drone: olympe.Drone):
-        super().__init__(modalities=["rgb", "metadata"])
-        assert drone.connected, f"{drone} is not connected"
-        assert drone.streaming is not None, f"{drone} drone.streaming is None"
-        self.drone = drone
+    def __init__(self, ip: str):
+        super().__init__(frequency=None)
+        self.drone = olympe.Drone(ip)
+        assert self.drone.connect(), f"could not connect to '{ip}'"
 
         self._current_frame: np.ndarray | None = None
         self._current_metadata: dict | None = None
@@ -41,21 +39,27 @@ class OlympeDataProducer(DataProducer):
         logger.info("Starting streaming...")
 
     @overrides
-    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
-        """gets the latest frame processed from the drone stream. Blocks for timeout_s if no frame is available yet."""
-        assert (A := self.drone.connected) and (B := self.drone.streaming.state == PdrawState.Playing), (A, B)
-        self._wait_for_data()
+    def is_running(self) -> bool:
+        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
+
+    @overrides
+    def get_state(self) -> dict:
+        self._wait_for_initial_data()
         with self._current_frame_lock:
             return {"rgb": self._current_frame, "metadata": self._current_metadata}
 
-    def _wait_for_data(self):
+    @overrides
+    def get_modalities(self) -> list[str]:
+        return ["rgb", "metadata"]
+
+    def _wait_for_initial_data(self):
         """wait for data at the beginning before anything was sent by the parrot drone"""
         n_tries = 0
         while self._current_frame is None:
             time.sleep(1)
             n_tries += 1
-            if n_tries > OlympeDataProducer.WAIT_FOR_DATA_SECONDS:
-                raise ValueError(f"no data produced for {OlympeDataProducer.WAIT_FOR_DATA_SECONDS} seconds")
+            if n_tries > OlympeEnv.WAIT_FOR_DATA_SECONDS:
+                raise ValueError(f"no data produced for {OlympeEnv.WAIT_FOR_DATA_SECONDS} seconds")
 
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """

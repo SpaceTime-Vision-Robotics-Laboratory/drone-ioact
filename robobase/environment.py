@@ -5,7 +5,8 @@ from datetime import datetime
 
 class Environment(ABC):
     """Generic environment for robots."""
-    def __init__(self, frequency: float):
+    def __init__(self, frequency: float | None = None):
+        frequency = frequency or 2**31 # none is used in case we wrap other env, like olympe or gym
         assert frequency > 0 and isinstance(frequency, (int, float)), frequency
         self.frequency = frequency
         self._prev_time = datetime(1900, 1, 1)

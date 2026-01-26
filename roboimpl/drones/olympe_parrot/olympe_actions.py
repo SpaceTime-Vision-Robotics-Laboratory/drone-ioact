@@ -9,8 +9,9 @@ OLYMPE_SUPPORTED_ACTIONS: set[str] = {
     "INCREASE_HEIGHT", "DECREASE_HEIGHT"
 }
 
-def olympe_actions_fn(action: Action, drone: olympe.Drone) -> bool:
+def olympe_actions_fn(drone: olympe.Drone, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
+    drone = drone.drone #TODO
     if action == "DISCONNECT":
         drone.streaming.stop()
         return True
