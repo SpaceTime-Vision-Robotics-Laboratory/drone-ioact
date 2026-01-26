@@ -2,13 +2,13 @@
 from pathlib import Path
 from robobase import Action
 from roboimpl.utils import logger, image_write
-from .video_player import VideoPlayer
+from .video_player_env import VideoPlayerEnv
 
 VIDEO_SUPPORTED_ACTIONS: set[str] = {
     "DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"
 }
 
-def video_actions_fn(action: Action, video_player: VideoPlayer, write_path: Path | None = None) -> bool:
+def video_actions_fn(action: Action, video_player: VideoPlayerEnv, write_path: Path | None = None) -> bool:
     """the actions callback from generic actions to video-specific ones"""
     write_path = write_path or Path.cwd()
     if action == "DISCONNECT":
@@ -20,6 +20,6 @@ def video_actions_fn(action: Action, video_player: VideoPlayer, write_path: Path
     if action == "GO_BACK_ONE_SECOND":
         video_player.increment_frame(-video_player.fps)
     if action == "TAKE_SCREENSHOT":
-        image_write(video_player.get_current_frame()["rgb"], pth := f"{write_path}/frame.png")
+        image_write(video_player.get_state()["rgb"], pth := f"{write_path}/frame.png")
         logger.debug(f"Stored screenshot at '{pth}'")
     return True

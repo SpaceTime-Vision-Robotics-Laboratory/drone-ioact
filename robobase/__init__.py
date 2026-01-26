@@ -7,6 +7,7 @@ from .controller import BaseController, Controller
 from .actions_queue import ActionsQueue
 from .actions2robot import Actions2Robot
 from .utils.thread_group import ThreadGroup
+from .environment import Environment
 
 __all__ = ["DataItem", "ActionFn", "Action", "ControllerFn",
            "DataChannel",
@@ -15,4 +16,6 @@ __all__ = ["DataItem", "ActionFn", "Action", "ControllerFn",
            "BaseController", "Controller",
            "ActionsQueue",
            "Actions2Robot",
-           "ThreadGroup"]
+           "ThreadGroup",
+           "Environment",
+]

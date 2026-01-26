@@ -12,11 +12,11 @@ import random
 from queue import Queue
 from loggez import make_logger
 
-from robobase import (DataProducer, DataChannel, ActionsQueue, ThreadGroup,
+from robobase import (LambdaDataProducer, DataChannel, ActionsQueue, ThreadGroup,
                       DataProducers2Channels, Controller, DataItem, Actions2Robot, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
-from maze import Maze, PointIJ # pylint: disable=all
+from examples.maze.maze_env import MazeEnv, PointIJ # pylint: disable=all
 
 logger = make_logger("MAZE_SOLVER")
 
@@ -25,15 +25,6 @@ MAZE_WALLS_PROB = 0.2
 MAZE_MAX_TRIES = 200
 INF = 2**31
 PRINT = os.getenv("PRINT", "0") == "1"
-
-class MazeDataProducer(DataProducer):
-    """maze data producer"""
-    def __init__(self, maze: Maze):
-        super().__init__(modalities=["distance_to_exit", "n_moves"])
-        self.maze = maze
-
-    def produce(self, deps = None) -> dict[str, DataItem]:
-        return self.maze.get_state()
 
 def random_controller_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=unused-argument
     """random planner"""
@@ -112,7 +103,7 @@ class Strategy1:
         potential_moves = [move for i, move in enumerate(potential_moves) if potential_scores[i] == min_score]
         return self.move(random.choice(potential_moves))
 
-def actions_fn(action: Action, maze: Maze):
+def actions_fn(action: Action, maze: MazeEnv):
     maze.move_player(action)
     if PRINT:
         print("\n" * 20)
@@ -133,19 +124,19 @@ def main(args: Namespace):
         "random": random_controller_fn,
         "strategy1": Strategy1(),
     }[args.strategy]
-    maze = Maze.build_random_maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB,
-                                  random_seed=args.seed, max_tries=MAZE_MAX_TRIES)
+    maze = MazeEnv.build_random_maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB,
+                                    random_seed=args.seed, max_tries=MAZE_MAX_TRIES)
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
-    maze2data = MazeDataProducer(maze)
+    maze2data = LambdaDataProducer(lambda deps: maze.get_state(), modalities=["distance_to_exit", "n_moves"])
     actions_queue = ActionsQueue(Queue(), actions=["up", "down", "left", "right"])
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
     maze_planner = Controller(data_channel, actions_queue, controller_fn=controller_fn)
     action2maze = Actions2Robot(actions_queue, action_fn=partial(actions_fn, maze=maze),
-                                 termination_fn=lambda: maze.is_finished() or maze.n_moves >= maze.max_tries)
+                                termination_fn=lambda: not maze.is_running())
 
     threads = ThreadGroup({
         "Maze -> Data": DataProducers2Channels(data_channels=[data_channel], data_producers=[maze2data]),
@@ -157,7 +148,7 @@ def main(args: Namespace):
         time.sleep(1) # important to not throttle everything with this main thread
 
     maze.print_maze()
-    logger.info(f"Maze {'finished in' if maze.is_finished() else 'not finished after'} {maze.n_moves} moves.")
+    logger.info(f"Maze {'finished in' if maze.is_completed() else 'not finished after'} {maze.n_moves} moves.")
     open(args.results_path, "a").write(f"{maze.random_seed},{args.strategy},{maze.n_moves}\n")
     threads.join(timeout=0) # stop all the threads
 

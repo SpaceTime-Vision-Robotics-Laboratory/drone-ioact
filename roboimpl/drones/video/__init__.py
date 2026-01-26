@@ -1,9 +1,9 @@
 """init file"""
 
 try:
-    from .video_player import VideoPlayer
+    from .video_player_env import VideoPlayerEnv
     from .video_actions import video_actions_fn, VIDEO_SUPPORTED_ACTIONS
-    __all__ = ["VideoPlayer",
+    __all__ = ["VideoPlayerEnv",
                "video_actions_fn", "VIDEO_SUPPORTED_ACTIONS"]
 except ImportError as e:
     from roboimpl.utils import logger

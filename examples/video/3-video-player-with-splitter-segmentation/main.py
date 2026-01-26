@@ -19,7 +19,7 @@ from mask_splitter_data_producer import MaskSplitterDataProducer
 from robobase import (
     ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer)
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
@@ -74,7 +74,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayer(VREVideo(args.video_path), loop=False)).start() # start the video player
+    (video_player := VideoPlayerEnv(VREVideo(args.video_path), loop=False)).start() # start the video player
     logger.info(f"{video_player}")
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
@@ -83,7 +83,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    rgb_data_producer = LambdaDataProducer(lambda d: video_player.get_current_frame(), modalities=["rgb", "frame_ix"])
+    rgb_data_producer = LambdaDataProducer(lambda d: video_player.get_state(), modalities=["rgb", "frame_ix"])
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,

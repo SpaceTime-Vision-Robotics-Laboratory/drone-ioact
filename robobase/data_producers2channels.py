@@ -1,6 +1,7 @@
 """data_producers2channels.py implements the mapping between a list of producers and a list of channels"""
 import threading
 import time
+import traceback
 
 from .utils import ThreadGroup, logger
 from .types import DataItem
@@ -94,5 +95,5 @@ class DataProducers2Channels(threading.Thread):
             except DataChannelClosedError: # in case it closes between is_open() check and put(data)
                 break
             except Exception as e:
-                logger.error(e)
+                logger.error(f"Error {e}\nTraceback: {traceback.format_exc()}")
                 break

@@ -10,7 +10,7 @@ from vre_video import VREVideo
 from loggez import loggez_logger as logger
 
 from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer
-from roboimpl.drones.video import VideoPlayer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30
@@ -26,13 +26,13 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayer(VREVideo(args.video_path))).start() # start the video player
+    (video_player := VideoPlayerEnv(VREVideo(args.video_path))).start() # start the video player
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    video_data_producer = LambdaDataProducer(lambda d: video_player.get_current_frame(), modalities=["rgb", "frame_ix"])
+    video_data_producer = LambdaDataProducer(lambda d: video_player.get_state(), modalities=["rgb", "frame_ix"])
     data_producers = DataProducers2Channels(data_channels=[data_channel], data_producers=[video_data_producer])
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}

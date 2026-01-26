@@ -15,7 +15,7 @@ from robobase import (
     ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer)
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayer, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
@@ -65,7 +65,7 @@ def get_args() -> Namespace:
 def main(args: Namespace):
     """main fn"""
     reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
-    (video_player := VideoPlayer(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
+    (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
@@ -76,7 +76,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    dps = [LambdaDataProducer(lambda d: video_player.get_current_frame(), modalities=["rgb", "frame_ix"])]
+    dps = [LambdaDataProducer(lambda d: video_player.get_state(), modalities=["rgb", "frame_ix"])]
     if args.weights_path_phg is not None:
         dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:
