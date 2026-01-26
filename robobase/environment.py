@@ -23,3 +23,7 @@ class Environment(ABC):
     @abstractmethod
     def get_state(self) -> dict:
         """Returns the state of this environment at the current time"""
+
+    @abstractmethod
+    def get_modalities(self) -> list[str]:
+        """The list of raw modalities produced by this environment"""

@@ -31,8 +31,8 @@ def main():
     actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
-    # define the data producers. XXXDataProducer is low-level while the rest are higher level (i.e. semantic segmentation)
-    drone2data = XXXDataProducer(drone) # populates the data channel with RGB & pose from drone
+    # define the data producers.
+    raw_data = RawDataProducer(env=drone) # populates the data channel with RGB & pose from drone (raw data)
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here)

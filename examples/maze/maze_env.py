@@ -77,6 +77,10 @@ class MazeEnv(Environment):
         distance_to_exit = abs(self.exit_pos.i - self.player_pos.i) + abs(self.exit_pos.j - self.player_pos.j)
         return {"distance_to_exit": distance_to_exit, "n_moves": self.n_moves}
 
+    @overrides
+    def get_modalities(self) -> list[str]:
+        return ["distance_to_exit", "n_moves"]
+
     def is_completed(self) -> bool:
         """returns true if the maze is succesfully completed"""
         return self.player_pos == self.exit_pos

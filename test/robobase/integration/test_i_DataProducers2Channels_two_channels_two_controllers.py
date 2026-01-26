@@ -1,38 +1,42 @@
 from __future__ import annotations
 from queue import Queue
-from datetime import datetime
 import threading
 import time
 import numpy as np
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
-                      Actions2Robot, LambdaDataProducer, Controller, Action)
+                      Actions2Robot, LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
 
 N_FRAMES = 60
 N1 = 0
 N2 = 0
 
-class FakeVideo(threading.Thread):
+class FakeVideo(threading.Thread, Environment):
     def __init__(self, frames: np.ndarray, fps: int):
-        super().__init__()
+        threading.Thread.__init__(self, daemon=True)
+        Environment.__init__(self, frequency=fps)
         self.frames = frames
         self.fps = fps
         self._frame_ix = 0
         self._current_frame = frames[0]
         self._lock = threading.Lock()
 
-    def get(self) -> dict[str, np.ndarray | int]:
+    def get_state(self) -> dict[str, np.ndarray | int]:
         with self._lock:
             return {"rgb": self._current_frame, "frame_ix": self._frame_ix}
 
+    def is_running(self):
+        return self.is_alive()
+
+    def get_modalities(self):
+        return ["rgb", "frame_ix"]
+
     def run(self):
         while self._frame_ix < len(self.frames):
-            now = datetime.now()
+            self.freq_barrier()
             with self._lock:
                 self._current_frame = self.frames[self._frame_ix]
                 self._frame_ix += 1
-            if (diff := (1 / self.fps - (datetime.now() - now).total_seconds())) > 0:
-                time.sleep(diff)
 
 def rgb_rev_produce_fn(deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
     """fake some lag for the second producer"""
@@ -58,7 +62,7 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     dc1 = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     dc2 = DataChannel(supported_types=["rgb", "frame_ix", "rgb_rev"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
-    video_dp = LambdaDataProducer(lambda deps: video_player.get(), modalities=["rgb", "frame_ix"], dependencies=[])
+    video_dp = RawDataProducer(env=video_player)
     rgb_rev_dp = LambdaDataProducer(rgb_rev_produce_fn, modalities=["rgb_rev"], dependencies=["rgb"])
     dpl = DataProducers2Channels(data_producers=[video_dp, rgb_rev_dp], data_channels=[dc1, dc2])
     ctrl1 = Controller(dc1, actions_queue, controller_fn1)

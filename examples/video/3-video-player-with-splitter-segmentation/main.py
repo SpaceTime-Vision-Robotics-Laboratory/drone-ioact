@@ -17,7 +17,7 @@ from loggez import loggez_logger as logger
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
 from robobase import (
-    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer)
+    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -83,7 +83,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    rgb_data_producer = LambdaDataProducer(lambda d: video_player.get_state(), modalities=["rgb", "frame_ix"])
+    rgb_data_producer = RawDataProducer(env=video_player)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,

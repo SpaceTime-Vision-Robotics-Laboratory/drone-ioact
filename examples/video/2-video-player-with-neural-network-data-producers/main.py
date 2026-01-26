@@ -12,7 +12,7 @@ import numpy as np
 from loggez import loggez_logger as logger
 
 from robobase import (
-    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, LambdaDataProducer)
+    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
@@ -76,7 +76,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     # define the threads of the app
-    dps = [LambdaDataProducer(lambda d: video_player.get_state(), modalities=["rgb", "frame_ix"])]
+    dps = [RawDataProducer(env=video_player)]
     if args.weights_path_phg is not None:
         dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:

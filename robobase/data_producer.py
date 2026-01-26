@@ -4,8 +4,9 @@ from abc import ABC, abstractmethod
 from typing import Callable
 from overrides import overrides
 
-from robobase.types import DataItem
-from robobase.utils import parsed_str_type
+from .types import DataItem
+from .utils import parsed_str_type
+from .environment import Environment
 
 class DataProducer(ABC):
     """DataProducer - interface for a single data producer. It has a produce() method and a list of dependencies"""
@@ -42,3 +43,8 @@ class LambdaDataProducer(DataProducer):
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         return self.produce_fn(deps)
+
+class RawDataProducer(LambdaDataProducer):
+    """RawDataProducer simply asks the Environment object for the current state. It's usually the first DP in an app."""
+    def __init__(self, env: Environment):
+        super().__init__(produce_fn=lambda deps: env.get_state(), modalities=env.get_modalities(), dependencies=[])

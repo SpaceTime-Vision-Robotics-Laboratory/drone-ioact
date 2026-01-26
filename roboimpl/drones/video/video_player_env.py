@@ -35,6 +35,10 @@ class VideoPlayerEnv(threading.Thread, Environment):
         return not self.is_done and self.is_alive()
 
     @overrides
+    def get_modalities(self) -> list[str]:
+        return ["rgb", "frame_ix"]
+
+    @overrides
     def run(self):
         self.is_paused = self.is_paused
         while not self.is_done:

@@ -12,7 +12,7 @@ import random
 from queue import Queue
 from loggez import make_logger
 
-from robobase import (LambdaDataProducer, DataChannel, ActionsQueue, ThreadGroup,
+from robobase import (RawDataProducer, DataChannel, ActionsQueue, ThreadGroup,
                       DataProducers2Channels, Controller, DataItem, Actions2Robot, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
@@ -125,11 +125,11 @@ def main(args: Namespace):
         "strategy1": Strategy1(),
     }[args.strategy]
     maze = MazeEnv.build_random_maze(maze_size=MAZE_SIZE, walls_prob=MAZE_WALLS_PROB,
-                                    random_seed=args.seed, max_tries=MAZE_MAX_TRIES)
+                                     random_seed=args.seed, max_tries=MAZE_MAX_TRIES)
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
-    maze2data = LambdaDataProducer(lambda deps: maze.get_state(), modalities=["distance_to_exit", "n_moves"])
+    maze2data = RawDataProducer(env=maze)
     actions_queue = ActionsQueue(Queue(), actions=["up", "down", "left", "right"])
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
