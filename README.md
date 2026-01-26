@@ -32,16 +32,16 @@ def main():
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.
-    raw_data = RawDataProducer(env=drone) # populates the data channel with RGB & pose from drone (raw data)
+    raw_data = RawDataProducer(drone) # populates the data channel with RGB & pose from drone (raw data)
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here)
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
-    def XXXaction_fn(action: Action) -> bool:
+    def XXXaction_fn(drone: XXXDrone, action: Action) -> bool:
         return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
-    action2drone = Actions2Robot(drone, actions_queue, action_fn=XXXaction_fn, termination_fn=lambda: drone.is_alive)
+    action2drone = Actions2Robot(drone, actions_queue, action_fn=XXXaction_fn)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Drone -> Data": data_producers,

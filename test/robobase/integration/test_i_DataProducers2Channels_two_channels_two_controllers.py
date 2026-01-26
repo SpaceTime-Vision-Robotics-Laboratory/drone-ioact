@@ -6,6 +6,7 @@ import numpy as np
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
                       Actions2Robot, LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
+from robobase.utils import logger
 
 N_FRAMES = 60
 N1 = 0
@@ -26,7 +27,8 @@ class FakeVideo(threading.Thread, Environment):
             return {"rgb": self._current_frame, "frame_ix": self._frame_ix}
 
     def is_running(self):
-        return self.is_alive()
+        res = self._frame_ix < len(self.frames)
+        return res
 
     def get_modalities(self):
         return ["rgb", "frame_ix"]
@@ -56,7 +58,7 @@ def controller_fn2(data: dict[str, DataItem]) -> Action:
 def test_i_DataProducers2Channels_two_channels_two_controllers():
     """main fn"""
     frames = np.random.randint(0, 255, size=(N_FRAMES, 30, 30, 3), dtype=np.uint8)
-    (video_player := FakeVideo(frames, fps=30)).start() # start the video player
+    video_player = FakeVideo(frames, fps=30)
 
     actions_queue = ActionsQueue(Queue(), actions=["a"])
     dc1 = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
@@ -67,11 +69,11 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     dpl = DataProducers2Channels(data_producers=[video_dp, rgb_rev_dp], data_channels=[dc1, dc2])
     ctrl1 = Controller(dc1, actions_queue, controller_fn1)
     ctrl2 = Controller(dc2, actions_queue, controller_fn2)
-    action2video = Actions2Robot(actions_queue=actions_queue, action_fn=lambda : None,
-                                 termination_fn=lambda: video_player._frame_ix < len(frames))
+    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=lambda : None)
 
     # start the threads
     threads = ThreadGroup({
+        "Video player env": video_player,
         "Video -> Data": dpl,
         "Ctrl1": ctrl1,
         "Ctrl2": ctrl2,

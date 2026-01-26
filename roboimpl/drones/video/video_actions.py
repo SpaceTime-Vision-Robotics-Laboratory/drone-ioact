@@ -8,7 +8,7 @@ VIDEO_SUPPORTED_ACTIONS: set[str] = {
     "DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"
 }
 
-def video_actions_fn(action: Action, video_player: VideoPlayerEnv, write_path: Path | None = None) -> bool:
+def video_action_fn(video_player: VideoPlayerEnv, action: Action, write_path: Path | None = None) -> bool:
     """the actions callback from generic actions to video-specific ones"""
     write_path = write_path or Path.cwd()
     if action == "DISCONNECT":

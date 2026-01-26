@@ -7,7 +7,6 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
-from functools import partial
 import time
 import logging
 from vre_video import VREVideo
@@ -19,7 +18,7 @@ from mask_splitter_data_producer import MaskSplitterDataProducer
 from robobase import (
     ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
@@ -95,8 +94,7 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  action_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
 
     # start the threads
     threads = ThreadGroup({

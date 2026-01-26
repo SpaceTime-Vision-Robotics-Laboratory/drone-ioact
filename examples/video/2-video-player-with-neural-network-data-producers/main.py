@@ -15,7 +15,7 @@ from robobase import (
     ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.drones.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
@@ -89,8 +89,7 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
-    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                  action_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
 
     # start the threads
     threads = ThreadGroup({

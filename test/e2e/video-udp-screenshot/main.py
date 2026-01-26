@@ -10,7 +10,7 @@ from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, DataProducers2Channels, Actions2Robot, RawDataProducer
 from robobase.utils import logger, ThreadGroup
-from roboimpl.drones.video import VideoPlayerEnv, video_actions_fn
+from roboimpl.drones.video import VideoPlayerEnv, video_action_fn
 from roboimpl.controllers import UDPController
 
 QUEUE_MAX_SIZE = 30
@@ -36,8 +36,7 @@ def main(args: Namespace):
     raw_data_producer = RawDataProducer(env=video_player)
     video2data = DataProducers2Channels(data_channels=[data_channel], data_producers=[raw_data_producer])
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    action2video = Actions2Robot(actions_queue=actions_queue, termination_fn=lambda: video_player.is_done,
-                                 action_fn=partial(video_actions_fn, video_player=video_player))
+    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
 
     # start the threads
     threads = ThreadGroup({

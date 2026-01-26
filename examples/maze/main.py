@@ -103,7 +103,7 @@ class Strategy1:
         potential_moves = [move for i, move in enumerate(potential_moves) if potential_scores[i] == min_score]
         return self.move(random.choice(potential_moves))
 
-def actions_fn(action: Action, maze: MazeEnv):
+def actions_fn(maze: MazeEnv, action: Action):
     maze.move_player(action)
     if PRINT:
         print("\n" * 20)
@@ -135,8 +135,7 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
     maze_planner = Controller(data_channel, actions_queue, controller_fn=controller_fn)
-    action2maze = Actions2Robot(actions_queue, action_fn=partial(actions_fn, maze=maze),
-                                termination_fn=lambda: not maze.is_running())
+    action2maze = Actions2Robot(env=maze, actions_queue=actions_queue, action_fn=actions_fn)
 
     threads = ThreadGroup({
         "Maze -> Data": DataProducers2Channels(data_channels=[data_channel], data_producers=[maze2data]),
