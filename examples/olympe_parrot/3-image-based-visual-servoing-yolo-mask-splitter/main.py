@@ -33,7 +33,7 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     res = data["rgb"].copy()
 
     # if data["segmentation"] is not None:
-    #     all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
+    #     all_segmentations = data["segmentation"].sum(0).repeat(3, axis=2) * Color.GREENISH
     #     image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
 
     if data["bbox_oriented"] is not None:
@@ -44,9 +44,9 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
         image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
     if data["front_mask"] is not None:
-        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.BLUE).astype(np.uint8), inplace=True)
+        image_paste(res, (data["front_mask"].repeat(3, axis=2) * Color.RED).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
-        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
+        image_paste(res, (data["back_mask"].repeat(3, axis=2) * Color.GREEN).astype(np.uint8), inplace=True)
 
     if data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1]
@@ -82,7 +82,7 @@ def main(args: Namespace):
 
     # define the threads of the app
     raw_data_producer = RawDataProducer(env=env)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=True)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)

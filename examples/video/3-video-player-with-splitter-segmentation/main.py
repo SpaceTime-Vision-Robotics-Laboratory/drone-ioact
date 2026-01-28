@@ -28,6 +28,8 @@ QUEUE_MAX_SIZE = 30
 DEFAULT_SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
+BGR = False # some yolo models may be trained with BGR images instead!
+
 
 def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
@@ -73,7 +75,9 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayerEnv(VREVideo(args.video_path), loop=False)).start() # start the video player
+    # from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
+    # video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
+    video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
     logger.info(f"{video_player}")
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
@@ -83,7 +87,7 @@ def main(args: Namespace):
 
     # define the threads of the app
     rgb_data_producer = RawDataProducer(env=video_player)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=BGR)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)

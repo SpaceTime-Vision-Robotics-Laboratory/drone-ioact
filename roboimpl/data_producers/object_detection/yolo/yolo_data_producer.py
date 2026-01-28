@@ -15,12 +15,13 @@ Segmentation = np.ndarray
 
 class YOLODataProducer(DataProducer):
     """Yolo data producer - Returns bbox and/or segmentations. We can also optionally resize segmentations."""
-    def __init__(self, weights_path: str, threshold: float, resize_segmentations: bool = True):
+    def __init__(self, weights_path: str, threshold: float, resize_segmentations: bool = True, bgr: bool=False):
         super().__init__(modalities=["bbox", "bbox_confidence", "segmentation", "segmentation_xy"],
                          dependencies=["rgb"])
         self.yolo = YOLO(weights_path)
         self.threshold = threshold
         self.resize_segmentations = resize_segmentations
+        self.bgr = bgr
 
     def _compute_yolo(self, rgb: np.ndarray) \
             -> tuple[list[Bbox], list[float], list[Segmentation] | None, list[np.ndarray] | None] | None:
@@ -55,7 +56,9 @@ class YOLODataProducer(DataProducer):
 
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
-        yolo_res = self._compute_yolo(deps["rgb"])
+        logger.log_every_s(f"RGB: {deps['rgb'].shape}", "DEBUG")
+        rgb = deps["rgb"] if self.bgr is False else deps["rgb"][..., ::-1] # some yolo model'r trained with BGR images:)
+        yolo_res = self._compute_yolo(rgb)
         bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
         if yolo_res is not None and bbox is not None and segmentation is not None:
             print(f"{len(bbox)} {len(bbox_confidence)} {segmentation.shape=} {len(segmentation_xy)}")

@@ -29,9 +29,9 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
     if action == "RIGHT":
         return drone.piloting(50, 0, 0, 0, 0.15)
     if action == "ROTATE_LEFT":
-        return drone.piloting(0, 0, -20, 0, 0.15)
+        return drone.piloting(0, 0, -50, 0, 0.15)
     if action == "ROTATE_RIGHT":
-        return drone.piloting(0, 0, 20, 0, 0.15)
+        return drone.piloting(0, 0, 50, 0, 0.15)
     if action == "INCREASE_HEIGHT":
         return drone.piloting(0, 0, 0, 20, 0.15)
     if action == "DECREASE_HEIGHT":
