@@ -22,9 +22,11 @@ def main():
     # define the threads
     raw_data_producer = RawDataProducer(env=env)
     data_producers = DataProducers2Channels(data_producers=[raw_data_producer], data_channels=[data_channel])
-    key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
-                     "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
-                     "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
+    key_to_action = {
+        "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
+        "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT", "q": "ROTATE_LEFT", "e": "ROTATE_RIGHT",
+        "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Next": "TILT_DOWN", "Prior": "TILT_UP"
+    }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action, resolution=RESOLUTION)
     action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)
 

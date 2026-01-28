@@ -48,7 +48,7 @@ class OlympeEnv(Environment):
         self._wait_for_initial_data()
         with self._current_frame_lock:
             res = self._current_frame
-            res = image_resize(res, *self.image_size) if image_resize is not None else res
+            res = image_resize(res, *self.image_size) if self.image_size is not None else res
             return {"rgb": res, "metadata": self._current_metadata}
 
     @overrides

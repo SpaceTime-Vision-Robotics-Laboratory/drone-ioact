@@ -60,9 +60,11 @@ def main():
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
     drone2data = DataProducers2Channels(data_producers=dps, data_channels=[data_channel])
 
-    key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
-                     "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
-                     "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
+    key_to_action = {
+        "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
+        "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT", "q": "ROTATE_LEFT", "e": "ROTATE_RIGHT",
+        "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Next": "TILT_DOWN", "Prior": "TILT_UP"
+    }
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)

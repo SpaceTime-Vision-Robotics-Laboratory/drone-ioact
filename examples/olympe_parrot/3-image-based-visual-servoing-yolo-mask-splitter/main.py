@@ -92,7 +92,7 @@ def main(args: Namespace):
     key_to_action = {
         "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
         "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT", "q": "ROTATE_LEFT", "e": "ROTATE_RIGHT",
-        "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT",
+        "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Next": "TILT_DOWN", "Prior": "TILT_UP"
     }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
