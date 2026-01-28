@@ -5,8 +5,8 @@ from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
 from ultralytics.engine.results import Masks, Boxes # pylint: disable=import-error
 from torch.nn import functional as F
-from robobase import DataProducer, DataItem
 from loggez import make_logger
+from robobase import DataProducer, DataItem
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 logger = make_logger("ROBOIMPL_YOLO")

@@ -30,7 +30,6 @@ BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
 BGR = False # some yolo models may be trained with BGR images instead!
 
-
 def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
@@ -75,10 +74,10 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
-    video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
-    BGR = True
-    # video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
+    # from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
+    # video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
+    # BGR = True
+    video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
     logger.info(f"{video_player}")
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)

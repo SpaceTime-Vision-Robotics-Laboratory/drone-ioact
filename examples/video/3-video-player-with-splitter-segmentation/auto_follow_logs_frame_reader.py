@@ -1,12 +1,14 @@
 """auto_follow_logs_frame_reader.py - interface for auto follow logs to simulate the olympe env as video"""
-import numpy as np
-from vre_video.readers import NumpyFrameReader
 import os
 from pathlib import Path
 from natsort import natsorted
+import numpy as np
+from vre_video.readers import NumpyFrameReader
 from roboimpl.utils import logger
 
+# pylint: disable=super-init-not-called
 class AutoFollowLogsFrameReader(NumpyFrameReader):
+    """AutoFollowLogsFrameReader implementation"""
     def __init__(self, res_path: Path, fps: float | None = None, frames: list[int] | None = None):
         """must be the 'res' dir wtih npz files from auto follow logs"""
         res_names = natsorted([p.name for p in Path(res_path).iterdir()])
