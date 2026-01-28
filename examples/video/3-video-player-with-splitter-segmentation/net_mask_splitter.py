@@ -115,13 +115,13 @@ class MaskSplitterNet(nn.Module):
 
     def preprocess(self, image: np.ndarray, mask: np.ndarray, image_size: tuple[int, int]) -> torch.Tensor:
         """Prepares the input 4-channel tensor from image and mask."""
-        assert len(image.shape) == 3 and len(mask.shape) == 2, (image.shape, mask.shape)
-        image_bgr = image[..., ::-1] # BGR!
-        image_bgr_rsz = image_resize(image_bgr, height=image_size[0], width=image_size[1]) # BGR!
-        mask_rsz = image_resize(mask[..., None], height=image_size[0], width=image_size[1], interpolation="nearest")
-        tr_image = torch.from_numpy(image_bgr_rsz.copy()).to(DEVICE).permute(2, 0, 1).float() / 255.0
-        tr_mask = torch.from_numpy(mask_rsz).to(DEVICE).permute(2, 0, 1).float() / 255.0
-        res = torch.cat([tr_image, tr_mask], dim=0).to(DEVICE).unsqueeze(0)
+        assert len(A := image.shape) == 3 and len(B := mask.shape) == 3 and A[0:2] == B[0:2], (image.shape, mask.shape)
+        image_bgr = image[..., ::-1] # BGR! (H', W', 3)
+        image_bgr_rsz = image_resize(image_bgr, height=image_size[0], width=image_size[1]) # (H, W, 3)
+        mask_rsz = image_resize(mask, height=image_size[0], width=image_size[1], interpolation="nearest") # (H, W, 1)
+        tr_image = torch.from_numpy(image_bgr_rsz.copy()).to(DEVICE).permute(2, 0, 1).float() / 255.0 # (3, H, W)
+        tr_mask = torch.from_numpy(mask_rsz).to(DEVICE).permute(2, 0, 1).float() / 255.0 # (1, H, W)
+        res = torch.cat([tr_image, tr_mask], dim=0).to(DEVICE).unsqueeze(0) # (1, 4, H, W)
         return res
 
     def infer(self, image: np.ndarray, mask: np.ndarray, image_size: tuple[int, int],

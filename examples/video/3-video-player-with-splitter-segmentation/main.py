@@ -36,7 +36,7 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     res = data["rgb"].copy()
 
     if data["segmentation"] is not None:
-        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1) * Color.GREENISH
+        all_segmentations = data["segmentation"].sum(0).repeat(3, axis=-1) * Color.GREENISH
         image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
 
     if data["bbox_oriented"] is not None:
@@ -47,9 +47,9 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
         image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
     if data["front_mask"] is not None:
-        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
+        image_paste(res, (data["front_mask"].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
-        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
+        image_paste(res, (data["back_mask"].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
 
     if data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1]
@@ -75,9 +75,10 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    # from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
-    # video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
-    video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
+    from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
+    video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
+    BGR = True
+    # video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
     logger.info(f"{video_player}")
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
@@ -102,6 +103,7 @@ def main(args: Namespace):
 
     # start the threads
     threads = ThreadGroup({
+        "Video player": video_player,
         "Video -> Data": video2data,
         "Screen displayer": screen_displayer,
         "Action -> Video": action2video,

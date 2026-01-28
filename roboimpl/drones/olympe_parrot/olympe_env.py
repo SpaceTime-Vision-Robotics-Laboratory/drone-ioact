@@ -9,7 +9,7 @@ import olympe
 from olympe.video.pdraw import PdrawState
 
 from robobase import Environment
-from roboimpl.utils import logger
+from roboimpl.utils import logger, image_resize
 
 class OlympeEnv(Environment):
     """
@@ -20,9 +20,10 @@ class OlympeEnv(Environment):
     SAVE_EVERY_N_METADATA = 100
     WAIT_FOR_DATA_SECONDS = 5
 
-    def __init__(self, ip: str):
+    def __init__(self, ip: str, image_size: tuple[int, int] | None = None):
         super().__init__(frequency=None)
         self.drone = olympe.Drone(ip)
+        self.image_size = image_size
         assert self.drone.connect(), f"could not connect to '{ip}'"
 
         self._current_frame: np.ndarray | None = None
@@ -46,7 +47,9 @@ class OlympeEnv(Environment):
     def get_state(self) -> dict:
         self._wait_for_initial_data()
         with self._current_frame_lock:
-            return {"rgb": self._current_frame, "metadata": self._current_metadata}
+            res = self._current_frame
+            res = image_resize(res, *self.image_size) if image_resize is not None else res
+            return {"rgb": res, "metadata": self._current_metadata}
 
     @overrides
     def get_modalities(self) -> list[str]:

@@ -6,9 +6,10 @@ from ultralytics import YOLO # pylint: disable=import-error
 from ultralytics.engine.results import Masks, Boxes # pylint: disable=import-error
 from torch.nn import functional as F
 from robobase import DataProducer, DataItem
-from roboimpl.utils import logger
+from loggez import make_logger
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
+logger = make_logger("ROBOIMPL_YOLO")
 
 Bbox = tuple[int, int, int, int]
 Segmentation = np.ndarray
@@ -47,10 +48,10 @@ class YOLODataProducer(DataProducer):
         bbox_confidennce = good_boxes.conf.tolist() if not no_bbox else None
         segmentation = None
         if not no_segm and len(good_masks) > 0:
-            segmentation = good_masks.data
+            segmentation = good_masks.data[:, None] # (n_objs, 1, H, W)
             if self.resize_segmentations:
-                segmentation = F.interpolate(good_masks.data[None], size=good_masks.orig_shape)[0]
-            segmentation = segmentation.cpu().numpy()
+                segmentation = F.interpolate(segmentation, size=good_masks.orig_shape) # (n_objs, 1, H', W')
+            segmentation = segmentation.permute(0, 2, 3, 1).cpu().numpy() # (n_objs, H', W', 1)
         segmentation_xy = good_masks.xy if not no_segm else None
         return bbox, bbox_confidennce, segmentation, segmentation_xy
 
@@ -60,7 +61,6 @@ class YOLODataProducer(DataProducer):
         rgb = deps["rgb"] if self.bgr is False else deps["rgb"][..., ::-1] # some yolo model'r trained with BGR images:)
         yolo_res = self._compute_yolo(rgb)
         bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
-        if yolo_res is not None and bbox is not None and segmentation is not None:
-            print(f"{len(bbox)} {len(bbox_confidence)} {segmentation.shape=} {len(segmentation_xy)}")
+        logger.log_every_s(f"Segmentation: {segmentation.shape if segmentation is not None else None}", "DEBUG")
         return {"bbox": bbox, "bbox_confidence": bbox_confidence,
                 "segmentation": segmentation, "segmentation_xy": segmentation_xy}

@@ -12,7 +12,7 @@ import logging
 import numpy as np
 from loggez import loggez_logger as logger
 
-from mask_splitter_data_producer import MaskSplitterDataProducer
+from mask_splitter_data_producer import MaskSplitterDataProducer, IMAGE_SIZE_SPLITTER_NET
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup,
                       DataProducers2Channels, Actions2Robot, RawDataProducer)
@@ -72,7 +72,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    env = OlympeEnv(ip=args.drone_ip)
+    env = OlympeEnv(ip=args.drone_ip, image_size=IMAGE_SIZE_SPLITTER_NET)
 
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
     supported_types = ["bbox", "rgb", "splitter_segmentation", "metadata", "front_mask",

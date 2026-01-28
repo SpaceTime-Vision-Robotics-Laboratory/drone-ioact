@@ -90,11 +90,11 @@ def image_resize(image: np.ndarray, height: int | None, width: int | None,
             "bilinear": Image.Resampling.BILINEAR,
             "lanczos": Image.Resampling.LANCZOS,
         }[interpolation]
-        assert image.dtype == np.uint8, f"Only uint8 allowed, got {image.dtype}"
         pil_image = Image.fromarray(image).resize((width, height), resample=interpolation_type, **kwargs)
         res = np.asarray(pil_image)
     else:
         raise ValueError(str(backend))
+    res = res[..., None] if len(res.shape) == 2 else res # opencv makes it 2D in (H, W, 1) caes.
     return res
 
 def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: PointIJ=(0, 0),
