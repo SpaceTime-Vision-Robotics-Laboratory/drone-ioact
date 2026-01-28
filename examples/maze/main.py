@@ -4,7 +4,6 @@ from __future__ import annotations
 import time
 import sys
 import os
-from functools import partial
 from dataclasses import dataclass
 from pathlib import Path
 from argparse import ArgumentParser, Namespace

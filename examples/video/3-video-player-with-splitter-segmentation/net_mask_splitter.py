@@ -4,9 +4,10 @@ from pathlib import Path
 
 import torch
 import numpy as np
-import cv2
 from torch import nn
 from torchinfo import summary
+
+from roboimpl.utils import image_resize
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -114,11 +115,14 @@ class MaskSplitterNet(nn.Module):
 
     def preprocess(self, image: np.ndarray, mask: np.ndarray, image_size: tuple[int, int]) -> torch.Tensor:
         """Prepares the input 4-channel tensor from image and mask."""
-        image = cv2.resize(image[..., ::-1], (image_size[1], image_size[0])) # BGR!
-        mask = cv2.resize(mask, (image_size[1], image_size[0]))
-        image = torch.from_numpy(image).to(DEVICE).permute(2, 0, 1).float() / 255.0
-        mask = torch.from_numpy(mask).to(DEVICE).unsqueeze(0).float() / 255.0
-        return torch.cat([image, mask], dim=0).to(DEVICE).unsqueeze(0)
+        assert len(image.shape) == 3 and len(mask.shape) == 2, (image.shape, mask.shape)
+        image_bgr = image[..., ::-1] # BGR!
+        image_bgr_rsz = image_resize(image_bgr, height=image_size[0], width=image_size[1]) # BGR!
+        mask_rsz = image_resize(mask[..., None], height=image_size[0], width=image_size[1], interpolation="nearest")
+        tr_image = torch.from_numpy(image_bgr_rsz.copy()).to(DEVICE).permute(2, 0, 1).float() / 255.0
+        tr_mask = torch.from_numpy(mask_rsz).to(DEVICE).permute(2, 0, 1).float() / 255.0
+        res = torch.cat([tr_image, tr_mask], dim=0).to(DEVICE).unsqueeze(0)
+        return res
 
     def infer(self, image: np.ndarray, mask: np.ndarray, image_size: tuple[int, int],
               bbox_threshold: float) -> tuple[np.ndarray, np.ndarray]:

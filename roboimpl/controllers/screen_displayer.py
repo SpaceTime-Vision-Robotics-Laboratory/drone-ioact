@@ -9,7 +9,7 @@ import numpy as np
 from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
-TIMEOUT_S = 10
+TIMEOUT_S = 1000
 SLEEP_DURATION_S = 0.1
 
 class ScreenDisplayer(BaseController):

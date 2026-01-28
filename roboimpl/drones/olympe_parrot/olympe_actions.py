@@ -1,7 +1,7 @@
 """olympe_actions.py - defines all the supported actions of an olympe drone from our generic ones to the drone's"""
-import olympe
 from olympe.messages.ardrone3.Piloting import Landing, TakeOff
 from robobase import Action
+from .olympe_env import OlympeEnv
 
 # the list of all supported actions from our generic ones to the drone's internal ones.
 OLYMPE_SUPPORTED_ACTIONS: set[str] = {
@@ -9,9 +9,9 @@ OLYMPE_SUPPORTED_ACTIONS: set[str] = {
     "INCREASE_HEIGHT", "DECREASE_HEIGHT"
 }
 
-def olympe_actions_fn(drone: olympe.Drone, action: Action) -> bool:
+def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones"""
-    drone = drone.drone #TODO
+    drone = env.drone
     if action == "DISCONNECT":
         drone.streaming.stop()
         return True
@@ -33,8 +33,8 @@ def olympe_actions_fn(drone: olympe.Drone, action: Action) -> bool:
     if action == "ROTATE_RIGHT":
         return drone.piloting(0, 0, 20, 0, 0.15)
     if action == "INCREASE_HEIGHT":
-        return drone.piloting(0, 0, 0, -20, 0.15)
-    if action == "DECREASE_HEIGHT":
         return drone.piloting(0, 0, 0, 20, 0.15)
+    if action == "DECREASE_HEIGHT":
+        return drone.piloting(0, 0, 0, -20, 0.15)
 
     return False
