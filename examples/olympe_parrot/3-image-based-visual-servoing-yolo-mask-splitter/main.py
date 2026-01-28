@@ -44,9 +44,9 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
         image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
     if data["front_mask"] is not None:
-        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
+        image_paste(res, (data["front_mask"][..., None].repeat(3, axis=-1) * Color.BLUE).astype(np.uint8), inplace=True)
     if data["back_mask"] is not None:
-        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
+        image_paste(res, (data["back_mask"][..., None].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
 
     if data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1]
@@ -89,9 +89,11 @@ def main(args: Namespace):
     data_producers = [raw_data_producer, yolo_data_producer, mask_splitter_data_producer]
     drone2data = DataProducers2Channels(data_producers=data_producers, data_channels=[data_channel])
 
-    key_to_action = {"Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
-                     "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT",
-                     "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT", "Left": "ROTATE_LEFT", "Right": "ROTATE_RIGHT"}
+    key_to_action = {
+        "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
+        "w": "FORWARD", "a": "LEFT", "s": "BACKWARD", "d": "RIGHT", "q": "ROTATE_LEFT", "e": "ROTATE_RIGHT",
+        "Up": "INCREASE_HEIGHT", "Down": "DECREASE_HEIGHT",
+    }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)

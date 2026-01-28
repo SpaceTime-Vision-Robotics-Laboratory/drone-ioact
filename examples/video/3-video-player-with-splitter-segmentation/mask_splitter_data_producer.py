@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # pylint: disable=all
 from dataclasses import dataclass
-from overrides import overrides
 import torch
 import cv2
 import numpy as np
+from overrides import overrides
 try:
     from .net_mask_splitter import MaskSplitterNet
 except ImportError:
     from net_mask_splitter import MaskSplitterNet
 
 from robobase import DataProducer, DataItem
+from roboimpl.utils import image_resize
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_NUMBER_OF_POINTS = 2
 CONTOUR_2D_DIMENSIONS = 2
 TOL_ERR_NORM = 1E-3
 IMAGE_SIZE_SPLITTER_NET = (360, 640)
+RED = (255, 0, 0, 8)
+BLUE = (0, 0, 255, 8)
 
 @dataclass(frozen=True)
 class TargetIBVS:
@@ -159,23 +162,26 @@ class MaskSplitterDataProducer(DataProducer):
         best_back = {"conf": 0.8, "idx": None, "masks_xy": []}
         best_front = {"conf": 0.8, "idx": None, "masks_xy": []}
 
-        if np.any(back_mask > 0):
+        if (back_mask > 0).any():
             contours_back, _ = cv2.findContours(back_mask * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours_back:
                 largest_contour_back = max(contours_back, key=cv2.contourArea)
                 masks_xy_back = largest_contour_back.squeeze().astype(np.int32)
                 if masks_xy_back.ndim == CONTOUR_2D_DIMENSIONS:
                     best_back["masks_xy"] = masks_xy_back
-                    segmented_frame = cv2.fillPoly(segmented_frame, pts=[masks_xy_back], color=(255, 0, 0, 8))
+                    segmented_frame = cv2.fillPoly(segmented_frame, pts=[masks_xy_back], color=RED)
 
-        if np.any(front_mask > 0):
+        if (front_mask > 0).any():
             contours_front, _ = cv2.findContours(front_mask * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours_front:
                 largest_contour_front = max(contours_front, key=cv2.contourArea)
                 masks_xy_front = largest_contour_front.squeeze().astype(np.int32)
                 if masks_xy_front.ndim == CONTOUR_2D_DIMENSIONS:
                     best_front["masks_xy"] = masks_xy_front
-                    segmented_frame = cv2.fillPoly(segmented_frame, pts=[masks_xy_front], color=(0, 0, 255, 8))
+                    segmented_frame = cv2.fillPoly(segmented_frame, pts=[masks_xy_front], color=BLUE)
+
+        if len(best_back["masks_xy"]) == 0 and len(best_front["masks_xy"]) == 0:
+            return None
 
         combined_masks = []
         if len(best_back["masks_xy"]) > 0:
@@ -183,12 +189,8 @@ class MaskSplitterDataProducer(DataProducer):
         if len(best_front["masks_xy"]) > 0:
             combined_masks.append(best_front["masks_xy"])
 
-        if not combined_masks:
-            return None
-
-        all_points = np.vstack(combined_masks) if combined_masks else np.array([])
-        if len(all_points) == 0:
-            return None
+        all_points = np.vstack(combined_masks)
+        assert len(all_points) > 0, combined_masks
 
         x1, y1 = all_points.min(axis=0)
         x2, y2 = all_points.max(axis=0)
@@ -225,5 +227,9 @@ class MaskSplitterDataProducer(DataProducer):
         if target is None:
             return res
 
-        return {"front_mask": target.front_mask, "back_mask": target.back_mask, "bbox_oriented": target.bbox_oriented,
+        height, width = deps["rgb"].shape[0:2]
+        front_mask_rsz = image_resize(target.front_mask[..., None], height=height, width=width, interpolation="nearest")
+        back_mask_rsz = image_resize(target.back_mask[..., None], height=height, width=width, interpolation="nearest")
+
+        return {"front_mask": front_mask_rsz, "back_mask": back_mask_rsz, "bbox_oriented": target.bbox_oriented,
                 "splitter_segmentation": target.segmented_frame}

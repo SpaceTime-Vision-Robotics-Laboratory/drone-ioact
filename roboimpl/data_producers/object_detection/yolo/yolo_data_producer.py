@@ -57,5 +57,7 @@ class YOLODataProducer(DataProducer):
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         yolo_res = self._compute_yolo(deps["rgb"])
         bbox, bbox_confidence, segmentation, segmentation_xy = yolo_res if yolo_res is not None else [None] * 4
+        if yolo_res is not None and bbox is not None and segmentation is not None:
+            print(f"{len(bbox)} {len(bbox_confidence)} {segmentation.shape=} {len(segmentation_xy)}")
         return {"bbox": bbox, "bbox_confidence": bbox_confidence,
                 "segmentation": segmentation, "segmentation_xy": segmentation_xy}

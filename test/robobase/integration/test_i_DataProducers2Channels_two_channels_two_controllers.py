@@ -6,7 +6,6 @@ import numpy as np
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
                       Actions2Robot, LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
-from robobase.utils import logger
 
 N_FRAMES = 60
 N1 = 0

@@ -3,7 +3,6 @@
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from queue import Queue
-from functools import partial
 from argparse import ArgumentParser, Namespace
 import time
 from vre_video import VREVideo
