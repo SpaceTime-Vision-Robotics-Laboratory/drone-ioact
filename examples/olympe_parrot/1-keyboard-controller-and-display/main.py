@@ -6,7 +6,7 @@ from queue import Queue
 from loggez import loggez_logger as logger
 
 from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer
-from roboimpl.drones.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
+from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 
 QUEUE_MAX_SIZE = 30

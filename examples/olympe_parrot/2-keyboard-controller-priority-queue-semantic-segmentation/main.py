@@ -13,7 +13,7 @@ import numpy as np
 from robobase import (ActionsQueue, Action, DataItem, DataChannel, ThreadGroup,
                       DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
-from roboimpl.drones.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
+from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image
 

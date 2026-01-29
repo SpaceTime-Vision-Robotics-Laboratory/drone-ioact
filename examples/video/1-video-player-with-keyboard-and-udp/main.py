@@ -9,7 +9,7 @@ from vre_video import VREVideo
 from loggez import loggez_logger as logger
 
 from robobase import ActionsQueue, DataChannel, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer
-from roboimpl.drones.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
 QUEUE_MAX_SIZE = 30

@@ -18,7 +18,7 @@ from mask_splitter_data_producer import MaskSplitterDataProducer
 from robobase import (
     ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.drones.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 

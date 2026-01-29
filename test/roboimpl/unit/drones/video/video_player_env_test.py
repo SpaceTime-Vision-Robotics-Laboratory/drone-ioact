@@ -2,7 +2,7 @@ import time
 import numpy as np
 import pytest
 from vre_video import VREVideo
-from roboimpl.drones.video import VideoPlayerEnv
+from roboimpl.envs.video import VideoPlayerEnv
 
 def test_VideoPlayerEnv_basic():
     video = VREVideo(frames := np.random.randint(0, 255, size=(100, 40, 40, 3), dtype=np.uint8), fps=30)
