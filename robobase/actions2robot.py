@@ -32,7 +32,7 @@ class Actions2Robot(threading.Thread):
         while res := self.env.is_running():
             try:
                 action: Action = self.actions_queue.get(block=True, timeout=1_000)
-                logger.debug(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+                logger.log_every_s(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})", "DEBUG")
                 res = self.action_fn(self.env, action)
                 if res is False:
                     logger.warning(f"Could not perform action '{action}'")

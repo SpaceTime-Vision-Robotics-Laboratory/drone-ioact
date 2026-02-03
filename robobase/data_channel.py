@@ -2,7 +2,7 @@
 from __future__ import annotations
 from copy import deepcopy
 import os
-from typing import Callable
+from typing import Callable, Any
 from datetime import datetime
 import threading
 import time
@@ -15,6 +15,9 @@ from robobase.utils import logger
 
 DATA_STORER_QUEUE_MAXSIZE = 100
 SLEEP_INTERVAL = 0.01
+
+def _fmt(v: np.ndarray | Any) -> tuple | type:
+    return v.shape if isinstance(v, np.ndarray) else type(v)
 
 class DataChannelClosedError(ValueError): pass # pylint: disable=all # noqa
 
@@ -76,10 +79,7 @@ class DataChannel:
             if self._data_storer is not None: # for logging
                 if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
                     self._data_storer.push(item) # only push differnt items according to eq_fn
-                    logger.trace(
-                        "Received new item: "
-                        f"'{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }'"
-                    )
+                    logger.log_every_s(f"Received new item: '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
             self._data = item
 
     def get(self) -> dict[str, DataItem]:

@@ -69,6 +69,7 @@ class Controller(BaseController):
                 logger.log_every_s("Previous data equals to current data. Skipping.", level="DEBUG")
                 time.sleep(self.data_polling_interval_s)
                 continue
+            logger.log_every_s(f"Processing a new data item: {curr_data['timestamp']}", level="DEBUG") # TODO: rm ts
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
                 self.actions_queue.put(action)
