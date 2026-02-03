@@ -36,8 +36,7 @@ def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], onl
     if "segmentation" in data and data["segmentation"] is not None:
         # merge all segmentation masks together (as bools)
         data["segmentation"] = data["segmentation"][0:1] if only_top1_bbox else data["segmentation"]
-        all_segmentations = data["segmentation"].sum(0)[..., None].repeat(3, axis=-1)
-        all_segmentations = (all_segmentations * Color.GREENISH).astype(np.uint8)
+        all_segmentations = (data["segmentation"].sum(0).repeat(3, axis=-1) * Color.GREENISH).astype(np.uint8)
         data["rgb"] = image_paste(data["rgb"], all_segmentations)
 
     res = data["rgb"]
