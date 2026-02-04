@@ -58,10 +58,10 @@ class ScreenDisplayer(BaseController):
     def run(self):
         self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
         prev_ts = datetime.now()
-        prev_data = curr_data = self.data_channel.get()
-        height = self.initial_resolution[0] if self.initial_resolution is not None else curr_data["rgb"].shape[0]
-        width = self.initial_resolution[1] if self.initial_resolution is not None else curr_data["rgb"].shape[1]
-        self._startup_tk(image_resize(curr_data["rgb"], height=height, width=width))
+        prev_data, _ = self.data_channel.get()
+        height = self.initial_resolution[0] if self.initial_resolution is not None else prev_data["rgb"].shape[0]
+        width = self.initial_resolution[1] if self.initial_resolution is not None else prev_data["rgb"].shape[1]
+        self._startup_tk(image_resize(prev_data["rgb"], height=height, width=width))
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
         fpss = [1/30]
@@ -70,7 +70,7 @@ class ScreenDisplayer(BaseController):
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
             logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}")
 
-            curr_data = self.data_channel.get()
+            curr_data, _ = self.data_channel.get()
             curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
             if self.data_channel.eq_fn(prev_data, curr_data) and prev_shape == curr_shape:
                 logger.trace(f"Not updating. Prev data equals to curr data and same shape: {curr_shape}")

@@ -28,11 +28,11 @@ def test_DataChannel_eq_fn():
     assert channel.eq_fn(d1, d3)
 
 def test_DataChannel_data_storer(tmp_path: Path):
-    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path, store_logs=True)
+    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path)
     channel.put({"rgb": 0})
     channel.put({"rgb": 0})
     channel.put({"rgb": 1})
     channel.put({"rgb": 1})
     channel.put({"rgb": 2})
     channel.close()
-    assert len(list(tmp_path.iterdir())) == 3
+    assert len(list(channel.log_path.iterdir())) == 3

@@ -64,12 +64,12 @@ class Controller(BaseController):
         super().wait_for_initial_data(self.initial_data_max_duration_s, self.initial_data_sleep_duration_s)
         prev_data = None
         while self.data_channel.has_data():
-            curr_data = self.data_channel.get()
+            curr_data, curr_ts = self.data_channel.get()
             if prev_data is not None and self.data_channel.eq_fn(prev_data, curr_data):
                 logger.log_every_s("Previous data equals to current data. Skipping.", level="DEBUG")
                 time.sleep(self.data_polling_interval_s)
                 continue
-            logger.log_every_s(f"Processing a new data item: {curr_data['timestamp']}", level="DEBUG") # TODO: rm ts
+            logger.log_every_s(f"Processing a new data item: {curr_ts}", level="DEBUG")
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
                 self.actions_queue.put(action)

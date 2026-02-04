@@ -66,7 +66,7 @@ class DataProducers2Channels(threading.Thread):
         super().__init__(daemon=True)
         self.data_channels = data_channels
         self.data_producers = _topo_sort_producers(data_producers)
-        self._data_producer_lists: list[_DataProducerList] = []
+        self._data_producer_lists: list[_DataProducerList] = [] # mostlfy for debugging, see test_i_DataProducers2DCs
 
         self.workers = ThreadGroup()
         for i, data_channel in enumerate(data_channels):
@@ -75,12 +75,8 @@ class DataProducers2Channels(threading.Thread):
                 if any(dp_mod in data_channel.supported_types for dp_mod in dp.modalities):
                     channel_dps.append(dp)
             self._data_producer_lists.append(_DataProducerList(data_channel=data_channel, data_producers=channel_dps))
-            self.workers[f"DPList-{i}"] = threading.Thread(
-                target=self._worker_fn,
-                args=(self._data_producer_lists[-1], ),
-                daemon=True,
-                name=f"DPList-{i}",
-            )
+            self.workers[f"DPList-{i}"] = threading.Thread(target=self._worker_fn, daemon=True, name=f"DPList-{i}",
+                                                           args=(self._data_producer_lists[-1], ))
 
     def run(self):
         self.workers.start()

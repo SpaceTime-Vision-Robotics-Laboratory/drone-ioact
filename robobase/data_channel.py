@@ -31,9 +31,9 @@ class _DataStorer(threading.Thread):
         self.data_queue = Queue(maxsize=DATA_STORER_QUEUE_MAXSIZE)
         self.data_channel = data_channel
 
-    def push(self, data: dict[str, DataItem]):
+    def push(self, data: dict[str, DataItem], timestamp: datetime):
         """push a data item to the data storer queue so it's later stored on disk"""
-        self.data_queue.put({"data": data, "timestamp": datetime.now().isoformat()})
+        self.data_queue.put({"data": data, "timestamp": timestamp.isoformat()})
 
     def run(self):
         while True:
@@ -48,19 +48,19 @@ class _DataStorer(threading.Thread):
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
     def __init__(self, supported_types: list[str], eq_fn: Callable[[DataItem, DataItem], bool],
-                 log_path: Path | None = None, store_logs: bool = os.getenv("DATA_CHANNEL_STORE_LOGS", "0") == "1"):
+                 log_path: Path | None = None):
         assert len(supported_types) > 0, "cannot have a data channel that supports no data type (i.e. rgb, pose etc.)"
         self.supported_types = set(supported_types)
         self.eq_fn = eq_fn
-        self.log_path = log_path or Path(logger.get_file_handler().file_path).parent / "DataChannel"
-        self.store_logs = store_logs
+        self.log_path = DataChannel._make_log_path(log_path)
 
         self._lock = threading.Lock()
         self._data: dict[str, DataItem] = {}
+        self._data_ts: datetime = datetime(1900, 1, 1)
         self._is_closed = False
 
         self._data_storer = None
-        if store_logs:
+        if self.log_path is not None:
             logger.info(f"Storing DataChannel logs at '{self.log_path}'")
             self._data_storer = _DataStorer(self, self.log_path)
             self._data_storer.start()
@@ -71,6 +71,7 @@ class DataChannel:
 
     def put(self, item: dict[str, DataItem]):
         """Put data into the queue"""
+        item_ts = datetime.now()
         assert isinstance(item, dict), type(item)
         assert (ks := set(item.keys())) == (st := self.supported_types), f"Data keys: {ks} vs. Supported types: {st}"
         with self._lock:
@@ -78,15 +79,16 @@ class DataChannel:
                 raise DataChannelClosedError("Channel is closed, cannot put data.")
             if self._data_storer is not None: # for logging
                 if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
-                    self._data_storer.push(item) # only push differnt items according to eq_fn
+                    self._data_storer.push(item, item_ts) # only push differnt items according to eq_fn
                     logger.log_every_s(f"Received new item: '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
             self._data = item
+            self._data_ts = item_ts
 
-    def get(self) -> dict[str, DataItem]:
-        """Return the item from the channel"""
+    def get(self) -> tuple[dict[str, DataItem], datetime]:
+        """Return the current item from the channel + its the timestamp when it was received"""
         with self._lock:
             assert self.is_open(), "Cannot get data from a closed chanel"
-            return deepcopy(self._data)
+            return deepcopy(self._data), deepcopy(self._data_ts)
 
     def has_data(self) -> bool:
         """Checks if the channel has data"""
@@ -101,6 +103,15 @@ class DataChannel:
             logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self._data_storer.path}'")
             while self._data_storer.data_queue.qsize() > 0:
                 time.sleep(SLEEP_INTERVAL)
+
+    def _make_log_path(log_path: Path | None) -> Path | None:
+        if log_path is None:
+            res = None
+            if os.getenv("DATA_CHANNEL_STORE_LOGS", "0") == "1":
+                res = Path(logger.get_file_handler().file_path).parent / "DataChannel"
+                logger.debug("DATA_CHANNEL_STORE_LOGS=1 detected. Storing logs.")
+            return res
+        return log_path / "DataChannel" if log_path.name != "DataChannel" else log_path
 
     def __repr__(self) -> str:
         return f"[DataChannel] Types: {self.supported_types}. Has data: {self.has_data()}. Open: {self.is_open()}."
