@@ -6,44 +6,18 @@ from typing import Callable, Any
 from datetime import datetime
 import threading
 import time
-from queue import Queue, Empty
 from pathlib import Path
 import numpy as np
 
 from robobase.types import DataItem
-from robobase.utils import logger
+from robobase.utils import logger, DataStorer
 
-DATA_STORER_QUEUE_MAXSIZE = 100
 SLEEP_INTERVAL = 0.01
 
 def _fmt(v: np.ndarray | Any) -> tuple | type:
     return v.shape if isinstance(v, np.ndarray) else type(v)
 
 class DataChannelClosedError(ValueError): pass # pylint: disable=all # noqa
-
-class _DataStorer(threading.Thread):
-    """internal thread for storing DataChannel data"""
-    def __init__(self, data_channel: DataChannel, path: Path):
-        threading.Thread.__init__(self, daemon=True)
-        assert not path.exists() or len(list(path.iterdir())) == 0, f"Path '{path}' exists."
-        path.mkdir(parents=True, exist_ok=True)
-        self.path = path
-        self.data_queue = Queue(maxsize=DATA_STORER_QUEUE_MAXSIZE)
-        self.data_channel = data_channel
-
-    def push(self, data: dict[str, DataItem], timestamp: datetime):
-        """push a data item to the data storer queue so it's later stored on disk"""
-        self.data_queue.put({"data": data, "timestamp": timestamp.isoformat()})
-
-    def run(self):
-        while True:
-            try:
-                x = self.data_queue.get_nowait()
-                np.save(pth := f"{self.path}/{x['timestamp']}", x["data"])
-                logger.trace(f"Stored at '{pth}'")
-            except Empty:
-                time.sleep(SLEEP_INTERVAL)
-                logger.trace("Empty queue on DataStorer")
 
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
@@ -62,7 +36,7 @@ class DataChannel:
         self._data_storer = None
         if self.log_path is not None:
             logger.info(f"Storing DataChannel logs at '{self.log_path}'")
-            self._data_storer = _DataStorer(self, self.log_path)
+            self._data_storer = DataStorer(self.log_path)
             self._data_storer.start()
 
     def is_open(self) -> bool:
@@ -77,10 +51,12 @@ class DataChannel:
         with self._lock:
             if not self.is_open():
                 raise DataChannelClosedError("Channel is closed, cannot put data.")
+
             if self._data_storer is not None: # for logging
                 if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
                     self._data_storer.push(item, item_ts) # only push differnt items according to eq_fn
-                    logger.log_every_s(f"Received new item: '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
+                    logger.log_every_s(f"Received ({item_ts}): '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
+
             self._data = item
             self._data_ts = item_ts
 

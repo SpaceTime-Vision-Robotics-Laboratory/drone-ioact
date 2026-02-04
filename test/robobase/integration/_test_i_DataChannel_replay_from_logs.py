@@ -2,36 +2,12 @@ import time
 import random
 import threading
 import shutil
-from functools import partial
-from typing import T, Iterable, Callable
 from pathlib import Path
 from queue import Queue
 from datetime import datetime
 import numpy as np
 from robobase import DataChannel, RawDataProducer, Environment, ThreadGroup, Controller, ActionsQueue, Actions2Robot
 from robobase.data_producers2channels import DataProducers2Channels
-
-def natsorted(seq: Iterable[T], key: Callable[[T], "SupportsGTAndLT"] | None = None, reverse: bool=False) -> list[T]: # noqa
-    """wrapper on top of natsorted so we can properly remove it"""
-    def _try_convert_to_num(x: str) -> str | int | float:
-        try:
-            return int(x)
-        except ValueError:
-            try:
-                return float(x)
-            except ValueError:
-                return x
-
-    def natsorted_key(item: T, key: Callable) -> "SupportsGTAndLT": #noqa
-        item = key(item)
-        if isinstance(item, str):
-            ix_dot = item.rfind(".")
-            item = item[0:ix_dot] if ix_dot != -1 else item
-            item = _try_convert_to_num(item)
-        return item
-
-    key = key or (lambda item: item)
-    return sorted(seq, key=partial(natsorted_key, key=key), reverse=reverse)
 
 class TestEnv(Environment):
     def __init__(self):
@@ -72,9 +48,12 @@ def test_i_DataChannel_replay_from_logs():
     tg.join(timeout=0.1)
     channel.close()
 
-    files = natsorted(list(Path(channel.log_path).iterdir()), key=lambda p: p.name)
+    files = sorted(list(Path(channel.log_path).iterdir()), key=lambda p: p.name)
     data = [np.load(x, allow_pickle=True).item() for x in files]
     print(f"Loaded {len(data)} items. Keys: {data[0].keys()}.")
+    for i in range(len(data)):
+        if len(data[i]["state"]) > i:
+            breakpoint()
 
 if __name__ == "__main__":
     test_i_DataChannel_replay_from_logs()
