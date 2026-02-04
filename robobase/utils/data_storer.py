@@ -20,6 +20,12 @@ class DataStorer(threading.Thread):
         path.mkdir(parents=True, exist_ok=True)
         self.path = path
         self.data_queue = Queue(maxsize=DATA_STORER_QUEUE_MAXSIZE)
+        self.is_closed = False
+
+    def close(self):
+        """method to close the data storer"""
+        assert self.is_alive(), "cannot call close on dead or non started thread"
+        self.is_closed = True
 
     def push(self, data: Any, timestamp: datetime):
         """push a data item to the data storer queue so it's later stored on disk"""
@@ -36,5 +42,7 @@ class DataStorer(threading.Thread):
             try:
                 self.get_and_store()
             except Empty:
+                if self.is_closed:
+                    break
                 time.sleep(SLEEP_INTERVAL)
                 logger.trace("Empty queue on DataStorer")

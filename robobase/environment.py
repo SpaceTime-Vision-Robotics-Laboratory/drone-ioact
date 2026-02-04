@@ -23,7 +23,7 @@ class Environment(ABC):
 
     @abstractmethod
     def get_state(self) -> dict:
-        """Returns the state of this environment at the current time"""
+        """Returns the state of this environment at the some time. Remember to deepcopy() this or ensure immutability"""
 
     @abstractmethod
     def get_modalities(self) -> list[str]:

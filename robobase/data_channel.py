@@ -75,10 +75,12 @@ class DataChannel:
         """Closes the channel"""
         with self._lock:
             self._is_closed = True
-        if self._data_storer is not None and (n := self._data_storer.data_queue.qsize()) > 0:
-            logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self._data_storer.path}'")
-            while self._data_storer.data_queue.qsize() > 0:
-                time.sleep(SLEEP_INTERVAL)
+        if self._data_storer is not None:
+            if (n := self._data_storer.data_queue.qsize()) > 0:
+                logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self._data_storer.path}'")
+                while self._data_storer.data_queue.qsize() > 0:
+                    time.sleep(SLEEP_INTERVAL)
+            self._data_storer.close()
 
     def _make_log_path(log_path: Path | None) -> Path | None:
         if log_path is None:
