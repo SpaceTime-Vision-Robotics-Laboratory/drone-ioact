@@ -1,7 +1,7 @@
 """auto_follow_logs_frame_reader.py - interface for auto follow logs to simulate the olympe env as video"""
 import os
 from pathlib import Path
-from natsort import natsorted
+from natsort import natsorted # pylint: disable=import-error
 import numpy as np
 from vre_video.readers import NumpyFrameReader
 from roboimpl.utils import logger

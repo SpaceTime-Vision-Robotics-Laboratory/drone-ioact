@@ -44,16 +44,15 @@ class TestEnv(Environment):
     def is_running(self) -> bool:
         return len(self._state) < 100
     def get_state(self) -> dict:
-        return {"timestamp": datetime.now().isoformat()[0:-4], "state": self._state}
+        return {"ts": datetime.now().isoformat()[0:-4], "state": self._state}
     def get_modalities(self) -> list[str]:
-        return ["timestamp", "state"]
+        return ["ts", "state"]
 
 def test_i_DataChannel_replay_from_logs():
     env = TestEnv()
-    log_path = Path(__file__).parent / "test_i_DataChannel_replay_from_logs"
+    log_path = Path(__file__).parent / "test_i_DataChannel_replay_from_logs/"
     shutil.rmtree(log_path, ignore_errors=True)
-    channel = DataChannel(supported_types=["timestamp", "state"], eq_fn=lambda a, b: a["timestamp"] == b["timestamp"],
-                          log_path=log_path, store_logs=True)
+    channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["ts"] == b["ts"], log_path=log_path)
     actions_queue = ActionsQueue(Queue(), actions=["a1", "a2"])
 
     raw_dp = RawDataProducer(env)
@@ -73,8 +72,9 @@ def test_i_DataChannel_replay_from_logs():
     tg.join(timeout=0.1)
     channel.close()
 
-    files = natsorted(list(Path(log_path).iterdir()), key=lambda p: p.name)
-    _ = [np.load(x, allow_pickle=True).item() for x in files]
+    files = natsorted(list(Path(channel.log_path).iterdir()), key=lambda p: p.name)
+    data = [np.load(x, allow_pickle=True).item() for x in files]
+    print(f"Loaded {len(data)} items. Keys: {data[0].keys()}.")
 
 if __name__ == "__main__":
     test_i_DataChannel_replay_from_logs()
