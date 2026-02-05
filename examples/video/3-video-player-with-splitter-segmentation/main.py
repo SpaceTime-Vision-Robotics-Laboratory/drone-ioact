@@ -5,7 +5,6 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 """
 # pylint: disable=duplicate-code
 from __future__ import annotations
-from queue import Queue
 from argparse import ArgumentParser, Namespace
 import logging
 from vre_video import VREVideo

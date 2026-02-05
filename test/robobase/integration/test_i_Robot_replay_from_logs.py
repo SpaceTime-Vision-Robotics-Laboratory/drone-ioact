@@ -4,7 +4,6 @@ import shutil
 import threading
 import time
 from pathlib import Path
-from queue import Queue
 from copy import deepcopy
 from datetime import datetime
 import numpy as np

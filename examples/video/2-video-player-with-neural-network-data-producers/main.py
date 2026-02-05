@@ -2,7 +2,6 @@
 """keyboard controller and display example with frames of a video + semantic segmentation"""
 # pylint: disable=duplicate-code
 from __future__ import annotations
-from queue import Queue
 from functools import partial
 from argparse import ArgumentParser, Namespace
 import logging

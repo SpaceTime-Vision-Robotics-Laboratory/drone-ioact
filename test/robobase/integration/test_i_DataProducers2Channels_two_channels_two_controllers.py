@@ -1,5 +1,4 @@
 from __future__ import annotations
-from queue import Queue
 import threading
 import time
 import numpy as np

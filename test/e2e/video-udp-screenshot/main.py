@@ -2,7 +2,6 @@
 """keyboard controller and display example with frames of a video not a real or simulated drone"""
 # pylint: disable=duplicate-code
 from __future__ import annotations
-from queue import Queue
 from argparse import ArgumentParser, Namespace
 from vre_video import VREVideo
 
