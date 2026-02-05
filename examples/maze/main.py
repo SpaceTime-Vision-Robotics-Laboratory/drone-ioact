@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """maze main function"""
 from __future__ import annotations
-import time
 import sys
 import os
 from dataclasses import dataclass
@@ -11,8 +10,7 @@ import random
 from queue import Queue
 from loggez import make_logger
 
-from robobase import (RawDataProducer, DataChannel, ActionsQueue, ThreadGroup,
-                      DataProducers2Channels, Controller, DataItem, Actions2Robot, Action)
+from robobase import (Robot, DataChannel, ActionsQueue, DataItem, Action)
 
 sys.path.append(Path(__file__).parent.__str__())
 from examples.maze.maze_env import MazeEnv, PointIJ # pylint: disable=all
@@ -128,27 +126,18 @@ def main(args: Namespace):
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
-    maze2data = RawDataProducer(env=maze)
     actions_queue = ActionsQueue(Queue(), actions=["up", "down", "left", "right"])
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
-    maze_planner = Controller(data_channel, actions_queue, controller_fn=controller_fn)
-    action2maze = Actions2Robot(env=maze, actions_queue=actions_queue, action_fn=actions_fn)
-
-    threads = ThreadGroup({
-        "Maze -> Data": DataProducers2Channels(data_channels=[data_channel], data_producers=[maze2data]),
-        "Mazez Planner": maze_planner,
-        "Action -> Maze": action2maze,
-    }).start()
-
-    while not threads.is_any_dead():
-        time.sleep(1) # important to not throttle everything with this main thread
+    robot = Robot(env=maze, data_channel=data_channel, actions_queue=actions_queue, action_fn=actions_fn)
+    robot.add_controller(controller_fn, name="Maze Planner")
+    robot.run()
+    data_channel.close()
 
     maze.print_maze()
     logger.info(f"Maze {'finished in' if maze.is_completed() else 'not finished after'} {maze.n_moves} moves.")
     open(args.results_path, "a").write(f"{maze.random_seed},{args.strategy},{maze.n_moves}\n")
-    threads.join(timeout=0) # stop all the threads
 
 if __name__ == "__main__":
     main(get_args())

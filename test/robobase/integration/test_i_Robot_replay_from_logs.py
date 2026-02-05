@@ -2,10 +2,12 @@
 """basic minimal example to create and env, a data channel/actions queue and the middle part: dp, controller etc."""
 import shutil
 import threading
+import time
 from pathlib import Path
 from queue import Queue
 from copy import deepcopy
 from datetime import datetime
+import numpy as np
 from robobase import Robot, Environment, DataChannel, ActionsQueue
 
 TARGET = "helloworld"
@@ -28,8 +30,7 @@ class BasicEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["ts", "state"]
 
-def main(tmp_path: Path):
-    """main fn"""
+def test_i_Robot_replay_from_logs(tmp_path: Path):
     env = BasicEnv()
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"],
@@ -46,5 +47,11 @@ def main(tmp_path: Path):
     print(f"Final state: '{''.join(env.get_state()['state'])}'")
     assert "".join(env.get_state()["state"]) == TARGET
 
+    time.sleep(0.1)
+    files = sorted(list(Path(data_channel.log_path).iterdir()), key=lambda p: p.name)
+    data = [np.load(x, allow_pickle=True).item() for x in files]
+    for i in range(len(data)):
+        assert "".join(data[i]["state"]) == TARGET[0:i]
+
 if __name__ == "__main__":
-    main(Path(__file__).parent / Path(__file__).stem)
+    test_i_Robot_replay_from_logs(Path(__file__).parent / Path(__file__).stem)

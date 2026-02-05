@@ -2,14 +2,14 @@
 from __future__ import annotations
 from copy import deepcopy
 import os
-from typing import Callable, Any
+from typing import Any
 from datetime import datetime
 import threading
 import time
 from pathlib import Path
 import numpy as np
 
-from robobase.types import DataItem
+from robobase.types import DataItem, DataEqFn
 from robobase.utils import logger, DataStorer
 
 SLEEP_INTERVAL = 0.01
@@ -21,8 +21,7 @@ class DataChannelClosedError(ValueError): pass # pylint: disable=all # noqa
 
 class DataChannel:
     """DataChannel defines the thread-safe data structure where the data producer writes the data and consumers read"""
-    def __init__(self, supported_types: list[str], eq_fn: Callable[[DataItem, DataItem], bool],
-                 log_path: Path | None = None):
+    def __init__(self, supported_types: list[str], eq_fn: DataEqFn, log_path: Path | None = None):
         assert len(supported_types) > 0, "cannot have a data channel that supports no data type (i.e. rgb, pose etc.)"
         self.supported_types = set(supported_types)
         self.eq_fn = eq_fn

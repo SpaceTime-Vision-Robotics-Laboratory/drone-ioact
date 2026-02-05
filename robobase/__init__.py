@@ -1,22 +1,25 @@
 """init file"""
-from .types import DataItem, ActionFn, Action, ControllerFn
+from .environment import Environment
+from .robot import Robot
 from .data_channel import DataChannel
+from .actions_queue import ActionsQueue
+from .types import DataItem, ActionFn, Action, ControllerFn, DataEqFn
 from .data_producer import DataProducer, LambdaDataProducer, RawDataProducer
 from .data_producers2channels import DataProducers2Channels
 from .controller import BaseController, Controller
-from .actions_queue import ActionsQueue
-from .actions2robot import Actions2Robot
+from .actions2env import Actions2Environment
 from .utils.thread_group import ThreadGroup
-from .environment import Environment
 
 __all__ = [
-    "DataItem", "ActionFn", "Action", "ControllerFn",
+    "Environment",
+    "Robot",
     "DataChannel",
+    "ActionsQueue",
+    "DataItem", "ActionFn", "Action", "ControllerFn", "DataEqFn",
+    # low level controls below, use just the above ones for most of the cases
     "DataProducer", "LambdaDataProducer", "RawDataProducer",
     "DataProducers2Channels",
     "BaseController", "Controller",
-    "ActionsQueue",
-    "Actions2Robot",
+    "Actions2Environment",
     "ThreadGroup",
-    "Environment",
 ]

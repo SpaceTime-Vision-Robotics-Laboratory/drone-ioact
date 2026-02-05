@@ -9,7 +9,7 @@ from .utils import logger
 from .actions_queue import ActionsQueue
 from .environment import Environment
 
-class Actions2Robot(threading.Thread):
+class Actions2Environment(threading.Thread):
     """Interface defining the requirements of a robot (real, sym, mock) to receive an action & apply it to the robot"""
     def __init__(self, env: Environment, actions_queue: ActionsQueue, action_fn: ActionFn):
         threading.Thread.__init__(self, daemon=True)

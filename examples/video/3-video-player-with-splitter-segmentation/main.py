@@ -7,7 +7,6 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
-import time
 import logging
 from vre_video import VREVideo
 import numpy as np
@@ -15,8 +14,7 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import (
-    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
+from robobase import Robot, DataChannel, ActionsQueue, DataItem
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -80,40 +78,29 @@ def main(args: Namespace):
     video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
     logger.info(f"{video_player}")
 
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
                        "bbox_oriented", "segmentation_xy", "segmentation", "bbox_confidence", "back_mask"]
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
 
-    # define the threads of the app
-    rgb_data_producer = RawDataProducer(env=video_player)
+    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=BGR)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
-    data_producers = [rgb_data_producer, yolo_data_producer, mask_splitter_data_producer]
-    video2data = DataProducers2Channels(data_producers=data_producers, data_channels=[data_channel])
+    robot.add_data_producer(yolo_data_producer)
+    robot.add_data_producer(mask_splitter_data_producer)
 
     key_to_action = {"space": "PLAY_PAUSE", "q": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
+    robot.add_controller(screen_displayer, name="Screen displayer")
+    robot.add_other_thread(video_player, name="Video player")
 
-    # start the threads
-    threads = ThreadGroup({
-        "Video player": video_player,
-        "Video -> Data": video2data,
-        "Screen displayer": screen_displayer,
-        "Action -> Video": action2video,
-    }).start()
-
-    while not threads.is_any_dead():
-        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
-        time.sleep(1)
-
+    robot.run()
     video_player.stop_video()
-    threads.join(timeout=1)
+    data_channel.close()
 
 if __name__ == "__main__":
     main(get_args())

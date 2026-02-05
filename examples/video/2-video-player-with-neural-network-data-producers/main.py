@@ -5,14 +5,11 @@ from __future__ import annotations
 from queue import Queue
 from functools import partial
 from argparse import ArgumentParser, Namespace
-import time
 import logging
 from vre_video import VREVideo
 import numpy as np
-from loggez import loggez_logger as logger
 
-from robobase import (
-    ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Robot, RawDataProducer)
+from robobase import Robot, ActionsQueue, DataChannel, DataItem
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
@@ -66,21 +63,18 @@ def main(args: Namespace):
     reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
     (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
 
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
     supported_types = ["rgb", "frame_ix"]
     supported_types = supported_types if args.weights_path_phg is None else [*supported_types, "semantic"]
     if args.weights_path_yolo:
         supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
-
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
+    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
 
-    # define the threads of the app
-    dps = [RawDataProducer(env=video_player)]
+    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     if args.weights_path_phg is not None:
-        dps.append(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
+        robot.add_data_producer(PHGMAESemanticDataProducer(weights_path=args.weights_path_phg))
     if args.weights_path_yolo is not None:
-        dps.append(YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold))
-    data_producers = DataProducers2Channels(data_producers=dps, data_channels=[data_channel])
+        robot.add_data_producer(YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold))
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
@@ -88,21 +82,11 @@ def main(args: Namespace):
                      "Left": "GO_BACK_ONE_SECOND"}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
-    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
+    robot.add_controller(screen_displayer, "Screen Displayer")
 
-    # start the threads
-    threads = ThreadGroup({
-        "Video -> Data": data_producers,
-        "Semantic screen displayer": screen_displayer,
-        "Action -> Video": action2video,
-    }).start()
-
-    while not threads.is_any_dead():
-        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
-        time.sleep(1)
-
+    robot.run()
     video_player.stop_video()
-    threads.join(timeout=1)
+    data_channel.close()
 
 if __name__ == "__main__":
     main(get_args())
