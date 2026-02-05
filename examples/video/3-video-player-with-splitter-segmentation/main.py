@@ -22,7 +22,6 @@ from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle,
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
-QUEUE_MAX_SIZE = 30
 DEFAULT_SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
@@ -81,7 +80,7 @@ def main(args: Namespace):
     supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
                        "bbox_oriented", "segmentation_xy", "segmentation", "bbox_confidence", "back_mask"]
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=BGR)

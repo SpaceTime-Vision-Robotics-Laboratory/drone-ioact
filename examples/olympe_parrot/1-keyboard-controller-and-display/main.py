@@ -13,7 +13,7 @@ RESOLUTION = 480, 640
 def main():
     """main fn"""
     env = OlympeEnv(ip=sys.argv[1])
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(actions=OLYMPE_SUPPORTED_ACTIONS, queue=Queue(maxsize=QUEUE_MAX_SIZE))
     data_channel = DataChannel(supported_types=["rgb", "metadata"],
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 

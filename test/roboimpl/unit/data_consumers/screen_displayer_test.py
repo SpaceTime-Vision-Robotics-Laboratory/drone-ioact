@@ -5,7 +5,7 @@ from roboimpl.controllers import ScreenDisplayer
 
 def test_KeyboardController_mock_queue(mocker: MockerFixture):
     key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
-    actions_queue = ActionsQueue(q := Queue(), actions=list(key_to_action.values()))
+    actions_queue = ActionsQueue(actions=list(key_to_action.values()), queue=(q := Queue()))
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
     sd = ScreenDisplayer(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
 

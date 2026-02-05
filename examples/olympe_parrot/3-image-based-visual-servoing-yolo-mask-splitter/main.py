@@ -71,7 +71,7 @@ def main(args: Namespace):
     """main fn"""
     env = OlympeEnv(ip=args.drone_ip, image_size=IMAGE_SIZE_SPLITTER_NET)
 
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=OLYMPE_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(actions=OLYMPE_SUPPORTED_ACTIONS, queue=Queue(maxsize=QUEUE_MAX_SIZE))
     supported_types = ["bbox", "rgb", "splitter_segmentation", "metadata", "front_mask",
                        "bbox_oriented", "segmentation_xy", "segmentation", "bbox_confidence", "back_mask"]
     data_channel = DataChannel(supported_types=supported_types,

@@ -3,7 +3,7 @@
 Install `requirements-base.txt` for the common requirements without any 3rd party dependencies, lile `olympe` (from parrot).
 See [examples](examples/) for how to run it.
 
-Architecture:
+## Architecture:
 
 <img alt="arch" src="./arch.png" width="50%">
 
@@ -21,6 +21,12 @@ The usual flow is like this:
                                   -> normals       |-- [Controller n] --|
 ```
 
+## Example
+
+For an example you can run, see [this](examples/hello-world/main.py).
+
+### Using the `Robot` high-level wrapper
+
 Every `main` script will contain the following logic:
 
 ```python
@@ -28,7 +34,7 @@ def main():
     """main fn"""
     drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
     drone.connect() # establish connection to the drone before any callbacks
-    actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
+    actions_queue = ActionsQueue(actions=["a1", "a2", ...]) # defines the generic actions
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # action->drone converts a generic action to an actual drone action
@@ -51,6 +57,8 @@ if __name__ == "__main__":
     main()
 ```
 
+### Using the low-level primitives defined by the library
+
 The `Robot` class above is just a nice wrapper on top of the low-level machinery. We could replace it completely for more control (i.e. >1 data channels if we want) like this:
 
 ```python
@@ -58,7 +66,7 @@ def main():
     """main fn"""
     drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
     drone.connect() # establish connection to the drone before any callbacks
-    actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
+    actions_queue = ActionsQueue(actions=["a1", "a2", ...], queue=Queue()) # defines the generic actions and the queue type
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.

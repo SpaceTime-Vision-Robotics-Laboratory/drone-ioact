@@ -17,7 +17,6 @@ from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
-QUEUE_MAX_SIZE = 30
 BBOX_THICKNES = 1
 DEFAULT_SCREEN_RESOLUTION = (600, 800)
 
@@ -68,7 +67,7 @@ def main(args: Namespace):
     if args.weights_path_yolo:
         supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=VIDEO_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     if args.weights_path_phg is not None:

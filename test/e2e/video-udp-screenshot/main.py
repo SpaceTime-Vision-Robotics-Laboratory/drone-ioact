@@ -10,7 +10,6 @@ from robobase import ActionsQueue, DataChannel, Robot
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn
 from roboimpl.controllers import UDPController
 
-QUEUE_MAX_SIZE = 30
 SCREEN_HEIGHT = 420
 
 def get_args() -> Namespace:
@@ -26,7 +25,7 @@ def main(args: Namespace):
     (video_player := VideoPlayerEnv(VREVideo(args.video_path))).start() # start the video player
 
     actions = ["DISCONNECT", "PLAY_PAUSE", "SKIP_AHEAD_ONE_SECOND", "GO_BACK_ONE_SECOND", "TAKE_SCREENSHOT"]
-    actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
+    actions_queue = ActionsQueue(actions=actions)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)

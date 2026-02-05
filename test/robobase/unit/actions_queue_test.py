@@ -1,17 +1,16 @@
 import pytest
-from queue import Queue
 from robobase.actions2env import ActionsQueue
 
 def test_ActionsQueue_ctor():
     with pytest.raises(AssertionError):
-         ActionsQueue(Queue(), actions=[])
+         ActionsQueue(actions=[])
 
-    aq = ActionsQueue(Queue(), actions=["a1", "a2"])
+    aq = ActionsQueue(actions=["a1", "a2"])
     assert aq.actions == ["a1", "a2"]
     assert len(aq) == 0
 
 def test_ActionsQueue_push_pop():
-    aq = ActionsQueue(Queue(), actions=["a1", "a2"])
+    aq = ActionsQueue(actions=["a1", "a2"])
     assert len(aq) == 0
     aq.put("a1")
     aq.put("a2")

@@ -5,8 +5,9 @@ from robobase.types import Action
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
-    def __init__(self, queue: Queue, actions: list[Action]):
+    def __init__(self, actions: list[Action], queue: Queue | None = None):
         assert len(actions) > 0, "cannot have an empty list of actions"
+        queue = queue or Queue()
         super().__init__()
         self.queue = queue
         self.actions = actions

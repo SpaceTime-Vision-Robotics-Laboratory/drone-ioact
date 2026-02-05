@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 import random
-from queue import Queue
 from loggez import make_logger
 
 from robobase import (Robot, DataChannel, ActionsQueue, DataItem, Action)
@@ -126,7 +125,7 @@ def main(args: Namespace):
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
-    actions_queue = ActionsQueue(Queue(), actions=["up", "down", "left", "right"])
+    actions_queue = ActionsQueue(actions=["up", "down", "left", "right"])
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
