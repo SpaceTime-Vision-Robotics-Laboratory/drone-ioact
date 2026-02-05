@@ -1,4 +1,5 @@
 """init file"""
+
 try:
     import olympe
 
@@ -10,4 +11,4 @@ try:
     __all__ = ["OlympeEnv", "olympe_actions_fn", "OLYMPE_SUPPORTED_ACTIONS",]
 except ImportError as e:
     from roboimpl.utils import logger
-    logger.warning(f"olympe could not be imported {e}. Did you run 'pip install -r requirements-drones.txt' ?")
+    logger.warning(f"olympe could not be imported {e}. Did you run 'pip install -r requirements-extra.txt' ?")

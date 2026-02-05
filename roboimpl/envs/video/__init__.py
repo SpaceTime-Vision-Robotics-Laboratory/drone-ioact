@@ -7,4 +7,4 @@ try:
                "video_action_fn", "VIDEO_SUPPORTED_ACTIONS"]
 except ImportError as e:
     from roboimpl.utils import logger
-    logger.warning(f"video container could not be imported {e}. Did you run 'pip install -r requirements-drones.txt' ?")
+    logger.warning(f"video container could not be imported {e}. Did you run 'pip install -r requirements-extra.txt' ?")

@@ -11,6 +11,7 @@ from roboimpl.utils import image_resize, logger
 
 TIMEOUT_S = 1000
 SLEEP_DURATION_S = 0.1
+INITIAL_RESOLUTION_FALLBACK = (480, 640)
 
 class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
@@ -45,11 +46,19 @@ class ScreenDisplayer(BaseController):
         logger.debug(f"Pressed '{key}'. Pushing: {action} to the actions queue.")
         self.add_to_queue(action)
 
-    def _startup_tk(self, rgb_rsz: np.ndarray):
+    def _get_initial_height_width(self, prev_data: dict[str, DataItem]) -> tuple[int, int]:
+        """try hard to get the initial h,w. Either provided in ctor, from data (if 'rgb' is found) or default"""
+        if self.initial_resolution is not None:
+            return self.initial_resolution
+        if "rgb" in prev_data:
+            return prev_data["rgb"].shape[0:2]
+        return INITIAL_RESOLUTION_FALLBACK
+
+    def _startup_tk(self, height: int, width: int):
         """starts the tk window"""
         assert self.root is None, "cannot call twice"
         self.root = tk.Tk(className=" Screen Displayer") # space for capital S
-        self.canvas = tk.Canvas(self.root, width=rgb_rsz.shape[1], height=rgb_rsz.shape[0])
+        self.canvas = tk.Canvas(self.root, height=height, width=width)
         self.canvas.pack(fill="both", expand=True)
         self.canvas.focus_set()
         self.root.bind("<KeyRelease>", self._on_key_release)
@@ -59,9 +68,8 @@ class ScreenDisplayer(BaseController):
         self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
         prev_ts = datetime.now()
         prev_data, _ = self.data_channel.get()
-        height = self.initial_resolution[0] if self.initial_resolution is not None else prev_data["rgb"].shape[0]
-        width = self.initial_resolution[1] if self.initial_resolution is not None else prev_data["rgb"].shape[1]
-        self._startup_tk(image_resize(prev_data["rgb"], height=height, width=width))
+        height, width = self._get_initial_height_width(prev_data)
+        self._startup_tk(height=height, width=width)
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
         fpss = [1/30]
