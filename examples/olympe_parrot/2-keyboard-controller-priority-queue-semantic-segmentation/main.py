@@ -2,16 +2,12 @@
 """keyboard controller and display example. Same as the first example but also uses a priority queue."""
 # pylint: disable=duplicate-code
 import sys
-import time
 from queue import PriorityQueue
 from functools import partial
-from loggez import loggez_logger as logger
-
 from overrides import overrides
 import numpy as np
 
-from robobase import (ActionsQueue, Action, DataItem, DataChannel, ThreadGroup,
-                      DataProducers2Channels, Actions2Robot, RawDataProducer)
+from robobase import Robot, ActionsQueue, Action, DataItem, DataChannel
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -53,12 +49,12 @@ def main():
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
     screen_frame_callback = None
 
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
+
     # define the threads
-    dps = [RawDataProducer(env=env)]
     if len(sys.argv) == 3:
-        dps.append(PHGMAESemanticDataProducer(weights_path=sys.argv[2]))
+        robot.add_data_producer(PHGMAESemanticDataProducer(weights_path=sys.argv[2]))
         screen_frame_callback = partial(screen_frame_semantic, color_map=PHGMAESemanticDataProducer.COLOR_MAP)
-    drone2data = DataProducers2Channels(data_producers=dps, data_channels=[data_channel])
 
     key_to_action = {
         "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
@@ -67,20 +63,11 @@ def main():
     }
     screen_displayer = PriorityScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                                screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)
-
-    threads = ThreadGroup({
-        "Drone -> Data": drone2data,
-        "Screen displayer": screen_displayer,
-        "Action -> Drone": action2drone,
-    }).start()
-
-    while not threads.is_any_dead():
-        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
-        time.sleep(1)
+    robot.add_controller(screen_displayer, name="Screen displayer")
+    robot.run()
 
     env.drone.disconnect()
-    threads.join(timeout=1)
+    data_channel.close()
 
 if __name__ == "__main__":
     main()

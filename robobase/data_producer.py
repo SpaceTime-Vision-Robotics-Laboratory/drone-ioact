@@ -44,7 +44,12 @@ class LambdaDataProducer(DataProducer):
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         return self.produce_fn(deps)
 
-class RawDataProducer(LambdaDataProducer):
+class RawDataProducer(DataProducer):
     """RawDataProducer simply asks the Environment object for the current state. It's usually the first DP in an app."""
     def __init__(self, env: Environment):
-        super().__init__(produce_fn=lambda deps: env.get_state(), modalities=env.get_modalities(), dependencies=[])
+        super().__init__(modalities=env.get_modalities(), dependencies=[])
+        self.env = env
+
+    @overrides
+    def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
+        return self.env.get_state()

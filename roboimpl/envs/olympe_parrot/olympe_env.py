@@ -41,7 +41,7 @@ class OlympeEnv(Environment):
 
     @overrides
     def is_running(self) -> bool:
-        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing # pylint: disable=all #noqa
+        return self.drone.connected and self.drone.streaming.state == PdrawState.Playing
 
     @overrides
     def get_state(self) -> dict:

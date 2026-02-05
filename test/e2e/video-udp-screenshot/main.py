@@ -4,11 +4,9 @@
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
-import time
 from vre_video import VREVideo
 
-from robobase import ActionsQueue, DataChannel, DataProducers2Channels, Actions2Robot, RawDataProducer
-from robobase.utils import logger, ThreadGroup
+from robobase import ActionsQueue, DataChannel, Robot
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn
 from roboimpl.controllers import UDPController
 
@@ -31,25 +29,12 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(Queue(maxsize=QUEUE_MAX_SIZE), actions=actions)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
-    # define the threads of the app
-    raw_data_producer = RawDataProducer(env=video_player)
-    video2data = DataProducers2Channels(data_channels=[data_channel], data_producers=[raw_data_producer])
+    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    action2video = Actions2Robot(env=video_player, actions_queue=actions_queue, action_fn=video_action_fn)
-
-    # start the threads
-    threads = ThreadGroup({
-        "Video -> Data": video2data,
-        "UDP controller": udp_controller,
-        "Action -> Video": action2video,
-    }).start()
-
-    while not video_player.is_done and not threads.is_any_dead():
-        logger.trace(f"\n-{data_channel}\n-{actions_queue}")
-        time.sleep(1)
+    robot.add_controller(udp_controller, name="UDP controller")
+    robot.run()
 
     video_player.stop_video()
-    threads.join(timeout=1)
 
 if __name__ == "__main__":
     main(get_args())

@@ -7,15 +7,12 @@ Usage: ./main.py DRONE_IP --weights_path_yolo 29_05_best__yolo11n-seg_sim_car_bu
 from __future__ import annotations
 from queue import Queue
 from argparse import ArgumentParser, Namespace
-import time
 import logging
 import numpy as np
-from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer, IMAGE_SIZE_SPLITTER_NET
 
-from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup,
-                      DataProducers2Channels, Actions2Robot, RawDataProducer)
+from robobase import Robot, ActionsQueue, DataChannel, DataItem
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -80,14 +77,15 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types,
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
+
     # define the threads of the app
-    raw_data_producer = RawDataProducer(env=env)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=True)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)
-    data_producers = [raw_data_producer, yolo_data_producer, mask_splitter_data_producer]
-    drone2data = DataProducers2Channels(data_producers=data_producers, data_channels=[data_channel])
+    robot.add_data_producer(yolo_data_producer)
+    robot.add_data_producer(mask_splitter_data_producer)
 
     key_to_action = {
         "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
@@ -96,21 +94,11 @@ def main(args: Namespace):
     }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
-    action2drone = Actions2Robot(env=env, actions_queue=actions_queue, action_fn=olympe_actions_fn)
-
-    # start the threads
-    threads = ThreadGroup({
-        "Drone -> Data": drone2data,
-        "Screen displayer": screen_displayer,
-        "Action -> Drone": action2drone,
-    }).start()
-
-    while not threads.is_any_dead():
-        logger.trace(f"{data_channel}. Actions queue size: {len(actions_queue)}")
-        time.sleep(1)
+    robot.add_controller(screen_displayer)
+    robot.run()
 
     env.drone.disconnect()
-    threads.join(timeout=1)
+    data_channel.close()
 
 if __name__ == "__main__":
     main(get_args())

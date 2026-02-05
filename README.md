@@ -12,8 +12,8 @@ The two 'core' components of any robotics application are: the *data channel* an
 The usual flow is like this:
 ```
 
- Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Actions2Robot -- raw action --> Drone
-(robot)                                       (rgb, pose...)     (LIFT, MOVE...)                                   (robot)
+ Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Action2Env -- raw action --> Drone
+(robot)                                       (rgb, pose...)     (LIFT, MOVE...)     (action_fn)                 (robot)
                |                ↑                  |                    ↑
                |-------> pose                      |-> [Controller 1] --|
                          rgb -> semantic           |-- [Controller 2] --|
@@ -22,6 +22,36 @@ The usual flow is like this:
 ```
 
 Every `main` script will contain the following logic:
+
+```python
+def main():
+    """main fn"""
+    drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
+    drone.connect() # establish connection to the drone before any callbacks
+    actions_queue = ActionsQueue(maxsize=QUEUE_MAX_SIZE, actions=["a1", "a2", ...]) # defines the generic actions
+    data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
+
+    # action->drone converts a generic action to an actual drone action
+    def XXXaction_fn(drone: XXXDrone, action: Action) -> bool:
+        return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
+
+    robot = Robot(env=drone, data_channel=data_channel, actions_queue=actions_queue, action_fn=XXXaction_fn)
+    # define the data producers. The 'raw' one is added by default (env to raw data)
+    robot.add_data_producer(SemanticdataProducer(ckpt_path=path_to_model, ...))
+
+    key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
+    robot.add_controller(screen_displayer, name="Screen displayer")
+    robot.run()
+
+    drone.disconnect() # disconnect from the drone.
+    data_channel.close() # close the data channel as well which also waits for logs (if enabled) to be written to disk.
+
+if __name__ == "__main__":
+    main()
+```
+
+The `Robot` class above is just a nice wrapper on top of the low-level machinery. We could replace it completely for more control (i.e. >1 data channels if we want) like this:
 
 ```python
 def main():
@@ -41,7 +71,7 @@ def main():
     # action->drone converts a generic action to an actual drone action
     def XXXaction_fn(drone: XXXDrone, action: Action) -> bool:
         return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
-    action2drone = Actions2Robot(drone, actions_queue, action_fn=XXXaction_fn)
+    action2drone = Actions2Environment(drone, actions_queue, action_fn=XXXaction_fn)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Drone -> Data": data_producers,
@@ -54,6 +84,7 @@ def main():
 
     drone.disconnect() # disconnect from the drone.
     threads.join(timeout=1) # stop all the threads
+    data_channel.close() # close the data channel as well which also waits for logs (if enabled) to be written to disk.
 
 if __name__ == "__main__":
     main()

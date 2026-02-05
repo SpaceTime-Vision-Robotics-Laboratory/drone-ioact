@@ -63,6 +63,8 @@ class DataProducers2Channels(threading.Thread):
     a generalization of the (sync) DataProducerList, so each underlying may do the same work multiple times.
     """
     def __init__(self, data_producers: list[DataProducer], data_channels: list[DataChannel]):
+        assert isinstance(dps := data_producers, list) and all(isinstance(dp, DataProducer) for dp in dps), dps
+        assert isinstance(dcs := data_channels, list) and all(isinstance(dc, DataChannel) for dc in dcs), dcs
         super().__init__(daemon=True)
         self.data_channels = data_channels
         self.data_producers = _topo_sort_producers(data_producers)
