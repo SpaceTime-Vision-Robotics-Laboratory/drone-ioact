@@ -18,12 +18,16 @@ class Environment(ABC):
         self._prev_time = now
 
     @abstractmethod
-    def is_running(self) -> bool:
-        """returns true if this environment is running"""
+    def get_state(self) -> dict:
+        """
+        Returns the state of this environment at the some time. A few very important aspects to consider:
+        - Ensure that this call is blocking and you manage how it's updated. For example in GymEnvironment we use Events
+        - Remember to deepcopy() the returned object or ensure immutability some other way so it's safe 'outside'
+        """
 
     @abstractmethod
-    def get_state(self) -> dict:
-        """Returns the state of this environment at the some time. Remember to deepcopy() this or ensure immutability"""
+    def is_running(self) -> bool:
+        """returns true if this environment is running"""
 
     @abstractmethod
     def get_modalities(self) -> list[str]:
