@@ -14,7 +14,6 @@ TARGET = "helloworld"
 class BasicEnv(Environment):
     """minimal environment"""
     def __init__(self):
-        Environment.__init__(self, frequency=30)
         self._state = []
         self._lock = threading.Lock()
     def push(self, action):

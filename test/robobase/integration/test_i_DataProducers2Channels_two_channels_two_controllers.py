@@ -1,10 +1,12 @@
 from __future__ import annotations
 import threading
+from datetime import datetime
 import time
 import numpy as np
 
 from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
                       Actions2Environment, LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
+from robobase.utils import freq_barrier
 
 N_FRAMES = 60
 N1 = 0
@@ -13,12 +15,12 @@ N2 = 0
 class FakeVideo(threading.Thread, Environment):
     def __init__(self, frames: np.ndarray, fps: int):
         threading.Thread.__init__(self, daemon=True)
-        Environment.__init__(self, frequency=fps)
         self.frames = frames
         self.fps = fps
         self._frame_ix = 0
         self._current_frame = frames[0]
         self._lock = threading.Lock()
+        self._prev_time = datetime(1900, 1, 1)
 
     def get_state(self) -> dict[str, np.ndarray | int]:
         with self._lock:
@@ -33,7 +35,7 @@ class FakeVideo(threading.Thread, Environment):
 
     def run(self):
         while self._frame_ix < len(self.frames):
-            self.freq_barrier()
+            self._prev_time = freq_barrier(self.fps, self._prev_time)
             with self._lock:
                 self._current_frame = self.frames[self._frame_ix]
                 self._frame_ix += 1

@@ -1,6 +1,7 @@
 """generic utils file"""
 from pathlib import Path
 from datetime import datetime
+import time
 from typing import Any
 from loggez import make_logger
 
@@ -15,3 +16,10 @@ logger = make_logger("ROBOBASE", log_file=f"{logs_dir}/{datetime.now().isoformat
 def parsed_str_type(item: Any) -> str:
     """Given an object with a type of the format: <class 'A.B.C.D'>, parse it and return 'A.B.C.D'"""
     return str(type(item)).rsplit(".", maxsplit=1)[-1][0:-2]
+
+def freq_barrier(frequency: float, prev_time: datetime) -> datetime:
+    """sleeps for the amount of time required between two consuecitive runs as per frequency. Returns new time."""
+    assert frequency > 0, frequency
+    diff = (1 / frequency) - ((now := datetime.now()) - prev_time).total_seconds()
+    time.sleep(diff if diff > 0 else 0)
+    return now

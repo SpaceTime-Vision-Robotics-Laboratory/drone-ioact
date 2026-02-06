@@ -8,6 +8,7 @@ from overrides import overrides
 from vre_video import VREVideo
 
 from robobase import Environment
+from robobase.utils import freq_barrier
 from roboimpl.utils import logger
 
 class VideoPlayerEnv(threading.Thread, Environment):
@@ -18,7 +19,6 @@ class VideoPlayerEnv(threading.Thread, Environment):
 
     def __init__(self, video: VREVideo, loop: bool=True):
         threading.Thread.__init__(self, daemon=True)
-        Environment.__init__(self, frequency=video.fps)
         self.video = video
         self.loop = loop # if set to true, it will endlessly run, otherwise it stops after the video ends.
         self.fps = video.fps
@@ -28,6 +28,7 @@ class VideoPlayerEnv(threading.Thread, Environment):
         self.frame_ix = 0
         self._current_frame: np.ndarray | None = None
         self._current_frame_lock = threading.Lock()
+        self._prev_time = datetime(1900, 1, 1)
 
     @overrides
     def get_state(self) -> dict[str, np.ndarray | int]:
@@ -57,7 +58,7 @@ class VideoPlayerEnv(threading.Thread, Environment):
                             self.is_done = True
                         self.frame_ix = self.frame_ix % len(self.video)
                     self._current_frame = self.video[self.frame_ix]
-                self.freq_barrier()
+                self._prev_time = freq_barrier(self.fps, self._prev_time)
                 took_s = (datetime.now() - now).total_seconds()
                 logger.trace(f"Frame: {self.frame_ix}. FPS: {self.fps:.2f}. Took: {took_s:.5f}")
             except Exception as e:

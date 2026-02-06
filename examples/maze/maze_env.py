@@ -1,11 +1,13 @@
 """maze.py -- simple 2D maze environment for testing purposes"""
 from __future__ import annotations
 from typing import NamedTuple
+from datetime import datetime
 from loggez import make_logger
 import numpy as np
 from overrides import overrides
 
 from robobase import Environment
+from robobase.utils import freq_barrier
 
 EMPTY = 0
 WALL = 1
@@ -37,7 +39,7 @@ class PointIJ(NamedTuple):
 class MazeEnv(Environment):
     """Maze implementation"""
     def __init__(self, maze: np.ndarray, player_pos: PointIJ, exit_pos: PointIJ, max_tries: int):
-        super().__init__(frequency=FREQUENCY)
+        super().__init__()
         assert len(maze.shape) == 2, maze.shape
         self.maze_size = tuple(maze.shape)
         self.maze = maze
@@ -48,6 +50,7 @@ class MazeEnv(Environment):
         self.random_seed = None
         self.n_moves = 0
         self.initial_distance = np.linalg.norm(self.exit_pos - self.player_pos, ord=1).item()
+        self._prev_time = datetime(1900, 1, 1)
 
     @staticmethod
     def build_random_maze(maze_size: tuple[int, int], walls_prob: float, random_seed: int | None, **kwargs) -> MazeEnv:
@@ -73,7 +76,7 @@ class MazeEnv(Environment):
     @overrides
     def get_state(self) -> dict[str, PointIJ | float]:
         """gets the current state of the maze w.r.t the player position"""
-        self.freq_barrier()
+        self._prev_time = freq_barrier(FREQUENCY, self._prev_time)
         distance_to_exit = abs(self.exit_pos.i - self.player_pos.i) + abs(self.exit_pos.j - self.player_pos.j)
         return {"distance_to_exit": distance_to_exit, "n_moves": self.n_moves}
 

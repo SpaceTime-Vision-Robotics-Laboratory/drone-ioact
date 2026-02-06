@@ -21,7 +21,6 @@ class OlympeEnv(Environment):
     WAIT_FOR_DATA_SECONDS = 5
 
     def __init__(self, ip: str, image_size: tuple[int, int] | None = None):
-        super().__init__(frequency=None)
         self.drone = olympe.Drone(ip)
         self.image_size = image_size
         assert self.drone.connect(), f"could not connect to '{ip}'"

@@ -26,7 +26,6 @@ class GymEnv(Environment):
     See discussion: https://aistudio.google.com/app/prompts/1WGwVg5ZsOR-P7Y1TxfIXh7zWoPFN1mWF
     """
     def __init__(self, env: gym.Env, max_steps: int | None = MAX_STEPS, seed: int | None = INITIAL_SEED):
-        super().__init__()
         assert env.render_mode is None or env.render_mode in ("ascii", "rgb_array"), env.render_mode
         self.env = env
 
