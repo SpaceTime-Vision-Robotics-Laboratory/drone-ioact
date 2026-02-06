@@ -83,7 +83,7 @@ def main(args: Namespace):
     robot.add_controller(screen_displayer, "Screen Displayer")
 
     robot.run()
-    video_player.stop_video()
+    video_player.close()
     data_channel.close()
 
 if __name__ == "__main__":

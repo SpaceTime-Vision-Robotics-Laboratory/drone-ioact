@@ -1,9 +1,20 @@
 """environment.py - Script defining an interface for environments where a robot exists in"""
 from abc import ABC, abstractmethod
+import threading
 from robobase.utils import parsed_str_type, logger
+
+class _DataReadyEvent(threading.Event):
+    """Wrapper over threading.Event for Env-specific methods regarding whether (new) data is 'ready' or not"""
+    def wait_and_clear(self, timeout: float | None = None):
+        """wait for green light and set red light again. Used in get_state() at the beginning."""
+        self.wait(timeout) # wait for green light
+        self.clear() # set red light
 
 class Environment(ABC):
     """Generic environment for robots."""
+    def __init__(self):
+        self.data_ready = _DataReadyEvent()
+
     @abstractmethod
     def get_state(self) -> dict:
         """

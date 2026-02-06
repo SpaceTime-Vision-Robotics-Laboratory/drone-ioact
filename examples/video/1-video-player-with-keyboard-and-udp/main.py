@@ -37,7 +37,7 @@ def main(args: Namespace):
     robot.run()
 
     data_channel.close()
-    video_player.stop_video()
+    video_player.close()
 
 if __name__ == "__main__":
     main(get_args())

@@ -51,6 +51,7 @@ class MazeEnv(Environment):
         self.n_moves = 0
         self.initial_distance = np.linalg.norm(self.exit_pos - self.player_pos, ord=1).item()
         self._prev_time = datetime(1900, 1, 1)
+        self.data_ready.set()
 
     @staticmethod
     def build_random_maze(maze_size: tuple[int, int], walls_prob: float, random_seed: int | None, **kwargs) -> MazeEnv:
@@ -76,7 +77,7 @@ class MazeEnv(Environment):
     @overrides
     def get_state(self) -> dict[str, PointIJ | float]:
         """gets the current state of the maze w.r.t the player position"""
-        self._prev_time = freq_barrier(FREQUENCY, self._prev_time)
+        self.data_ready.wait_and_clear() # wait for green light and set red light
         distance_to_exit = abs(self.exit_pos.i - self.player_pos.i) + abs(self.exit_pos.j - self.player_pos.j)
         return {"distance_to_exit": distance_to_exit, "n_moves": self.n_moves}
 
@@ -84,13 +85,18 @@ class MazeEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["distance_to_exit", "n_moves"]
 
+    @overrides
+    def close(self):
+        self.data_ready.set() # set to green light
+
     def is_completed(self) -> bool:
         """returns true if the maze is succesfully completed"""
         return self.player_pos == self.exit_pos
 
-    def move_player(self, direction: str) -> bool:
+    def _move_player(self, direction: str) -> bool:
         """moves player in one of the 4 directions. Returns true on succes, false otherwise"""
-        assert self.is_running() and self.n_moves < self.max_tries, "maze already finished"
+        self._prev_time = freq_barrier(FREQUENCY, self._prev_time)
+
         self.n_moves += 1
         delta = {"up": (-1, 0), "down": (1, 0), "left": (0, -1), "right": (0, 1)}
         if direction not in delta.keys():
@@ -108,6 +114,13 @@ class MazeEnv(Environment):
         if not self.is_running():
             logger.info("Maze environment ending.")
         return True
+
+    def step(self, direction: str) -> bool:
+        """step is move_player + data_ready being put to set"""
+        assert self.is_running() and self.n_moves < self.max_tries, "maze already finished"
+        res = self._move_player(direction)
+        self.data_ready.set()
+        return res
 
     def print_maze(self):
         """print the current state of the maze"""

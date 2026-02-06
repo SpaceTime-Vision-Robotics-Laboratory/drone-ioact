@@ -66,7 +66,7 @@ def main():
     robot.add_controller(screen_displayer, name="Screen displayer")
     robot.run()
 
-    env.drone.disconnect()
+    env.close()
     data_channel.close()
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 """video_player.py - this acts as a video player that continuously plays the video at the target FPS in real time"""
 import threading
-import time
 from datetime import datetime
 import traceback
 import numpy as np
@@ -15,10 +14,10 @@ class VideoPlayerEnv(threading.Thread, Environment):
     """video player implementation. Plays the video and defines the state of it (paused/current frame etc.)"""
 
     WAIT_FOR_DATA_TOTAL_S = 5
-    WAIT_FOR_DATA_SLEEP_S = 0.1
 
     def __init__(self, video: VREVideo, loop: bool=True):
         threading.Thread.__init__(self, daemon=True)
+        Environment.__init__(self)
         self.video = video
         self.loop = loop # if set to true, it will endlessly run, otherwise it stops after the video ends.
         self.fps = video.fps
@@ -33,7 +32,7 @@ class VideoPlayerEnv(threading.Thread, Environment):
     @overrides
     def get_state(self) -> dict[str, np.ndarray | int]:
         """thread-safe to get the current frame (rgb + frame_ix keys)"""
-        self._wait_for_initial_data()
+        self.data_ready.wait_and_clear(VideoPlayerEnv.WAIT_FOR_DATA_TOTAL_S if self._current_frame is None else None)
         with self._current_frame_lock:
             return {"rgb": self._current_frame.copy(), "frame_ix": self.frame_ix}
 
@@ -47,7 +46,6 @@ class VideoPlayerEnv(threading.Thread, Environment):
 
     @overrides
     def run(self):
-        self.is_paused = self.is_paused
         while not self.is_done:
             try:
                 now = datetime.now()
@@ -64,27 +62,20 @@ class VideoPlayerEnv(threading.Thread, Environment):
             except Exception as e:
                 logger.error(f"Error {e}\nTraceback: {traceback.format_exc()}")
                 self.is_done = True
+            self.data_ready.set() # set green light
 
-    def _wait_for_initial_data(self):
-        """wait for data at the beginning before anything was sent by the parrot drone"""
-        n_tries = 0
-        while self._current_frame is None:
-            time.sleep(VideoPlayerEnv.WAIT_FOR_DATA_SLEEP_S)
-            n_tries += 1
-            if n_tries * VideoPlayerEnv.WAIT_FOR_DATA_SLEEP_S > VideoPlayerEnv.WAIT_FOR_DATA_TOTAL_S:
-                raise ValueError(f"no data produced for {VideoPlayerEnv.WAIT_FOR_DATA_TOTAL_S} seconds")
+    @overrides
+    def close(self):
+        if self.is_done:
+            return
+        assert self.is_alive(), "cannot stop the video if it was never started :)"
+        self.is_done = True
+        self.data_ready.set() # set green light
 
     def increment_frame(self, n: int):
         """thread-safe way to increment the frame. Called by the actions maker on key presses"""
         with self._current_frame_lock:
             self.frame_ix = (self.frame_ix + int(n)) % len(self.video)
-
-    def stop_video(self):
-        """stops the video playing thread"""
-        if self.is_done:
-            return
-        assert self.is_alive(), "cannot stop the video if it was never started :)"
-        self.is_done = True
 
     def __repr__(self):
         return f"[VideoPlayerEnv] {repr(self.video)}"

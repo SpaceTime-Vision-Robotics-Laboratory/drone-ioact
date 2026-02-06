@@ -100,7 +100,7 @@ class Strategy1:
         return self.move(random.choice(potential_moves))
 
 def actions_fn(maze: MazeEnv, action: Action):
-    maze.move_player(action)
+    maze.step(action)
     if PRINT:
         print("\n" * 20)
         maze.print_maze()

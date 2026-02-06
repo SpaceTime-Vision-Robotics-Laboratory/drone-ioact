@@ -97,7 +97,7 @@ def main(args: Namespace):
     robot.add_controller(screen_displayer)
     robot.run()
 
-    env.drone.disconnect()
+    env.close()
     data_channel.close()
 
 if __name__ == "__main__":
