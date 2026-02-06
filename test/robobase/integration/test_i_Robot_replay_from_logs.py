@@ -14,15 +14,19 @@ TARGET = "helloworld"
 class BasicEnv(Environment):
     """minimal environment"""
     def __init__(self):
+        super().__init__()
         self._state = []
         self._lock = threading.Lock()
+        self.data_ready.set() # first data is available from the beginning
     def push(self, action):
         """updates the state of the env in a thread-safe way"""
         with self._lock:
             self._state.append(action)
+        self.data_ready.set() # upon pushing, we signal that data is ready
     def is_running(self) -> bool:
         return len(self._state) != len(TARGET)
     def get_state(self) -> dict:
+        self.data_ready.wait_and_clear() # you can only get the data once from the env: wait for 'green' light + clear.
         with self._lock:
             return {"ts": datetime.now().isoformat(), "state": deepcopy(self._state)} # important to deepcopy :)
     def get_modalities(self) -> list[str]:
@@ -42,8 +46,8 @@ def test_i_Robot_replay_from_logs(tmp_path: Path):
 
     robot.run()
     data_channel.close()
-    print(f"Final state: '{''.join(env.get_state()['state'])}'")
-    assert "".join(env.get_state()["state"]) == TARGET
+    print(f"Final state: '{''.join(env._state)}'") # pylint: disable=protected-access
+    assert "".join(env._state) == TARGET # pylint: disable=protected-access
 
     time.sleep(0.1)
     files = sorted(list(Path(data_channel.log_path).iterdir()), key=lambda p: p.name)

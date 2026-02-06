@@ -12,16 +12,19 @@ TARGET = "helloworld"
 class BasicEnv(Environment):
     """minimal environment"""
     def __init__(self):
-        Environment.__init__(self, frequency=30)
+        super().__init__()
         self._state = []
         self._lock = threading.Lock()
+        self.data_ready.set()
     def push(self, action):
         """updates the state of the env in a thread-safe way"""
         with self._lock:
             self._state.append(action)
+        self.data_ready.set()
     def is_running(self) -> bool:
         return len(self._state) != len(TARGET)
     def get_state(self) -> dict:
+        self.data_ready.wait_and_clear()
         with self._lock:
             return {"ts": datetime.now().isoformat(), "state": deepcopy(self._state)} # important to deepcopy :)
     def get_modalities(self) -> list[str]:
@@ -30,7 +33,7 @@ class BasicEnv(Environment):
 def main(tmp_path: Path):
     """main fn"""
     env = BasicEnv()
-    shutil.rmtree(tmp_path, ignore_errors=True)
+    shutil.rmtree(tmp_path, ignore_errors=True) if tmp_path is not None else None
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"],
                                log_path=tmp_path)
     actions_queue = ActionsQueue(actions=list(map(chr, range(ord("a"), ord("z") + 1)))) # from 'a' to 'z'
@@ -42,8 +45,8 @@ def main(tmp_path: Path):
 
     robot.run()
     data_channel.close()
-    print(f"Final state: '{''.join(env.get_state()['state'])}'")
-    assert "".join(env.get_state()["state"]) == TARGET
+    print(f"Final state: '{''.join(env._state)}'") # pylint: disable=protected-access
+    assert "".join(env._state) == TARGET # pylint: disable=protected-access
 
 if __name__ == "__main__":
-    main(Path(__file__).parent / Path(__file__).stem)
+    main(None)

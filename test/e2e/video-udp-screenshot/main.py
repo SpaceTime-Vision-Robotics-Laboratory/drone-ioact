@@ -32,7 +32,7 @@ def main(args: Namespace):
     robot.add_controller(udp_controller, name="UDP controller")
     robot.run()
 
-    video_player.stop_video()
+    video_player.close()
 
 if __name__ == "__main__":
     main(get_args())

@@ -1,7 +1,6 @@
 """olympe_data_producer.py - Data producer for an olympe drone."""
 from datetime import datetime
 import threading
-import time
 from overrides import overrides
 import numpy as np
 import cv2
@@ -17,10 +16,10 @@ class OlympeEnv(Environment):
     This class handles the streaming of video from a drone, converting frames to OpenCV
     format, and optionally saving metadata associated with the stream.
     """
-    SAVE_EVERY_N_METADATA = 100
     WAIT_FOR_DATA_SECONDS = 5
 
     def __init__(self, ip: str, image_size: tuple[int, int] | None = None):
+        super().__init__()
         self.drone = olympe.Drone(ip)
         self.image_size = image_size
         assert self.drone.connect(), f"could not connect to '{ip}'"
@@ -44,7 +43,7 @@ class OlympeEnv(Environment):
 
     @overrides
     def get_state(self) -> dict:
-        self._wait_for_initial_data()
+        self.data_ready.wait_and_clear(OlympeEnv.WAIT_FOR_DATA_SECONDS if self._current_frame is None else None)
         with self._current_frame_lock:
             res = self._current_frame
             res = image_resize(res, *self.image_size) if self.image_size is not None else res
@@ -54,14 +53,10 @@ class OlympeEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["rgb", "metadata"]
 
-    def _wait_for_initial_data(self):
-        """wait for data at the beginning before anything was sent by the parrot drone"""
-        n_tries = 0
-        while self._current_frame is None:
-            time.sleep(1)
-            n_tries += 1
-            if n_tries > OlympeEnv.WAIT_FOR_DATA_SECONDS:
-                raise ValueError(f"no data produced for {OlympeEnv.WAIT_FOR_DATA_SECONDS} seconds")
+    @overrides
+    def close(self):
+        self.data_ready.set()
+        self.drone.disconnect()
 
     def _yuv_frame_cb(self, yuv_frame: olympe.VideoFrame):
         """
@@ -81,12 +76,12 @@ class OlympeEnv(Environment):
             with self._current_frame_lock:
                 yuv_frame.ref()
                 self._current_frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_colors[yuv_frame.format()])
-                now = datetime.now().isoformat()
-                logger.trace(f"Received a new frame at {now}. Shape: {self._current_frame.shape}")
                 self._current_metadata = {
-                    "time": now,
+                    "time": (now := datetime.now().isoformat()),
                     "drone": yuv_frame.vmeta()[1]["drone"],
                     "camera": yuv_frame.vmeta()[1]["camera"],
                 }
+                logger.trace(f"Received a new frame at {now}. Shape: {self._current_frame.shape}")
+                self.data_ready.set()
         finally:
             yuv_frame.unref()

@@ -28,7 +28,7 @@ def main():
     robot.run()
 
     data_channel.close()
-    env.drone.disconnect()
+    env.close()
 
 if __name__ == "__main__":
     main()

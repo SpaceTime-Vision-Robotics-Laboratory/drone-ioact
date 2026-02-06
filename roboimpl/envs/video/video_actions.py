@@ -12,7 +12,7 @@ def video_action_fn(video_player: VideoPlayerEnv, action: Action, write_path: Pa
     """the actions callback from generic actions to video-specific ones"""
     write_path = write_path or Path.cwd()
     if action == "DISCONNECT":
-        video_player.stop_video()
+        video_player.close()
     if action == "PLAY_PAUSE":
         video_player.is_paused = not video_player.is_paused
     if action == "SKIP_AHEAD_ONE_SECOND":

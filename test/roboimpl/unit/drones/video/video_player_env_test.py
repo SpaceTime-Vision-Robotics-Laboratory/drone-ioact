@@ -10,7 +10,7 @@ def test_VideoPlayerEnv_basic():
     assert video_player.frame_ix == 0
 
     with pytest.raises(AssertionError):
-        video_player.stop_video()
+        video_player.close()
 
     assert not video_player.is_running()
     video_player.start()
@@ -23,7 +23,7 @@ def test_VideoPlayerEnv_basic():
 
     while True:
         if video_player.frame_ix > 10:
-            video_player.stop_video()
+            video_player.close()
             break
 
     time.sleep(0.05)
