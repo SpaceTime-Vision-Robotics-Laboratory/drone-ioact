@@ -79,7 +79,7 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     }).start()
 
     while not threads.is_any_dead():
-        pass
+        time.sleep(0.1)
 
     threads.join(timeout=0.5)
     assert N1 > 20, N1

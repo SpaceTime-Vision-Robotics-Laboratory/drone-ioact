@@ -28,9 +28,9 @@ def test_DataProducerList_wrong_data_channel_supported_types():
     _ = DataProducerList(DataChannel(supported_types=["rgb", "hsv"], eq_fn=lambda: True), data_producers=[rgb, hsv])
 
 def test_DataProducerList_same_modality_in_different_DataProducer():
-    rgb, hsv = FakeDP(modalities=["rgb"]), FakeDP(modalities=["hsv", "rgb"])
+    dp1, dp2 = FakeDP(modalities=["rgb"]), FakeDP(modalities=["hsv", "rgb"])
     with pytest.raises(AssertionError) as exc:
-        _ = DataProducerList(DataChannel(supported_types=["rgb", "hsv"], eq_fn=lambda: True), data_producers=[rgb, hsv])
+        _ = DataProducerList(DataChannel(supported_types=["rgb", "hsv"], eq_fn=lambda: True), data_producers=[dp1, dp2])
     assert str(exc.value).startswith("One or more DataProducers provide the same modality!")
 
 def test_DataProducerList_topo_sort_producers_good():

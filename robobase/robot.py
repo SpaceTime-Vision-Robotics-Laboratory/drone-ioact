@@ -67,4 +67,5 @@ class Robot:
             while not tg.is_any_dead() and self.env.is_running():
                 time.sleep(sleep_duration)
         finally:
+            logger.info(f"Joining threads: \n{tg}")
             tg.join(timeout=sleep_duration)

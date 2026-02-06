@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 import time
 from datetime import datetime
+from robobase.utils import parsed_str_type, logger
 
 class Environment(ABC):
     """Generic environment for robots."""
@@ -32,3 +33,7 @@ class Environment(ABC):
     @abstractmethod
     def get_modalities(self) -> list[str]:
         """The list of raw modalities produced by this environment"""
+
+    def close(self):
+        """Closes the environment. It's optional (warn) but useful to have it a method."""
+        logger.warning(f"[{parsed_str_type(self)}] Called .close() on this environment but no implemenattion exists")

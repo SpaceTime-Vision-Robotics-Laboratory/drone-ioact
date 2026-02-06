@@ -2,6 +2,7 @@
 -r requirements-base.txt
 # drones, robots, mocks (video), etc.
 parrot-olympe==7.7.5
+gymnasium==1.2.3
 # data or actions producers
 opencv-python-headless==4.11.0.86
 torch[cpu]>=2.8.0
