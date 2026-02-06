@@ -41,7 +41,8 @@ class _DataProducerList:
     """
     def __init__(self, data_channel: DataChannel, data_producers: list[DataProducer]):
         assert isinstance(data_channel, DataChannel), f"data_channel is of wrong type: {type(data_channel)}"
-        assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), (A, B)
+        assert (A := data_channel.supported_types) == set(B := sum([d.modalities for d in data_producers], [])), \
+            f"Data Channel types: {[*A]} vs. Data Producers modalities: {B}\nMissing: {[*A - {*B}]}"
         assert len(B) == len(set(B)), f"One or more DataProducers provide the same modality! {B}"
         self.data_channel = data_channel
         self.data_producers = data_producers
