@@ -10,7 +10,7 @@ from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
 TIMEOUT_S = 1000
-SLEEP_DURATION_S = 0.1
+TKINTER_SLEEP_S = 0.01
 INITIAL_RESOLUTION_FALLBACK = (480, 640)
 
 class ScreenDisplayer(BaseController):
@@ -65,24 +65,25 @@ class ScreenDisplayer(BaseController):
 
     @overrides
     def run(self):
-        self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
+        event = self.data_channel.subscribe()
+        event.wait(TIMEOUT_S)
         prev_ts = datetime.now()
-        prev_data, _ = self.data_channel.get()
-        height, width = self._get_initial_height_width(prev_data)
+        height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
         self._startup_tk(height=height, width=width)
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
-        fpss = [1/30]
+        fpss = [1 / 30]
         while self.data_channel.has_data():
             self.root.update()
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
             logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}")
 
+            if not event.wait(timeout=TKINTER_SLEEP_S): # if red light (but non-blocking)
+                continue
+
+            event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get()
             curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
-            if self.data_channel.eq_fn(prev_data, curr_data) and prev_shape == curr_shape:
-                logger.trace(f"Not updating. Prev data equals to curr data and same shape: {curr_shape}")
-                continue
 
             frame = self.screen_frame_callback(curr_data)
             frame_rsz = image_resize(frame, height=curr_shape[0], width=curr_shape[1])
@@ -93,7 +94,6 @@ class ScreenDisplayer(BaseController):
             else:
                 self.photo.paste(Image.fromarray(frame_rsz))
 
-            prev_data = curr_data
             prev_shape = curr_shape
             fpss.append((datetime.now() - prev_ts).total_seconds())
             prev_ts = datetime.now()

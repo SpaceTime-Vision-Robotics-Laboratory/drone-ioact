@@ -7,6 +7,7 @@ import numpy as np
 from overrides import overrides
 
 from robobase import Environment
+from robobase.utils import wait_and_clear
 from robobase.utils import freq_barrier
 
 EMPTY = 0
@@ -77,7 +78,7 @@ class MazeEnv(Environment):
     @overrides
     def get_state(self) -> dict[str, PointIJ | float]:
         """gets the current state of the maze w.r.t the player position"""
-        self.data_ready.wait_and_clear() # wait for green light and set red light
+        wait_and_clear(self.data_ready) # wait for green light and set red light
         distance_to_exit = abs(self.exit_pos.i - self.player_pos.i) + abs(self.exit_pos.j - self.player_pos.j)
         return {"distance_to_exit": distance_to_exit, "n_moves": self.n_moves}
 

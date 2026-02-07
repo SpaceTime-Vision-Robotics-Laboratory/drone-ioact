@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime
 import numpy as np
 from robobase import Robot, Environment, DataChannel, ActionsQueue
+from robobase.utils import wait_and_clear
 
 TARGET = "helloworld"
 
@@ -26,7 +27,7 @@ class BasicEnv(Environment):
     def is_running(self) -> bool:
         return len(self._state) != len(TARGET)
     def get_state(self) -> dict:
-        self.data_ready.wait_and_clear() # you can only get the data once from the env: wait for 'green' light + clear.
+        wait_and_clear(self.data_ready) # you can only get the data once from the env: wait for 'green' light + clear.
         with self._lock:
             return {"ts": datetime.now().isoformat(), "state": deepcopy(self._state)} # important to deepcopy :)
     def get_modalities(self) -> list[str]:

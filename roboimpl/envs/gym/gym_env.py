@@ -5,6 +5,7 @@ from overrides import overrides
 import gymnasium as gym # pylint: disable=import-error
 from gymnasium.core import ObsType
 from robobase import Environment
+from robobase.utils import wait_and_clear
 
 MAX_STEPS = 1000
 INITIAL_SEED = 42
@@ -43,7 +44,7 @@ class GymEnv(Environment):
 
     @overrides
     def get_state(self) -> dict:
-        self.data_ready.wait_and_clear() # wait for green light and set red light
+        wait_and_clear(self.data_ready) # wait for green light and set red light
         return {"state": self._last_state}
 
     @overrides

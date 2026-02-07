@@ -18,7 +18,7 @@ def action_fn(env: GymEnv, act: Any):
     elif act == "stop":
         env.close()
     else:
-        env.step(int(act))
+        env.step([float(act)])
 
 def controller_fn(data: dict[str, GymState], actions: list[Action]) -> Action:
     """controller fn: env state (data) to actions (generic)"""
@@ -31,10 +31,11 @@ def controller_fn(data: dict[str, GymState], actions: list[Action]) -> Action:
 
 def main():
     """main fn"""
-    env = GymEnv(gym.make("CartPole-v1", render_mode="rgb_array"))
+    env = GymEnv(gym.make("Pendulum-v1", render_mode="rgb_array"))
     data_channel = DataChannel(["state"], lambda a, b: np.allclose(a["state"].observation, b["state"].observation))
-    gym_actions = env.env.action_space
-    actions = list(map(str, range(gym_actions.start, gym_actions.n)))
+    # gym_actions = env.env.action_space
+    # actions = list(map(str, range(gym_actions.start, gym_actions.n)))
+    actions = [str(x) for x in np.linspace(-2, 2, 10000)]
     actions_queue = ActionsQueue(actions=actions + ["reset", "stop"])
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=action_fn)

@@ -32,6 +32,8 @@ class DataChannel:
         self._data_ts: datetime = datetime(1900, 1, 1)
         self._is_closed = False
 
+        self._subscribers_events: list[threading.Event] = [] # a list of subscribers that are notified on data change
+
         self._data_storer = None
         if self.log_path is not None:
             logger.info(f"Storing DataChannel logs at '{self.log_path}'")
@@ -59,6 +61,9 @@ class DataChannel:
             self._data = item
             self._data_ts = item_ts
 
+            for subscriber_event in self._subscribers_events: # announce each 'subscriber' of new data too
+                subscriber_event.set()
+
     def get(self) -> tuple[dict[str, DataItem], datetime]:
         """Return the current item from the channel + its the timestamp when it was received"""
         with self._lock:
@@ -74,12 +79,20 @@ class DataChannel:
         """Closes the channel"""
         with self._lock:
             self._is_closed = True
+            for subscriber_event in self._subscribers_events:
+                subscriber_event.set() # set green light so the subscribers don't block forever
         if self._data_storer is not None:
             if (n := self._data_storer.data_queue.qsize()) > 0:
                 logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self._data_storer.path}'")
                 while self._data_storer.data_queue.qsize() > 0:
                     time.sleep(SLEEP_INTERVAL)
             self._data_storer.close()
+
+    def subscribe(self) -> threading.Event:
+        """subscribe to this data channel, receiving a threading.Event object"""
+        with self._lock:
+            self._subscribers_events.append(res := threading.Event())
+        return res
 
     def _make_log_path(log_path: Path | None) -> Path | None:
         if log_path is None:

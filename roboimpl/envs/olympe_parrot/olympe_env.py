@@ -8,6 +8,7 @@ import olympe
 from olympe.video.pdraw import PdrawState
 
 from robobase import Environment
+from robobase.utils import wait_and_clear
 from roboimpl.utils import logger, image_resize
 
 class OlympeEnv(Environment):
@@ -43,7 +44,7 @@ class OlympeEnv(Environment):
 
     @overrides
     def get_state(self) -> dict:
-        self.data_ready.wait_and_clear(OlympeEnv.WAIT_FOR_DATA_SECONDS if self._current_frame is None else None)
+        wait_and_clear(self.data_ready, OlympeEnv.WAIT_FOR_DATA_SECONDS if self._current_frame is None else None)
         with self._current_frame_lock:
             res = self._current_frame
             res = image_resize(res, *self.image_size) if self.image_size is not None else res
