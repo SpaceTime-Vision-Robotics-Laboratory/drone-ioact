@@ -7,7 +7,7 @@ from overrides import overrides
 from vre_video import VREVideo
 
 from robobase import Environment
-from robobase.utils import freq_barrier
+from robobase.utils import freq_barrier, wait_and_clear
 from roboimpl.utils import logger
 
 class VideoPlayerEnv(threading.Thread, Environment):
@@ -32,7 +32,7 @@ class VideoPlayerEnv(threading.Thread, Environment):
     @overrides
     def get_state(self) -> dict[str, np.ndarray | int]:
         """thread-safe to get the current frame (rgb + frame_ix keys)"""
-        self.data_ready.wait_and_clear(VideoPlayerEnv.WAIT_FOR_DATA_TOTAL_S if self._current_frame is None else None)
+        wait_and_clear(self.data_ready, VideoPlayerEnv.WAIT_FOR_DATA_TOTAL_S if self._current_frame is None else None)
         with self._current_frame_lock:
             return {"rgb": self._current_frame.copy(), "frame_ix": self.frame_ix}
 

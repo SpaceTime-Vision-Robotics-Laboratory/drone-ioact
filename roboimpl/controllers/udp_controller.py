@@ -7,7 +7,6 @@ from roboimpl.utils import logger
 
 HOST = "127.0.0.1"
 TIMEOUT_S = 10
-SLEEP_DURATION_S = 0.1
 
 class UDPController(BaseController):
     """
@@ -28,7 +27,8 @@ class UDPController(BaseController):
 
     @overrides
     def run(self):
-        self.wait_for_initial_data(timeout_s=TIMEOUT_S, sleep_duration_s=SLEEP_DURATION_S)
+        event = self.data_channel.subscribe()
+        event.wait(TIMEOUT_S)
         (s := socket.socket(socket.AF_INET, socket.SOCK_DGRAM)).bind((HOST, self.port))
         logger.info(f"UDP socket listening to '{HOST}:{self.port}'")
 

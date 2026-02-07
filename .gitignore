@@ -4,4 +4,5 @@ metadata
 __pycache__
 *.png
 .venv/
+CLAUDE.md
 
