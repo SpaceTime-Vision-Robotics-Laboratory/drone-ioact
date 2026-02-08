@@ -65,8 +65,7 @@ class ScreenDisplayer(BaseController):
 
     @overrides
     def run(self):
-        event = self.data_channel.subscribe()
-        event.wait(TIMEOUT_S)
+        self.data_channel_event.wait(TIMEOUT_S)
 
         prev_ts = datetime.now()
         height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
@@ -79,10 +78,10 @@ class ScreenDisplayer(BaseController):
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
             logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}")
 
-            if not event.wait(timeout=TKINTER_SLEEP_S): # if red light (but non-blocking)
+            if not self.data_channel_event.wait(timeout=TKINTER_SLEEP_S): # if red light (but non-blocking)
                 continue
 
-            event.clear() # if green, make it red again
+            self.data_channel_event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get()
             curr_shape = self.canvas.winfo_height(), self.canvas.winfo_width()
 

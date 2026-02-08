@@ -21,6 +21,7 @@ class BaseController(threading.Thread):
         threading.Thread.__init__(self, daemon=True)
         self._data_channel = data_channel
         self._actions_queue = actions_queue
+        self.data_channel_event = self.data_channel.subscribe()
 
     @property
     def data_channel(self) -> DataChannel:
@@ -45,12 +46,11 @@ class Controller(BaseController):
     @overrides
     def run(self):
         """default data polling scheduling"""
-        event = self.data_channel.subscribe()
-        event.wait(self.initial_data_max_duration_s) # wait for initial data
+        self.data_channel_event.wait(self.initial_data_max_duration_s) # wait for initial data
         while self.data_channel.has_data():
             curr_data, curr_ts = self.data_channel.get()
             logger.log_every_s(f"Processing a new data item: {curr_ts}", level="DEBUG")
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
                 self.actions_queue.put(action)
-            wait_and_clear(event) # get new data and set red light again.
+            wait_and_clear(self.data_channel_event) # get new data and set red light again.

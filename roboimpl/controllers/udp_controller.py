@@ -27,8 +27,7 @@ class UDPController(BaseController):
 
     @overrides
     def run(self):
-        event = self.data_channel.subscribe()
-        event.wait(TIMEOUT_S)
+        self.data_channel_event.wait(TIMEOUT_S)
         (s := socket.socket(socket.AF_INET, socket.SOCK_DGRAM)).bind((HOST, self.port))
         logger.info(f"UDP socket listening to '{HOST}:{self.port}'")
 

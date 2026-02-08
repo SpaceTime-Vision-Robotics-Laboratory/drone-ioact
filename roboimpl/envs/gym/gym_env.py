@@ -7,7 +7,7 @@ from gymnasium.core import ObsType
 from robobase import Environment
 from robobase.utils import wait_and_clear
 
-MAX_STEPS = 1000
+MAX_STEPS = 1000000
 INITIAL_SEED = 42
 RenderFrame = Any
 
