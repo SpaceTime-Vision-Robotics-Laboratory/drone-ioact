@@ -36,3 +36,20 @@ def test_DataChannel_data_storer(tmp_path: Path):
     channel.put({"rgb": 2})
     channel.close()
     assert len(list(channel.log_path.iterdir())) == 3
+
+def test_DataChannel_subscribe():
+    channel = DataChannel(supported_types=["item"], eq_fn=lambda a, b: a==b)
+    event = channel.subscribe()
+
+    assert not event.is_set()
+
+    channel.put({"item": 0}) # put new item -> event is set
+    assert event.is_set()
+    event.clear()
+
+    assert not event.is_set()
+    channel.put({"item": 0}) # put same item, the event is not set again
+    assert not event.is_set()
+
+    channel.put({"item": 1}) # put other item -> event is set
+    assert event.is_set()
