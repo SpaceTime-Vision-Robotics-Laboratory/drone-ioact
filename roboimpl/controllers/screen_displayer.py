@@ -67,12 +67,13 @@ class ScreenDisplayer(BaseController):
     def run(self):
         event = self.data_channel.subscribe()
         event.wait(TIMEOUT_S)
+
         prev_ts = datetime.now()
         height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
         self._startup_tk(height=height, width=width)
         prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
-        fpss = [1 / 30]
+        fpss = [1 / 30] # start with default value to not skew the results.
         while self.data_channel.has_data():
             self.root.update()
             fpss = fpss[-100:] if len(fpss) > 1000 else fpss
@@ -83,7 +84,7 @@ class ScreenDisplayer(BaseController):
 
             event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get()
-            curr_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
+            curr_shape = self.canvas.winfo_height(), self.canvas.winfo_width()
 
             frame = self.screen_frame_callback(curr_data)
             frame_rsz = image_resize(frame, height=curr_shape[0], width=curr_shape[1])

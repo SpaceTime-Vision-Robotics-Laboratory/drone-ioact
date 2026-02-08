@@ -53,16 +53,16 @@ class DataChannel:
             if not self.is_open():
                 raise DataChannelClosedError("Channel is closed, cannot put data.")
 
-            if self._data_storer is not None: # for logging
-                if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)):
+            if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)): # new data
+                logger.log_every_s(f"New data ({item_ts}): '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
+                if self._data_storer is not None: # for logging
                     self._data_storer.push(item, item_ts) # only push differnt items according to eq_fn
-                    logger.log_every_s(f"Received ({item_ts}): '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
+
+                for subscriber_event in self._subscribers_events: # announce each 'subscriber' of new data too
+                    subscriber_event.set()
 
             self._data = item
             self._data_ts = item_ts
-
-            for subscriber_event in self._subscribers_events: # announce each 'subscriber' of new data too
-                subscriber_event.set()
 
     def get(self) -> tuple[dict[str, DataItem], datetime]:
         """Return the current item from the channel + its the timestamp when it was received"""

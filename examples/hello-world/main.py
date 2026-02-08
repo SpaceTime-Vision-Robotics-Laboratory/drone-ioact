@@ -47,7 +47,7 @@ def main(tmp_path: Path):
     robot.run()
     data_channel.close()
     print(f"Final state: '{''.join(env._state)}'") # pylint: disable=protected-access
-    assert "".join(env._state) == TARGET # pylint: disable=protected-access
+    assert "".join(env._state) == TARGET, env._state # pylint: disable=protected-access
 
 if __name__ == "__main__":
     main(None)
