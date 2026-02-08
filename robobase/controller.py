@@ -48,9 +48,9 @@ class Controller(BaseController):
         """default data polling scheduling"""
         self.data_channel_event.wait(self.initial_data_max_duration_s) # wait for initial data
         while self.data_channel.has_data():
+            wait_and_clear(self.data_channel_event) # get new data and set red light again.
             curr_data, curr_ts = self.data_channel.get()
             logger.log_every_s(f"Processing a new data item: {curr_ts}", level="DEBUG")
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
                 self.actions_queue.put(action)
-            wait_and_clear(self.data_channel_event) # get new data and set red light again.
