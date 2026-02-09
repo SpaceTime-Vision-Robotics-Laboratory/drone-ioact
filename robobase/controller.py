@@ -6,7 +6,7 @@ from overrides import overrides
 
 from robobase.utils import logger, wait_and_clear
 from robobase.types import ControllerFn, Action
-from robobase.data_channel import DataChannel
+from robobase.data_channel import DataChannel, DataChannelClosedError
 from robobase.actions_queue import ActionsQueue
 
 INITIAL_DATA_MAX_DURATION_S = 5
@@ -49,7 +49,10 @@ class Controller(BaseController):
         self.data_channel_event.wait(self.initial_data_max_duration_s) # wait for initial data
         while self.data_channel.has_data():
             wait_and_clear(self.data_channel_event) # get new data and set red light again.
-            curr_data, curr_ts = self.data_channel.get()
+            try:
+                curr_data, curr_ts = self.data_channel.get()
+            except DataChannelClosedError:
+                break
             logger.log_every_s(f"Processing a new data item: {curr_ts}", level="DEBUG")
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:

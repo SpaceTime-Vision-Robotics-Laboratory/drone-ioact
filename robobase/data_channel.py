@@ -67,7 +67,8 @@ class DataChannel:
     def get(self) -> tuple[dict[str, DataItem], datetime]:
         """Return the current item from the channel + its the timestamp when it was received"""
         with self._lock:
-            assert self.is_open(), "Cannot get data from a closed chanel"
+            if not self.is_open():
+                raise DataChannelClosedError("Channel is closed, cannot put data.")
             return deepcopy(self._data), deepcopy(self._data_ts)
 
     def has_data(self) -> bool:
