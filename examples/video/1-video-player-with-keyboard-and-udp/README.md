@@ -5,10 +5,10 @@ python main.py video.mp4 [PORT=42069]
 ```
 
 Key to Action:
-- `q` -> `DISCONNECT`: closes the window
-- `Key.space` -> `PLAY_PAUSE`: pauses or plays the video
-- `Key.right` -> `SKIP_AHEAD_ONE_SECOND`: skips on second ahead
-- `Key.left` -> `GO_BACK_ONE_SECOND`: goes one second behind
+- `Escape` -> `DISCONNECT`: closes the window
+- `Space` -> `PLAY_PAUSE`: pauses or plays the video
+- `Right` -> `SKIP_AHEAD_ONE_SECOND`: skips on second ahead
+- `Left` -> `GO_BACK_ONE_SECOND`: goes one second behind
 - `n/a` -> `TAKE_SCREENSHOT`: take a screenshot (no key, only UDP)
 
 Furthermore, this example starts an UDP socket listening to the given port. The raw actions (right side) can also be sent via UDP messages.

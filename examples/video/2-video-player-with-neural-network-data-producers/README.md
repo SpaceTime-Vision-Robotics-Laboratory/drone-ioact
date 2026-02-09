@@ -2,12 +2,10 @@
 
 Supported neural networks:
 - PHG-MAE-Distil
-    - TODO: flags
-- TODO: YOLO
+- YOLO
 
 ```bash
-# TODO: argparse this properly
-python main.py video.mp4 model.ckpt
+python main.py video.mp4 [--weights_path_phg model_phg.ckpt] [--weights_path_yolo model_yolo.ckpt]
 ```
 
 To get checkpoints, use these links:
@@ -21,3 +19,9 @@ Controls:
 - `SPACE` - pauses or plays the video
 - `->` - skips on second ahead
 - `<-` - goes one second behind
+
+Webcam trickeries via ffmpeg:
+
+```bash
+ffmpeg -i https://w3.webcamromania.ro/busteni/index.m3u8 -f rawvideo -pix_fmt rgb24 - | CUDA_VISIBLE_DEVICES=0 VRE_VIDEO_LOGLEVEL=2 ROBOBASE_LOGLEVEL=2 ROBOIMPL_LOGLEVEL=2 ./main.py - --weights_path_yolo yolo11s.pt --yolo_threshold 0.1 --frame_resolution 800 1280 --fps 30
+```

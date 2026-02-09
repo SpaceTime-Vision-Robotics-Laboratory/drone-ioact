@@ -1,7 +1,9 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
+from __future__ import annotations
 from datetime import datetime
 import tkinter as tk
 from typing import Callable
+from dataclasses import dataclass
 from PIL import Image, ImageTk
 from overrides import overrides
 import numpy as np
@@ -13,15 +15,30 @@ TIMEOUT_S = 1000
 TKINTER_SLEEP_S = 0.01
 INITIAL_RESOLUTION_FALLBACK = (480, 640)
 
+@dataclass
+class _DisplayerState:
+    """internal class representing the internal state of the UI to differentiate between data/actions updates and UI"""
+    resolution: tuple[int, int]
+    hud: bool
+    ts: datetime = None
+
+    def __post_init__(self):
+        self.ts = datetime.now()
+
+    def __eq__(self, other: _DisplayerState):
+        return self.resolution == other.resolution and self.hud == other.hud
+
 class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
                  resolution: tuple[int, int] | None = None,
                  screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,
-                 key_to_action: dict[str, Action] | None = None):
+                 key_to_action: dict[str, Action] | None = None,
+                 toggle_info_key: str | None = None):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.initial_resolution = resolution
         self.key_to_action = key_to_action = key_to_action or {}
+        self.toggle_info_key = toggle_info_key or ("i" if "i" not in self.key_to_action else None)
         assert all(v in actions_queue.actions for v in self.key_to_action.values()), (key_to_action, actions_queue)
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         # state of the canvas: initialized at startup time.
@@ -67,36 +84,38 @@ class ScreenDisplayer(BaseController):
     def run(self):
         self.data_channel_event.wait(TIMEOUT_S)
 
-        prev_ts = datetime.now()
         height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
         self._startup_tk(height=height, width=width)
-        prev_shape = (self.canvas.winfo_height(), self.canvas.winfo_width())
 
+        old_state = _DisplayerState((self.canvas.winfo_height(), self.canvas.winfo_width()), hud=False)
         fpss = [1 / 30] # start with default value to not skew the results.
+
         while self.data_channel.has_data():
             self.root.update()
-            fpss = fpss[-100:] if len(fpss) > 1000 else fpss
-            logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}")
+            fpss = fpss[-100:] if len(fpss) > 1000 else fpss # poor man's circular buffer
+            logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}", "INFO")
+            new_state = _DisplayerState(resolution=(self.canvas.winfo_height(), self.canvas.winfo_width()), hud=False)
 
-            if not self.data_channel_event.wait(timeout=TKINTER_SLEEP_S): # if red light (but non-blocking)
+            ui_events = new_state != old_state # UI events i.e. resize or toggle info
+            data_events = self.data_channel_event.wait(timeout=TKINTER_SLEEP_S) # data events: new frame arived
+            if not ui_events and not data_events:
                 continue
+            logger.log_every_s(f"Updating UI: {ui_events=}, {data_events=}", "DEBUG")
 
             self.data_channel_event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get()
-            curr_shape = self.canvas.winfo_height(), self.canvas.winfo_width()
 
             frame = self.screen_frame_callback(curr_data)
-            frame_rsz = image_resize(frame, height=curr_shape[0], width=curr_shape[1])
-            if prev_shape != curr_shape:
+            frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1]) # can be noop
+            if old_state.resolution != new_state.resolution:
                 self.photo = ImageTk.PhotoImage(Image.fromarray(frame_rsz))
                 self.canvas.delete("all")
                 self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
             else:
                 self.photo.paste(Image.fromarray(frame_rsz))
 
-            prev_shape = curr_shape
-            fpss.append((datetime.now() - prev_ts).total_seconds())
-            prev_ts = datetime.now()
+            old_state = new_state
+            fpss.append((datetime.now() - old_state.ts).total_seconds())
 
         self.root.destroy()
         logger.warning("ScreenDisplayer thread stopping")
