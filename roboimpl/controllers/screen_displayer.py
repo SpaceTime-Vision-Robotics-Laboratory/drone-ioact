@@ -32,7 +32,7 @@ class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
                  resolution: tuple[int, int] | None = None,
-                 screen_frame_callback: Callable[[DataItem], np.ndarray] | None = None,
+                 screen_frame_callback: Callable[[DataItem], np.ndarray | None] | None = None,
                  key_to_action: dict[str, Action] | None = None,
                  toggle_info_key: str | None = None):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
@@ -106,6 +106,8 @@ class ScreenDisplayer(BaseController):
             curr_data, _ = self.data_channel.get()
 
             frame = self.screen_frame_callback(curr_data)
+            if frame is None:
+                continue
             frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1]) # can be noop
             if old_state.resolution != new_state.resolution:
                 self.photo = ImageTk.PhotoImage(Image.fromarray(frame_rsz))

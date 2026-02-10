@@ -4,10 +4,11 @@ from typing import Callable
 import threading
 from overrides import overrides
 
-from robobase.utils import logger, wait_and_clear
-from robobase.types import ControllerFn, Action
-from robobase.data_channel import DataChannel, DataChannelClosedError
-from robobase.actions_queue import ActionsQueue
+from .action import Action
+from .data_channel import DataChannel, DataChannelClosedError
+from .actions_queue import ActionsQueue
+from .utils import logger, wait_and_clear
+from .types import ControllerFn
 
 INITIAL_DATA_MAX_DURATION_S = 5
 

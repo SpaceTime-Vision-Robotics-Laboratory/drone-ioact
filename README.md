@@ -66,7 +66,8 @@ def main():
     """main fn"""
     drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
     drone.connect() # establish connection to the drone before any callbacks
-    actions_queue = ActionsQueue(actions=["a1", "a2", ...], queue=Queue()) # defines the generic actions and the queue type
+    actions = ["a1", "a2", ...] # Actions can have parameters via Action("a1", (param1, param2, ...)).
+    actions_queue = ActionsQueue(actions, queue=Queue()) # defines the generic actions and the queue type.
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.

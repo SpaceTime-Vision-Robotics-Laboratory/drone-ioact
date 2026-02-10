@@ -25,8 +25,9 @@ def screen_frame_semantic(data: dict[str, DataItem], color_map: list[tuple[int, 
 class MyActionsPriorityQueue(ActionsQueue):
     """Wrapper on top of a priority queue for actions"""
     @overrides(check_signature=False)
-    def put(self, item: tuple[int, Action], *args, **kwargs):
-        self.queue.put(item, *args, **kwargs)
+    def put(self, action: tuple[int, Action], *args, **kwargs):
+        priority, action = action[0], Action(action[1]) if isinstance(action[1], str) else action[1]
+        self.queue.put((priority, action), *args, **kwargs)
 
     @overrides
     def get(self, *args, **kwargs) -> Action:
