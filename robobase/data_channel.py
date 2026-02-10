@@ -55,6 +55,7 @@ class DataChannel:
 
             if self._data == {} or (self._data != {} and not self.eq_fn(item, self._data)): # new data
                 logger.log_every_s(f"New data ({item_ts}): '{ {k: _fmt(v) for k, v in item.items() } }'", "DEBUG")
+                logger.trace(f"New data ({item_ts}): '{ {k: _fmt(v) for k, v in item.items() } }'")
                 if self._data_storer is not None: # for logging
                     self._data_storer.push(item, item_ts) # only push differnt items according to eq_fn
 
