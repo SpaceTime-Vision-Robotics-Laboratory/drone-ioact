@@ -36,12 +36,14 @@ class UDPController(BaseController):
             message = data.decode("utf-8").strip()
             logger.debug(f"Received from '{addr[0]}:{addr[1]}', message: '{message}'")
 
-            if message not in self.actions:
-                logger.warning(msg := f"Unknown message: {message}")
-                logger.debug(msg)
-            else:
+            try:
+                items = message.split(" ")
+                action = Action(name=items[0], parameters=tuple(items[1:]))
+                self.actions_queue.put(action, block=True)
                 msg = "OK"
-                self.add_to_queue(message)
+            except Exception as e:
+                logger.error(msg := str(e))
+                msg = f"Unknown message: {message}" if "not in" in msg else msg # for e2e test
 
             s.sendto(f"{msg}\n".encode("utf-8"), addr)
         s.close()

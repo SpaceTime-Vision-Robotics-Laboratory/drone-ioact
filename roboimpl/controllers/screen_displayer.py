@@ -39,7 +39,7 @@ class ScreenDisplayer(BaseController):
         self.initial_resolution = resolution
         self.key_to_action = key_to_action = key_to_action or {}
         self.toggle_info_key = toggle_info_key or ("i" if "i" not in self.key_to_action else None)
-        assert all(v in actions_queue.actions for v in self.key_to_action.values()), (key_to_action, actions_queue)
+        assert all(v in actions_queue.actions for v in key_to_action.values()), f"{key_to_action}\n{actions_queue}"
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         # state of the canvas: initialized at startup time.
         self.root: tk.Tk | None = None
