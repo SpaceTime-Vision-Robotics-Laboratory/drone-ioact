@@ -1,22 +1,23 @@
 """actions_queue.py - thread-safe queue composition with support for robobase generic actions"""
 from queue import Queue
 
-from robobase.types import Action
+from .action import Action
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
-    def __init__(self, actions: list[Action], queue: Queue | None = None):
+    def __init__(self, actions: list[Action | str], queue: Queue | None = None):
         assert len(actions) > 0, "cannot have an empty list of actions"
-        queue = queue or Queue()
-        super().__init__()
-        self.queue = queue
-        self.actions = actions
+        assert all(isinstance(action, (Action, str)) for action in actions), actions
+        self.actions: list[Action] = [act if isinstance(act, Action) else Action(name=act) for act in actions]
+        self.queue = queue or Queue()
+        self._action_names = set(a.name for a in self.actions)
 
-    def put(self, item: Action, *args, **kwargs):
-        """Put an item into the queue"""
-        assert isinstance(item, Action), type(item)
-        assert item in (actions := self.actions), f"{item} not in {actions}"
-        self.queue.put(item, *args, **kwargs)
+    def put(self, action: Action | str, *args, **kwargs):
+        """Put an action into the queue"""
+        assert isinstance(action, (Action, str)), type(action)
+        action = Action(action) if isinstance(action, str) else action
+        assert action.name in self._action_names, f"{action} not in {self._action_names}"
+        self.queue.put(action, *args, **kwargs)
 
     def get(self, *args, **kwargs) -> Action:
         """Remove and return an item from the queue"""

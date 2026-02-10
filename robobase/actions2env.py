@@ -4,10 +4,11 @@ import threading
 import traceback
 from queue import Empty
 
-from .types import Action, ActionFn
-from .utils import logger
-from .actions_queue import ActionsQueue
 from .environment import Environment
+from .action import Action
+from .actions_queue import ActionsQueue
+from .types import ActionFn
+from .utils import logger
 
 class Actions2Environment(threading.Thread):
     """Interface defining the requirements of a robot (real, sym, mock) to receive an action & apply it to the robot"""

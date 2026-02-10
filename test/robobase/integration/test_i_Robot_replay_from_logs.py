@@ -38,10 +38,9 @@ def test_i_Robot_replay_from_logs(tmp_path: Path):
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"],
                                log_path=tmp_path)
-    actions_queue = ActionsQueue(actions=list(map(chr, range(ord("a"), ord("z") + 1)))) # from 'a' to 'z'
-    action_fn = lambda env, action: env.push(action)
+    actions_queue = ActionsQueue(actions=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
-    robot = Robot(env, data_channel, actions_queue, action_fn)
+    robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
     robot.add_controller(lambda data: TARGET[len(data["state"])] if len(data["state"]) < len(TARGET) else None)
 
