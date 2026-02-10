@@ -37,7 +37,7 @@ res=$(echo "RANDOM" | nc -w1 -u 127.0.0.1 $PORT)
 expected="Unknown message: RANDOM"
 test "$res" == "$expected" || ( echo -e "Expected $expected.\nGot $res."; kill $PID_MAIN $$; )
 
-res=$(echo "SKIP_AHEAD_ONE_SECOND" | nc -w1 -u 127.0.0.1 $PORT)
+res=$(echo "GO_FORWARD 1" | nc -w1 -u 127.0.0.1 $PORT)
 expected="OK"
 test "$res" == "$expected" || ( echo -e "Expected $expected.\nGot $res."; kill $PID_MAIN $$; )
 

@@ -8,7 +8,7 @@ import logging
 from vre_video import VREVideo
 import numpy as np
 
-from robobase import Robot, ActionsQueue, DataChannel, DataItem
+from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
@@ -76,8 +76,9 @@ def main(args: Namespace):
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
-                     "Left": "GO_BACK_ONE_SECOND"}
+    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Left": Action("GO_BACK", (video_player.fps, )),
+                     "Right": Action("GO_FORWARD", (video_player.fps, )), "comma": Action("GO_BACK", (1, )),
+                     "period": Action("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, "Screen Displayer")

@@ -13,7 +13,7 @@ from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
 
-from robobase import Robot, DataChannel, ActionsQueue, DataItem
+from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
@@ -89,8 +89,9 @@ def main(args: Namespace):
     robot.add_data_producer(yolo_data_producer)
     robot.add_data_producer(mask_splitter_data_producer)
 
-    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Right": "SKIP_AHEAD_ONE_SECOND",
-                     "Left": "GO_BACK_ONE_SECOND"}
+    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Left": Action("GO_BACK", (video_player.fps, )),
+                     "Right": Action("GO_FORWARD", (video_player.fps, )), "comma": Action("GO_BACK", (1, )),
+                     "period": Action("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, name="Screen displayer")
