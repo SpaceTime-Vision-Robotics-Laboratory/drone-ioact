@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """basic minimal example to create and env, a data channel/actions queue and the middle part: dp, controller etc."""
-import shutil
 import threading
-from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
 from robobase import Robot, Environment, DataChannel, ActionsQueue, Action
@@ -31,12 +29,10 @@ class BasicEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["ts", "state"]
 
-def main(tmp_path: Path):
+def main():
     """main fn"""
     env = BasicEnv()
-    shutil.rmtree(tmp_path, ignore_errors=True) if tmp_path is not None else None
-    data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"],
-                               log_path=tmp_path)
+    data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(actions=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
     robot = Robot(env, data_channel, actions_queue, action_fn = lambda env, action: env.push(action.name))
@@ -49,4 +45,4 @@ def main(tmp_path: Path):
     assert "".join(env._state) == TARGET, env._state # pylint: disable=protected-access
 
 if __name__ == "__main__":
-    main(None)
+    main()

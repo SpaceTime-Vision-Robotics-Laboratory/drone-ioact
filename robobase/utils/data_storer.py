@@ -1,43 +1,70 @@
 """data_storer.py A thread with a queue for storing data on disk as npz files"""
+from __future__ import annotations
 import threading
+import atexit
 from typing import Any
 from pathlib import Path
 from datetime import datetime
 from queue import Queue, Empty
 import time
-import numpy as  np
+import os
+from overrides import overrides
+import numpy as np
 
-from .utils import logger
+from .utils import logger, get_project_root
 
 SLEEP_INTERVAL = 0.01
 DATA_STORER_QUEUE_MAXSIZE = 100
+_INSTANCE: DataStorer | None = None # pylint: disable=invalid-name
 
 class DataStorer(threading.Thread):
     """Thread that operates a queue for storing data from other threads i.e. DataChannel or ActionsQueue"""
     def __init__(self, path: Path):
-        threading.Thread.__init__(self, daemon=True)
-        assert not path.exists() or len(list(path.iterdir())) == 0, f"Path '{path}' exists."
+        super().__init__(daemon=True)
         path.mkdir(parents=True, exist_ok=True)
         self.path = path
         self.data_queue = Queue(maxsize=DATA_STORER_QUEUE_MAXSIZE)
         self.is_closed = False
 
+    @staticmethod
+    def get_instance() -> DataStorer | None:
+        """Singleton: creates the unique instance of DataStorer"""
+        global _INSTANCE # pylint: disable=global-statement
+        if _INSTANCE is not None and not _INSTANCE.is_closed:
+            return _INSTANCE
+        if os.getenv("ROBOBASE_STORE_LOGS", "0") != "2":
+            return None
+
+        logs_dir = Path(os.getenv("ROBOBASE_LOGS_DIR", get_project_root() / "logs"))
+        logger.info(f"Setting DataStorer at '{logs_dir}'")
+        (_INSTANCE := DataStorer(logs_dir)).start()
+        atexit.register(_INSTANCE.close)
+        return _INSTANCE
+
     def close(self):
         """method to close the data storer"""
-        assert self.is_alive(), "cannot call close on dead or non started thread"
+        if self.is_closed:
+            return
         self.is_closed = True
+        self.join()
 
-    def push(self, data: Any, timestamp: datetime):
-        """push a data item to the data storer queue so it's later stored on disk"""
-        self.data_queue.put({"data": data, "timestamp": timestamp.isoformat()})
+    def push(self, item: Any, tag: str, timestamp: datetime):
+        """Push a data item to the queue so it's later stored on disk. A 'tag' of the source must be provided."""
+        logger.log_every_s(f"Storing item at {self.path}/{tag}/{timestamp}. Q size: {len(self)}", "INFO", True)
+        assert not self.is_closed, "DataStorer is closed, cannot push."
+        self.data_queue.put({"item": item, "tag": tag, "timestamp": timestamp.isoformat()})
 
     def get_and_store(self):
-        """gets one item fro mthe data queue and stores it to the disk"""
+        """gets one item from the data queue and stores it to the disk"""
         x = self.data_queue.get_nowait()
-        np.save(pth := f"{self.path}/{x['timestamp']}", x["data"])
-        logger.trace(f"Stored at '{pth}'")
 
+        (path := self.path / x["tag"] / x["timestamp"]).parent.mkdir(exist_ok=True, parents=True)
+        np.save(path, x["item"])
+        logger.log_every_s(f"Stored at '{path}'", "DEBUG", True)
+
+    @overrides
     def run(self):
+        logger.debug(f"Starting DataStorer at '{self.path}'")
         while True:
             try:
                 self.get_and_store()
@@ -45,4 +72,13 @@ class DataStorer(threading.Thread):
                 if self.is_closed:
                     break
                 time.sleep(SLEEP_INTERVAL)
-                logger.trace("Empty queue on DataStorer")
+                logger.debug(f"Empty queue on DataSTorer. Q size: {len(self)}")
+
+        if (n := self.data_queue.qsize()) > 0:
+            logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self.path}'")
+            while self.data_queue.qsize() > 0:
+                self.get_and_store()
+        logger.debug(f"Ending DataStorer at '{self.path}'")
+
+    def __len__(self):
+        return self.data_queue.qsize()

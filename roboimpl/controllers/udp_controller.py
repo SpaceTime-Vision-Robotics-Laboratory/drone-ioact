@@ -1,4 +1,5 @@
 """udp_controller.py - Converts a UDP message to a generic action. Useful for end-to-end tests."""
+from datetime import datetime
 import socket
 from overrides import overrides
 
@@ -33,13 +34,14 @@ class UDPController(BaseController):
 
         while self.data_channel.has_data():
             data, addr = s.recvfrom(1024)
+            now = datetime.now()
             message = data.decode("utf-8").strip()
             logger.debug(f"Received from '{addr[0]}:{addr[1]}', message: '{message}'")
 
             try:
                 items = message.split(" ")
                 action = Action(name=items[0], parameters=tuple(items[1:]))
-                self.actions_queue.put(action, block=True)
+                self.actions_queue.put(action, data_ts=now, block=True)
                 msg = "OK"
             except Exception as e:
                 logger.error(msg := str(e))
