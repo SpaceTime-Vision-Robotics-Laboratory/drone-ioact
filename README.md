@@ -1,7 +1,41 @@
-# Drone Controller
+# Robobase - Robotics communication library
 
-Install `requirements-base.txt` for the common requirements without any 3rd party dependencies, lile `olympe` (from parrot).
-See [examples](examples/) for how to run it.
+Robotics communication library between common robotics parts: environment (real or simulated), robot perception modules and robot actuators. 
+The library is built in a generic way, and it can be used for pure Reinforcement Learning applications as well (i.e. we wrap `GymEnv` natively).
+
+The library is built around 2 modules:
+- `robobase` Generic primitives for thread-safe, concurrent and hopefully performant communication
+- `roboimpl` Environment and robots specific implementations (e.g. `olympe-parrot`, `gym`, `ffmpeg` etc.)
+
+## Installation and testing
+
+```
+python -m venv .venv # python 3.11 or above
+source .venv/bin/activate
+pip install -r requirements-base.txt # only the `robobase` stuff
+pytest test/robobase
+pip instal -r requirements-extra.txt # all the environments supported in `robobimpl` like olympe from parrot or gym
+pytest test/roboimpl
+bash test/e2e/run_all.sh
+```
+
+## First steps
+
+For an example you can run, see our [hello-world](examples/hello-world/main.py) example.
+
+Another runnable example is this [yolo + webcam example](examples/video/2-video-player-with-neural-network-data-producers/README.md) from  the end of the README.
+ - You need [yolo11n.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt) or [yolo11s.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt).
+
+### Relevant environment variables
+
+We have a few environment variables that control logging:
+```bash
+ROBOBASE_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
+ROBOIMPL_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
+ROBOBASE_LOGS_DIR=/path/to/logsdir # if not set, will use the 'robobase_repo_root/logs'
+ROBOBASE_STORE_LOGS=0/1/2 # 0 nothing, 1 txt only, 2 DataStorer
+```
+Notes on `ROBOBASE_STORE_LOGS`: if set to 0, will not store anything on disk, if set to 1, will store only logger (.txt), if set to 2, will also store all the data that passes through the system (i.e. DataChannel and ActionsQueue). This may consume GBs of disk! Use with caution.
 
 ## Architecture:
 
@@ -21,9 +55,6 @@ The usual flow is like this:
                                   -> normals       |-- [Controller n] --|
 ```
 
-## Example
-
-For an example you can run, see [this](examples/hello-world/main.py).
 
 ### Using the `Robot` high-level wrapper
 

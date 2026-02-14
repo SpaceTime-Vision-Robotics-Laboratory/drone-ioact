@@ -51,10 +51,10 @@ class Controller(BaseController):
         while self.data_channel.has_data():
             wait_and_clear(self.data_channel_event) # get new data and set red light again.
             try:
-                curr_data, curr_ts = self.data_channel.get()
+                curr_data, data_ts = self.data_channel.get()
             except DataChannelClosedError:
                 break
-            logger.log_every_s(f"Processing a new data item: {curr_ts}", level="DEBUG")
+            logger.log_every_s(f"Processing a new data item: {data_ts}", level="DEBUG")
             action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
             if action is not None:
-                self.actions_queue.put(action)
+                self.actions_queue.put(action, data_ts=data_ts)

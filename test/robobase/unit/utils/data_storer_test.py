@@ -13,14 +13,6 @@ def test_DataStorer_constructor_creates_directory(tmp_path: Path):
     assert target.exists()
     assert target.is_dir()
 
-def test_DataStorer_constructor_rejects_non_empty_directory(tmp_path: Path):
-    (target := tmp_path / "non_empty_dir").mkdir()
-    (target / "file.txt").write_text("data")
-
-    with pytest.raises(AssertionError) as exc:
-        DataStorer(target)
-    assert "exists" in str(exc.value)
-
 def test_push_and_get_and_store_flow(tmp_path):
     ds = DataStorer(tmp_path)
     t1, t2 = datetime.now(), datetime.now()
@@ -30,8 +22,8 @@ def test_push_and_get_and_store_flow(tmp_path):
     with pytest.raises(Empty):
         ds.get_and_store()
 
-    ds.push(arr1, t1)
-    ds.push(arr2, t2)
+    ds.push(arr1, "test", t1)
+    ds.push(arr2, "test", t2)
     assert ds.data_queue.qsize() == 2
 
     # store and check twice
@@ -43,7 +35,7 @@ def test_push_and_get_and_store_flow(tmp_path):
         ds.get_and_store()
 
     # verify data on disk
-    files = sorted(list(tmp_path.iterdir()), key=lambda p: p.name) # sort for consistency
+    files = sorted(list((tmp_path / "test").iterdir()), key=lambda p: p.name) # sort for consistency
     assert len(files) == 2
     saved_arrays = [np.load(f) for f in files]
     assert np.array_equal(saved_arrays[0], arr1)

@@ -53,7 +53,7 @@ class ScreenDisplayer(BaseController):
 
     def add_to_queue(self, action: Action):
         """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
-        self.actions_queue.put(action, block=True)
+        self.actions_queue.put(action, data_ts=None, block=True)
 
     def _on_key_release(self, event: tk.Event):
         action: Action | None = self.key_to_action.get(key := event.keysym)

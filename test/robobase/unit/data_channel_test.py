@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 from robobase.data_channel import DataChannel
 
 def test_DataChannel_ctor():
@@ -26,16 +25,6 @@ def test_DataChannel_eq_fn():
     d3 = {"rgb": 1}
     assert not channel.eq_fn(d1, d2)
     assert channel.eq_fn(d1, d3)
-
-def test_DataChannel_data_storer(tmp_path: Path):
-    channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b, log_path=tmp_path)
-    channel.put({"rgb": 0})
-    channel.put({"rgb": 0})
-    channel.put({"rgb": 1})
-    channel.put({"rgb": 1})
-    channel.put({"rgb": 2})
-    channel.close()
-    assert len(list(channel.log_path.iterdir())) == 3
 
 def test_DataChannel_subscribe():
     channel = DataChannel(supported_types=["item"], eq_fn=lambda a, b: a==b)
