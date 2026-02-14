@@ -46,7 +46,7 @@ class DataChannel:
             if self._data != {} and self.eq_fn(item, self._data): # duplicate data
                 return
 
-            logger.log_every_s(f"New data ({item_ts}): '{_fmt(item)}'", "DEBUG", log_to_next_level=True)
+            logger.trace(f"New data ({item_ts}): '{_fmt(item)}'")
             if (storer := DataStorer.get_instance()) is not None:
                 storer.push(item, tag="DataChannel", timestamp=item_ts) # only push different items to logger
 

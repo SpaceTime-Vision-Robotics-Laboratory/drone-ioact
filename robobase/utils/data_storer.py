@@ -11,7 +11,7 @@ import os
 from overrides import overrides
 import numpy as np
 
-from .utils import logger, get_project_root
+from .utils import logger
 
 SLEEP_INTERVAL = 0.01
 DATA_STORER_QUEUE_MAXSIZE = 100
@@ -34,8 +34,11 @@ class DataStorer(threading.Thread):
             return _INSTANCE
         if os.getenv("ROBOBASE_STORE_LOGS", "0") != "2":
             return None
+        if logger.get_file_handler() is not None:
+            logs_dir = Path(logger.get_file_handler().file_path).parent
+        else: # can happen in tests -_-
+            logs_dir = Path(os.environ["ROBOBASE_LOGS_DIR"])
 
-        logs_dir = Path(os.getenv("ROBOBASE_LOGS_DIR", get_project_root() / "logs"))
         logger.info(f"Setting DataStorer at '{logs_dir}'")
         (_INSTANCE := DataStorer(logs_dir)).start()
         atexit.register(_INSTANCE.close)
@@ -50,7 +53,7 @@ class DataStorer(threading.Thread):
 
     def push(self, item: Any, tag: str, timestamp: datetime):
         """Push a data item to the queue so it's later stored on disk. A 'tag' of the source must be provided."""
-        logger.log_every_s(f"Storing item at {self.path}/{tag}/{timestamp}. Q size: {len(self)}", "INFO", True)
+        logger.trace(f"Pushing item at {self.path}/{tag}/{timestamp}. Q size: {len(self)}")
         assert not self.is_closed, "DataStorer is closed, cannot push."
         self.data_queue.put({"item": item, "tag": tag, "timestamp": timestamp.isoformat()})
 
@@ -72,7 +75,7 @@ class DataStorer(threading.Thread):
                 if self.is_closed:
                     break
                 time.sleep(SLEEP_INTERVAL)
-                logger.debug(f"Empty queue on DataSTorer. Q size: {len(self)}")
+                logger.log_every_s(f"Empty queue on DataStorer. Q size: {len(self)}", "DEBUG", True)
 
         if (n := self.data_queue.qsize()) > 0:
             logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self.path}'")
