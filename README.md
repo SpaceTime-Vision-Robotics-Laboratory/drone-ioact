@@ -36,25 +36,25 @@ Every `main` script will contain the following logic:
 ```python
 def main():
     """main fn"""
-    drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
-    drone.connect() # establish connection to the drone before any callbacks
+    drone_env = XXXDrone(ip="192.168.0.101") # XXX = specific real or simulated drone like Olympe
+    drone_env.connect() # establish connection to the drone before any callbacks
     actions_queue = ActionsQueue(actions=["a1", "a2", ...]) # defines the generic actions
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
-    # action->drone converts a generic action to an actual drone action
-    def XXXaction_fn(drone: XXXDrone, action: Action) -> bool:
-        return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
-
-    robot = Robot(env=drone, data_channel=data_channel, actions_queue=actions_queue, action_fn=XXXaction_fn)
-    # define the data producers. The 'raw' one is added by default (env to raw data)
-    robot.add_data_producer(SemanticdataProducer(ckpt_path=path_to_model, ...))
-
-    key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
-    robot.add_controller(screen_displayer, name="Screen displayer")
+    # action_fn converts generic "a1", "a2" to raw drone-specific action e.g. parrot.piloting(...)
+    robot = Robot(env=drone_env, data_channel=data_channel, actions_queue=actions_queue,
+                  action_fn=lambda env, action: env.generic_to_raw(action))
+    # Define the data producers. The 'raw' one is added by default (env to raw data). Controllers receive the latest available data.
+    robot.add_data_producer(SemanticDataProducer(ckpt_path=path_to_model, ...))
+    # Define the controllers: the logic of the robot to act in the environment
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, key_to_action={"space": "a1", "w": "a2"}),
+                         name="Screen displayer") # manual controls via keyboard + UI display
+    robot.add_controller(lambda data, actions_queue: actions_queue.put(random.choice(["a1", "a2"])),
+                         name="Trajectory planner") # controller algorithmic logic
+    # Run the main loop which starts and monitors the threads behind the scenes (data producers, controllers, env communication etc.)
     robot.run()
 
-    drone.disconnect() # disconnect from the drone.
+    drone_env.disconnect() # disconnect from the drone.
     data_channel.close() # close the data channel as well which also waits for logs (if enabled) to be written to disk.
 
 if __name__ == "__main__":
@@ -101,34 +101,34 @@ The `Robot` class above is just a nice wrapper on top of the low-level machinery
 ```python
 def main():
     """main fn"""
-    drone = XXXDrone(ip := drone_ip) # XXX = specific real or simulated drone like Olympe
-    drone.connect() # establish connection to the drone before any callbacks
+    drone_env = XXXDrone(ip="192.168.0.101") # XXX = specific real or simulated drone like Olympe
+    drone_env.connect() # establish connection to the drone before any callbacks
     actions = ["a1", "a2", ...] # Actions can have parameters via Action("a1", (param1, param2, ...)).
     actions_queue = ActionsQueue(actions, queue=Queue()) # defines the generic actions and the queue type.
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.
-    raw_data = RawDataProducer(drone) # populates the data channel with RGB & pose from drone (raw data)
+    raw_data = RawDataProducer(drone_env) # populates the data channel with RGB & pose from drone (raw data)
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here)
     key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
-    def XXXaction_fn(drone: XXXDrone, action: Action) -> bool:
-        return drone.make_raw_action(action) # convert generic "a1", "a2" to raw drone-specific action
-    action2drone = Actions2Environment(drone, actions_queue, action_fn=XXXaction_fn)
+    def XXXaction_fn(env: XXXDrone, action: Action) -> bool:
+        return env.generic_to_raw(action) # convert generic "a1", "a2" to raw drone-specific action
+    action2nev = Actions2Environment(drone_env, actions_queue, action_fn=XXXaction_fn)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Drone -> Data": data_producers,
         "Screen displayer (+keyboard)": screen_displayer,
-        "Action -> Drone": action2drone,
+        "Action -> Drone": action2nev,
     }).start()
 
     while not threads.is_any_dead(): # wait for any of them to die or drone to disconnect
         time.sleep(1) # important to not throttle everything with this main thread
 
-    drone.disconnect() # disconnect from the drone.
+    drone_env.disconnect() # disconnect from the drone.
     threads.join(timeout=1) # stop all the threads
     data_channel.close() # close the data channel as well which also waits for logs (if enabled) to be written to disk.
 
