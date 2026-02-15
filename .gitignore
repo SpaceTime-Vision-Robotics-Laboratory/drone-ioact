@@ -4,6 +4,6 @@ metadata
 __pycache__
 *.png
 .venv/
-CLAUDE.md
 .claude/
+*.md
 
