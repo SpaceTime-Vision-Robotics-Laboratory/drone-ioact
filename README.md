@@ -19,44 +19,17 @@ pytest test/roboimpl
 bash test/e2e/run_all.sh
 ```
 
-## First steps
+## Running or making your own robot controllers
+
+### First steps: Running the provided examples
 
 For an example you can run, see our [hello-world](examples/hello-world/main.py) example.
 
 Another runnable example is this [yolo + webcam example](examples/video/2-video-player-with-neural-network-data-producers/README.md) from  the end of the README.
  - You need [yolo11n.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt) or [yolo11s.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt).
 
-### Relevant environment variables
 
-We have a few environment variables that control logging:
-```bash
-ROBOBASE_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
-ROBOIMPL_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
-ROBOBASE_LOGS_DIR=/path/to/logsdir # if not set, will use the 'robobase_repo_root/logs'
-ROBOBASE_STORE_LOGS=0/1/2 # 0 nothing, 1 txt only, 2 DataStorer
-```
-Notes on `ROBOBASE_STORE_LOGS`: if set to 0, will not store anything on disk, if set to 1, will store only logger (.txt), if set to 2, will also store all the data that passes through the system (i.e. DataChannel and ActionsQueue). This may consume GBs of disk! Use with caution.
-
-## Architecture:
-
-<img alt="arch" src="./arch.png" width="50%">
-
-The two 'core' components of any robotics application are: the *data channel* and the *actions queue*. The data consumers interact with the drone (or any robot) to get raw data and write them to the data channel, while the data consumers interact with the channel and always have access to the latest data. Some data consumers are also action products and write to the actions queue. Then, the actions consumer reads one action at a time from the actions queue and sends raw actions to the drone.
-
-The usual flow is like this:
-```
-
- Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Action2Env -- raw action --> Drone
-(robot)                                       (rgb, pose...)     (LIFT, MOVE...)     (action_fn)                 (robot)
-               |                ↑                  |                    ↑
-               |-------> pose                      |-> [Controller 1] --|
-                         rgb -> semantic           |-- [Controller 2] --|
-                             -> depth              |       ...          |
-                                  -> normals       |-- [Controller n] --|
-```
-
-
-### Using the `Robot` high-level wrapper
+### Creating your controllers: Using the `Robot` high-level wrapper
 
 Every `main` script will contain the following logic:
 
@@ -88,7 +61,40 @@ if __name__ == "__main__":
     main()
 ```
 
-### Using the low-level primitives defined by the library
+### Relevant environment variables for logging
+
+We have a few environment variables that control logging:
+```bash
+ROBOBASE_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
+ROBOIMPL_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
+ROBOBASE_LOGS_DIR=/path/to/logsdir # if not set, will use the 'robobase_repo_root/logs'
+ROBOBASE_STORE_LOGS=0/1/2 # 0 nothing, 1 txt only, 2 DataStorer
+```
+Notes on `ROBOBASE_STORE_LOGS`: if set to 0, will not store anything on disk, if set to 1, will store only logger (.txt), if set to 2, will also store all the data that passes through the system (i.e. DataChannel and ActionsQueue). This may consume GBs of disk! Use with caution.
+
+Additionally, you can use the [vizualization tool](tools/logsviz/) to see (in real time or after the fact) the interaction between the data and controller's action of your robot. For now, it only supports tracking data to action.
+
+
+## Architecture:
+
+<img alt="arch" src="./arch.png" width="50%">
+
+The two 'core' components of any robotics application are: the *data channel* and the *actions queue*. The data consumers interact with the drone (or any robot) to get raw data and write them to the data channel, while the data consumers interact with the channel and always have access to the latest data. Some data consumers are also action products and write to the actions queue. Then, the actions consumer reads one action at a time from the actions queue and sends raw actions to the drone.
+
+The usual flow is like this:
+```
+
+ Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Action2Env -- raw action --> Drone
+(robot)                                       (rgb, pose...)     (LIFT, MOVE...)     (action_fn)                 (robot)
+               |                ↑                  |                    ↑
+               |-------> pose                      |-> [Controller 1] --|
+                         rgb -> semantic           |-- [Controller 2] --|
+                             -> depth              |       ...          |
+                                  -> normals       |-- [Controller n] --|
+```
+
+
+### Creating your controllers: Using the low-level primitives defined by the library
 
 The `Robot` class above is just a nice wrapper on top of the low-level machinery. We could replace it completely for more control (i.e. >1 data channels if we want) like this:
 

@@ -51,13 +51,16 @@ def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert "".join(env._state) == TARGET # pylint: disable=protected-access
 
     DataStorer.get_instance().close()
+
+    # Load Data .npz files and compare states
     data_files = sorted(list((tmp_path / "DataChannel").iterdir()), key=lambda p: p.name)
-    data = [np.load(x, allow_pickle=True).item() for x in data_files]
+    data = [np.load(x, allow_pickle=True)["arr_0"].item() for x in data_files]
     for i in range(len(data)):
         assert "".join(data[i]["state"]) == TARGET[0:i]
 
+    # Load Actions .npz files and compare states
     actions_files = sorted(list((tmp_path / "ActionsQueue").iterdir()), key=lambda p: p.name)
-    actions = [np.load(x, allow_pickle=True).item() for x in actions_files]
+    actions = [np.load(x, allow_pickle=True)["arr_0"].item() for x in actions_files]
     for i in range(len(actions)):
         assert actions[i]["action"] == TARGET[i], (actions[i], TARGET[i])
         assert actions[i]["data_ts"] == data_files[i].stem

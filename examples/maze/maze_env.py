@@ -1,5 +1,6 @@
 """maze.py -- simple 2D maze environment for testing purposes"""
 from __future__ import annotations
+import os
 from typing import NamedTuple
 from datetime import datetime
 from loggez import make_logger
@@ -21,7 +22,7 @@ ENTRY_TO_CHAR = {
     PLAYER: "P",
     EXIT: "o",
 }
-FREQUENCY = 100
+FREQUENCY = int(os.getenv("MAZE_FREQ", "100"))
 
 logger = make_logger("MAZE")
 

@@ -37,6 +37,6 @@ def test_push_and_get_and_store_flow(tmp_path):
     # verify data on disk
     files = sorted(list((tmp_path / "test").iterdir()), key=lambda p: p.name) # sort for consistency
     assert len(files) == 2
-    saved_arrays = [np.load(f) for f in files]
+    saved_arrays = [np.load(f)["arr_0"] for f in files]
     assert np.array_equal(saved_arrays[0], arr1)
     assert np.array_equal(saved_arrays[1], arr2)

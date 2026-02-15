@@ -20,7 +20,7 @@ MAZE_SIZE = (10, 10)
 MAZE_WALLS_PROB = 0.2
 MAZE_MAX_TRIES = 200
 INF = 2**31
-PRINT = os.getenv("PRINT", "0") == "1"
+PRINT = os.getenv("MAZE_PRINT", "0") == "1"
 
 def random_controller_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=unused-argument
     """random planner"""
