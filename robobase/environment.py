@@ -26,4 +26,4 @@ class Environment(ABC):
 
     def close(self):
         """Closes the environment. It's optional (warn) but useful to have it a method."""
-        logger.warning(f"[{parsed_str_type(self)}] Called .close() on this environment but no implemenattion exists")
+        logger.warning(f"[{parsed_str_type(self)}] Called .close() on this environment but no implementation exists")

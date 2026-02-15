@@ -8,7 +8,8 @@ class Action(NamedTuple):
     parameters: tuple[Any, ...] = ()
 
     def __eq__(self, other: Action | str):
-        assert isinstance(other, (Action, str)), type(other)
+        if not isinstance(other, (Action, str)):
+            return NotImplemented
         return self.name == (Action(other) if isinstance(other, str) else other).name
 
     def __repr__(self):

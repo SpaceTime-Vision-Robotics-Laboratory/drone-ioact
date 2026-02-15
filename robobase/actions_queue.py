@@ -5,13 +5,15 @@ from datetime import datetime
 from .action import Action
 from .utils import DataStorer
 
+QUEUE_DEFAULT_MAX_SIZE = 100 # needed so .put() doesn't grow the queue indefinitely
+
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
     def __init__(self, actions: list[Action | str], queue: Queue | None = None):
         assert len(actions) > 0, "cannot have an empty list of actions"
         assert all(isinstance(action, (Action, str)) for action in actions), actions
         self.actions: list[Action] = [act if isinstance(act, Action) else Action(name=act) for act in actions]
-        self.queue = queue or Queue()
+        self.queue = queue or Queue(maxsize=QUEUE_DEFAULT_MAX_SIZE)
         self._action_names = set(a.name for a in self.actions)
 
     def put(self, action: Action | str, data_ts: datetime | None, *args, **kwargs):

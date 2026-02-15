@@ -45,7 +45,7 @@ class YOLODataProducer(DataProducer):
             no_segm = no_segm and (len(good_masks) == 0)
 
         bbox = good_boxes.xyxy.int().tolist() if not no_bbox else None
-        bbox_confidennce = good_boxes.conf.tolist() if not no_bbox else None
+        bbox_confidence = good_boxes.conf.tolist() if not no_bbox else None
         segmentation = None
         if not no_segm and len(good_masks) > 0:
             segmentation = good_masks.data[:, None] # (n_objs, 1, H, W)
@@ -53,7 +53,7 @@ class YOLODataProducer(DataProducer):
                 segmentation = F.interpolate(segmentation, size=good_masks.orig_shape) # (n_objs, 1, H', W')
             segmentation = segmentation.permute(0, 2, 3, 1).cpu().numpy() # (n_objs, H', W', 1)
         segmentation_xy = good_masks.xy if not no_segm else None
-        return bbox, bbox_confidennce, segmentation, segmentation_xy
+        return bbox, bbox_confidence, segmentation, segmentation_xy
 
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:

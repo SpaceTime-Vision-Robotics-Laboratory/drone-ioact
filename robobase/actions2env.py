@@ -32,7 +32,7 @@ class Actions2Environment(threading.Thread):
     def run(self):
         while res := self.env.is_running():
             try:
-                action: Action = self.actions_queue.get(block=True, timeout=1_000)
+                action: Action = self.actions_queue.get(block=True, timeout=1)
                 logger.log_every_s(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})", "DEBUG")
                 logger.trace(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
                 res = self.action_fn(self.env, action)
