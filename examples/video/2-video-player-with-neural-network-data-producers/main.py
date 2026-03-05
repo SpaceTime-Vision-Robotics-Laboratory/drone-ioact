@@ -65,8 +65,7 @@ def main(args: Namespace):
     supported_types = supported_types if args.weights_path_phg is None else [*supported_types, "semantic"]
     if args.weights_path_yolo:
         supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
-    eq_fn = (lambda a, b: a["frame_ix"] == b["frame_ix"]) if args.video_path != "-" else (lambda a, b: False)
-    data_channel = DataChannel(supported_types=supported_types, eq_fn=eq_fn)
+    data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
