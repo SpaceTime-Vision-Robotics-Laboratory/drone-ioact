@@ -35,9 +35,11 @@ echo "-- Initial cleanup"
 ( kill $(lsof -i udp:$PORT -t) 2>/dev/null ) || echo "---- No server to kill on port $PORT"
 rm -f frame.png # uses "cwd" of the user
 
+# ffmpeg -i https://w3.webcamromania.ro/busteni/index.m3u8  -f rawvideo -pix_fmt rgb24 - 2>/dev/null | \
+#     ./main.py - --port 42069 --frame_resolution 800 1280 --fps 30^
+# $CWD/main.py $CWD/test_video.mp4 --port $PORT &
 ffmpeg -i $CWD/test_video.mp4 -f rawvideo -pix_fmt rgb24 - 2>/dev/null | \
     $CWD/main.py - --port $PORT --frame_resolution 720 1280 --fps 30 &
-# $CWD/main.py $CWD/test_video.mp4 --port $PORT &
 PID_MAIN=$!
 PID_FFMPEG=$(ps -ef | grep ffmpeg | head -n 1 | tr -s "  " " " | cut -d " " -f2)
 wait_for_start 100 $PORT
