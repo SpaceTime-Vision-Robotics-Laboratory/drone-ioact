@@ -23,7 +23,7 @@ bash test/e2e/run_all.sh
 
 ### First steps: Running the provided examples
 
-For an example you can run, see our [hello-world](examples/hello-world/main.py) example.
+For an example you can run, see our [hello-world-controller](examples/hello-world-controller/main.py) & [hello-world-webcam](examples/hello-world-webcam/main.py) examples.
 
 Another runnable example is this [yolo + webcam example](examples/video/2-video-player-with-neural-network-data-producers/README.md) from  the end of the README.
  - You need [yolo11n.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt) or [yolo11s.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt).

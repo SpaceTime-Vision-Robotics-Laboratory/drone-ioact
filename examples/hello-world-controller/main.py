@@ -29,6 +29,21 @@ class BasicEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["ts", "state"]
 
+def controller_fn(data):
+    match "".join(data["state"]):
+        case "": return "h"
+        case "h": return "e"
+        case "he": return "l"
+        case "hel": return "l"
+        case "hell": return "o"
+        case "hello": return "w"
+        case "hellow": return "o"
+        case "hellowo": return "r"
+        case "hellowor": return "l"
+        case "helloworl": return "d"
+        case "helloworld": return None
+    raise ValueError(data["state"])
+
 def main():
     """main fn"""
     env = BasicEnv()
@@ -37,7 +52,7 @@ def main():
 
     robot = Robot(env, data_channel, actions_queue, action_fn = lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(controller=controller_fn)
 
     robot.run()
     data_channel.close()
