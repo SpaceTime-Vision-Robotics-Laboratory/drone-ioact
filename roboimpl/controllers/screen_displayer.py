@@ -100,7 +100,7 @@ class ScreenDisplayer(BaseController):
             data_events = self.data_channel_event.wait(timeout=TKINTER_SLEEP_S) # data events: new frame arived
             if not ui_events and not data_events:
                 continue
-            logger.log_every_s(f"Updating UI: {ui_events=}, {data_events=}", "DEBUG")
+            logger.log_every_s(f"Updating UI: {ui_events=}, {data_events=}", "DEBUG", log_to_next_level=True)
 
             self.data_channel_event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get()
