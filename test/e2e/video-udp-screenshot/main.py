@@ -16,12 +16,15 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("video_path")
     parser.add_argument("--port", type=int, default=42069)
+    parser.add_argument("--frame_resolution", type=int, nargs=2, help="optional, only for video_path='-'")
+    parser.add_argument("--fps", type=float, help="optional only for video_path='-'")
     args = parser.parse_args()
     return args
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayerEnv(VREVideo(args.video_path))).start() # start the video player
+    reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
+    (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
 
     actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
