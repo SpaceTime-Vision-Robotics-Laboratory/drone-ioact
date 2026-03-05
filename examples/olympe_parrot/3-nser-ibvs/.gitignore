@@ -2,4 +2,6 @@
 tmp/
 main_dbg.py
 log/
+results/
+output/
 

@@ -5,7 +5,6 @@ from pathlib import Path
 import torch
 import numpy as np
 from torch import nn
-from torchinfo import summary
 
 from roboimpl.utils import image_resize
 
@@ -135,6 +134,7 @@ class MaskSplitterNet(nn.Module):
         return predictions.cpu().numpy()
 
 if __name__ == "__main__":
+    from torchinfo import summary # pylint: disable=all
     input_channels = 4  # RGB (3) + mask (1)
     model = MaskSplitterNet(in_channels=input_channels, out_channels=2, base_channels=32)
 
