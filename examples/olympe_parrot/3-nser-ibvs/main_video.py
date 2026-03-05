@@ -12,6 +12,7 @@ import numpy as np
 from loggez import loggez_logger as logger
 
 from mask_splitter_data_producer import MaskSplitterDataProducer
+from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 
 from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action
 from roboimpl.data_producers.object_detection import YOLODataProducer
@@ -24,7 +25,6 @@ logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 DEFAULT_SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1.25
-BGR = False # some yolo models may be trained with BGR images instead!
 
 def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
@@ -70,10 +70,11 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    # from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader # for debug only
-    # video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=False)
-    # BGR = True
-    video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
+    if args.video_path.name == "res": # TODO: we should get rid of this once we are done comparing with the orig. code
+        video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=True)
+    else:
+        video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
+    bgr = isinstance(video_player.video.reader, AutoFollowLogsFrameReader)
     logger.info(f"{video_player}")
 
     supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
@@ -82,7 +83,7 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=BGR)
+    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=bgr)
     mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
                                                            mask_threshold=args.mask_splitter_network_mask_threshold,
                                                            bbox_threshold=args.mask_splitter_network_bbox_threshold)

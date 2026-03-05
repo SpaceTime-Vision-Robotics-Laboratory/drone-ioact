@@ -1,1 +1,0 @@
-../../video/3-video-player-with-splitter-segmentation/mask_splitter_data_producer.py

@@ -1,1 +1,0 @@
-../../video/3-video-player-with-splitter-segmentation/net_mask_splitter.py
