@@ -3,4 +3,4 @@ loggez>=0.7.2
 numpy>=1.21
 Pillow==11.3.0
 overrides==7.7.0
-vre-video>=0.4.3 # used in tests/CI
+vre-video>=0.5.3 # used in tests/CI

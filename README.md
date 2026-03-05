@@ -1,6 +1,6 @@
 # Robobase - Robotics communication library
 
-Robotics communication library between common robotics parts: environment (real or simulated), robot perception modules and robot actuators. 
+Robotics communication library between common robotics parts: environment (real or simulated), robot perception modules and robot actuators.
 The library is built in a generic way, and it can be used for pure Reinforcement Learning applications as well (i.e. we wrap `GymEnv` natively).
 
 The library is built around 2 modules:
