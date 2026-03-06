@@ -6,12 +6,13 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
 import logging
 from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
 
-from mask_splitter_data_producer import MaskSplitterDataProducer
+from detection.mask_splitter_data_producer import MaskSplitterDataProducer
 from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 
 from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action
@@ -57,7 +58,7 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
 def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
-    parser.add_argument("video_path")
+    parser.add_argument("video_path", type=Path)
     # yolo params
     parser.add_argument("--weights_path_yolo", required=True)
     parser.add_argument("--yolo_threshold", default=0.75, type=float)
@@ -70,6 +71,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
+    # TODO: make sure that the returned RGB is exactly IMAGE_SIZE_SPLITTER_NET in size.
     if args.video_path.name == "res": # TODO: we should get rid of this once we are done comparing with the orig. code
         video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=True)
     else:

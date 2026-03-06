@@ -10,7 +10,7 @@ from argparse import ArgumentParser, Namespace
 import logging
 import numpy as np
 
-from mask_splitter_data_producer import MaskSplitterDataProducer, IMAGE_SIZE_SPLITTER_NET
+from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAGE_SIZE_SPLITTER_NET
 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem
 from roboimpl.data_producers.object_detection import YOLODataProducer
