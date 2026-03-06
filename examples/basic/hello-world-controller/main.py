@@ -3,7 +3,7 @@
 import threading
 from copy import deepcopy
 from datetime import datetime
-from robobase import Robot, Environment, DataChannel, ActionsQueue, Action
+from robobase import Robot, Environment, DataChannel, ActionsQueue, DataItem
 from robobase.utils import wait_and_clear
 
 TARGET = "helloworld"
@@ -29,7 +29,8 @@ class BasicEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["ts", "state"]
 
-def controller_fn(data):
+def controller_fn(data: dict[str, DataItem]):
+    """Basic controller function. Returns the next character given the current state, i.e. push 'e' if state==['h']"""
     match "".join(data["state"]):
         case "": return "h"
         case "h": return "e"
@@ -51,7 +52,6 @@ def main():
     actions_queue = ActionsQueue(actions=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
     robot = Robot(env, data_channel, actions_queue, action_fn = lambda env, action: env.push(action.name))
-    # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
     robot.add_controller(controller=controller_fn)
 
     robot.run()

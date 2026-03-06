@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 # pylint: disable=all
-from dataclasses import dataclass
 import torch
 import cv2
 import numpy as np
+from dataclasses import dataclass
 from overrides import overrides
-try:
-    from .net_mask_splitter import MaskSplitterNet
-except ImportError:
-    from net_mask_splitter import MaskSplitterNet
-
 from robobase import DataProducer, DataItem
 from roboimpl.utils import image_resize
+
+from .mask_splitter_nn import MaskSplitterNet
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_NUMBER_OF_POINTS = 2
@@ -143,8 +140,8 @@ class MaskSplitterDataProducer(DataProducer):
 
         return points_reordered
 
-    def find_best_target(self, frame: np.ndarray, best_mask: np.ndarray, best_mask_xy_scaled: np.ndarray) \
-            -> TargetIBVS | None:
+    def find_best_target(self, frame: np.ndarray, best_mask: np.ndarray,
+                         best_mask_xy_scaled: np.ndarray) -> TargetIBVS | None:
         """
         Mask is usually not scaled to image frame, while xy are (yolo...) so we need to resize it ourselves here.
         Parameters:
