@@ -2,11 +2,15 @@
 
 try:
     import olympe
+    import os
 
     from .olympe_env import OlympeEnv
     from .olympe_actions import olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 
-    olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
+    if (val := os.getenv("OLYMPE_LOG_LEVEL", "")) != "":
+        olympe.log.update_config({"loggers": {"olympe": {"level": val}}})
+    else:
+        olympe.log.update_config({"loggers": {"olympe": {"level": "CRITICAL"}}})
 
     __all__ = ["OlympeEnv", "olympe_actions_fn", "OLYMPE_SUPPORTED_ACTIONS",]
 except ImportError as e:

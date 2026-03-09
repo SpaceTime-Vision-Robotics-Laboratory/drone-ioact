@@ -24,6 +24,7 @@ class OlympeEnv(Environment):
         self.drone = olympe.Drone(ip)
         self.image_size = image_size
         assert self.drone.connect(), f"could not connect to '{ip}'"
+        logger.info(f"Connected to drone at '{ip}'")
 
         self._current_frame: np.ndarray | None = None
         self._current_metadata: dict | None = None
@@ -36,7 +37,7 @@ class OlympeEnv(Environment):
             flush_raw_cb=(lambda _: logger.warning("Flush requested for stream. Resetting queue.")),
         )
         assert self.drone.streaming.start(), "error starting stream"
-        logger.info("Starting streaming...")
+        logger.info(f"Starting streaming from drone at '{ip}'")
 
     @overrides
     def is_running(self) -> bool:
