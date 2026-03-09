@@ -6,6 +6,8 @@ import numpy as np
 import cv2
 import olympe
 from olympe.video.pdraw import PdrawState
+from olympe.messages import gimbal
+from olympe.messages.ardrone3.PilotingState import FlyingStateChanged
 
 from robobase import Environment
 from robobase.utils import wait_and_clear
@@ -49,11 +51,15 @@ class OlympeEnv(Environment):
         with self._current_frame_lock:
             res = self._current_frame
             res = image_resize(res, *self.image_size) if self.image_size is not None else res
-            return {"rgb": res, "metadata": self._current_metadata}
+            gimbal_keys = ["roll_absolute", "pitch_absolute", "yaw_absolute"]
+            gimbal_state = {k: v for k, v in self.drone.get_state(gimbal.attitude)[0].items() if k in gimbal_keys}
+            flying_state = self.drone.get_state(FlyingStateChanged)["state"]
+            return {"rgb": res, "metadata": self._current_metadata, "gimbal": gimbal_state,
+                    "flying_state": flying_state.name}
 
     @overrides
     def get_modalities(self) -> list[str]:
-        return ["rgb", "metadata"]
+        return ["rgb", "metadata", "gimbal", "flying_state"]
 
     @overrides
     def close(self):

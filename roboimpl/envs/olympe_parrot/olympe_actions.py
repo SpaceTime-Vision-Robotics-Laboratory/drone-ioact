@@ -23,31 +23,39 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
         return drone(Landing()).wait().success()
     # (x, y, z, z_rot, time)
     if action == "FORWARD":
-        return drone.piloting(0, 50, 0, 0, 0.15)
+        y, time = action.parameters
+        return drone.piloting(0, y, 0, 0, time)
     if action == "BACKWARD":
-        return drone.piloting(0, -50, 0, 0, 0.15)
+        y, time = action.parameters
+        return drone.piloting(0, -y, 0, 0, time)
     if action == "LEFT":
-        return drone.piloting(-50, 0, 0, 0, 0.15)
+        x, time = action.parameters
+        return drone.piloting(-x, 0, 0, 0, time)
     if action == "RIGHT":
-        return drone.piloting(50, 0, 0, 0, 0.15)
+        x, time = action.parameters
+        return drone.piloting(x, 0, 0, 0, time)
     if action == "ROTATE_LEFT":
-        return drone.piloting(0, 0, -50, 0, 0.15)
+        z, time = action.parameters
+        return drone.piloting(0, 0, -z, 0, time)
     if action == "ROTATE_RIGHT":
-        return drone.piloting(0, 0, 50, 0, 0.15)
+        z, time = action.parameters
+        return drone.piloting(0, 0, z, 0, time)
     if action == "INCREASE_HEIGHT":
-        return drone.piloting(0, 0, 0, 20, 0.15)
+        z_rot, time = action.parameters
+        return drone.piloting(0, 0, 0, z_rot, time)
     if action == "DECREASE_HEIGHT":
-        return drone.piloting(0, 0, 0, -20, 0.15)
+        z_rot, time = action.parameters
+        return drone.piloting(0, 0, 0, -z_rot, time)
     # gimbal stuff
     gimbal_kwargs = {"gimbal_id": 0, "control_mode": "position", "yaw_frame_of_reference": "none", "yaw": 0,
                      "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute"}
-    # TODO: should be at sensors level and we parametrize the action.
-    # TODO: wait for tilt degree?
     current_pitch = drone.get_state(gimbal.attitude)[0]["pitch_absolute"]
-    logger.debug(f"Current pitch: {current_pitch}")
+    logger.debug(f"Action={action}. Current pitch: {current_pitch:.3f}.")
     if action == "TILT_UP":
-        return drone(gimbal.set_target(pitch=current_pitch + 10, **gimbal_kwargs)).wait().success()
+        delta_pitch = action.parameters[0]
+        return drone(gimbal.set_target(pitch=current_pitch + delta_pitch, **gimbal_kwargs))
     if action == "TILT_DOWN":
-        return drone(gimbal.set_target(pitch=current_pitch - 10, **gimbal_kwargs)).wait().success()
+        delta_pitch = action.parameters[0]
+        return drone(gimbal.set_target(pitch=current_pitch - delta_pitch, **gimbal_kwargs))
 
     return False
