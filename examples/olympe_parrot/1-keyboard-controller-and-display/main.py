@@ -9,6 +9,7 @@ from roboimpl.controllers import ScreenDisplayer
 
 QUEUE_MAX_SIZE = 30
 RESOLUTION = 480, 640
+DT = 0.15
 
 def main():
     """main fn"""
@@ -20,12 +21,11 @@ def main():
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
     key_to_action = {
         "Escape": "DISCONNECT", "space": "LIFT", "b": "LAND",
-        "w": Action("FORWARD", parameters=(50, 0.15)), "a": Action("LEFT", parameters=(50, 0.15)),
-        "s": Action("BACKWARD", parameters=(50, 0.15)), "d": Action("RIGHT", parameters=(50, 0.15)),
-        "q": Action("ROTATE_LEFT", parameters=(50, 0.15)), "e": Action("ROTATE_RIGHT", parameters=(50, 0.15)),
-        "Up": Action("INCREASE_HEIGHT", parameters=(50, 0.15)),
-        "Down": Action("DECREASE_HEIGHT", parameters=(50, 0.15)),
-        "Next": Action("TILT_DOWN", parameters=(10,)), "Prior": Action("TILT_UP", parameters=(10,))
+        "w": Action("FORWARD", parameters=(50, DT)), "a": Action("LEFT", parameters=(50, DT)),
+        "s": Action("BACKWARD", parameters=(50, DT)), "d": Action("RIGHT", parameters=(50, DT)),
+        "q": Action("ROTATE_LEFT", parameters=(50, DT)), "e": Action("ROTATE_RIGHT", parameters=(50, DT)),
+        "Up": Action("INCREASE_HEIGHT", parameters=(50, DT)), "Down": Action("DECREASE_HEIGHT", parameters=(50, DT)),
+        "Prior": Action("TILT_UP", parameters=(10, DT)), "Next": Action("TILT_DOWN", parameters=(10, DT)),
     }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action, resolution=RESOLUTION)
     robot.add_controller(screen_displayer, name="Screen Displayer")
