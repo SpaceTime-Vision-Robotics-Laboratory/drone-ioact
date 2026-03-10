@@ -35,10 +35,10 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
     # All actions below are in (velocity, time), meaning we apply that velocity for some time. drone.piloting() does
     # this for us, but for gimbal, we do it ourselves (blocking for now).
     velocity, piloting_time = action.parameters
-    if not (-100 <= velocity <= 100):
+    if not -100 <= velocity <= 100:
         logger.error(f"Velocity not in [-100:100]. Got: {velocity}")
         return False
-    # (x, y, z, z_rot, time)
+
     if action == "FORWARD":
         return drone.piloting(roll=0, pitch=velocity, yaw=0, gaz=0, piloting_time=piloting_time)
     if action == "BACKWARD":
