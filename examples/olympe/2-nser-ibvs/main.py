@@ -18,7 +18,7 @@ from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAG
 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action, DataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
+from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 

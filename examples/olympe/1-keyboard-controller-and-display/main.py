@@ -4,7 +4,7 @@ import sys
 from queue import Queue
 
 from robobase import ActionsQueue, DataChannel, Robot, Action
-from roboimpl.envs.olympe_parrot import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
+from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_SUPPORTED_ACTIONS
 from roboimpl.controllers import ScreenDisplayer
 
 QUEUE_MAX_SIZE = 30
