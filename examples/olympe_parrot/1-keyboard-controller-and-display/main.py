@@ -25,7 +25,8 @@ def main():
         "s": Action("BACKWARD", parameters=(50, DT)), "d": Action("RIGHT", parameters=(50, DT)),
         "q": Action("ROTATE_LEFT", parameters=(50, DT)), "e": Action("ROTATE_RIGHT", parameters=(50, DT)),
         "Up": Action("INCREASE_HEIGHT", parameters=(50, DT)), "Down": Action("DECREASE_HEIGHT", parameters=(50, DT)),
-        "Prior": Action("TILT_UP", parameters=(10, DT)), "Next": Action("TILT_DOWN", parameters=(10, DT)),
+        "Prior": Action("GIMBAL_UP", parameters=(50, DT)), "Next": Action("GIMBAL_DOWN", parameters=(50, DT)),
+        "k": Action("GIMBAL_ABSOLUTE", parameters=(-45, )),
     }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action, resolution=RESOLUTION)
     robot.add_controller(screen_displayer, name="Screen Displayer")
