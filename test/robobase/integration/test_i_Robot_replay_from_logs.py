@@ -7,7 +7,7 @@ from copy import deepcopy
 from datetime import datetime
 import pytest
 import numpy as np
-from robobase import Robot, Environment, DataChannel, ActionsQueue
+from robobase import Robot, Environment, DataChannel, ActionsQueue, Action
 from robobase.utils import wait_and_clear, DataStorer
 
 TARGET = "helloworld"
@@ -39,11 +39,11 @@ def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
-    actions_queue = ActionsQueue(actions=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
+    actions_queue = ActionsQueue(action_names=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
     robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: TARGET[len(data["state"])] if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
 
     robot.run()
     data_channel.close()
@@ -62,7 +62,7 @@ def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     actions_files = sorted(list((tmp_path / "ActionsQueue").iterdir()), key=lambda p: p.name)
     actions = [np.load(x, allow_pickle=True)["arr_0"].item() for x in actions_files]
     for i in range(len(actions)):
-        assert actions[i]["action"] == TARGET[i], (actions[i], TARGET[i])
+        assert actions[i]["action"].name == TARGET[i], (actions[i], TARGET[i])
         assert actions[i]["data_ts"] == data_files[i].stem
 
 if __name__ == "__main__":

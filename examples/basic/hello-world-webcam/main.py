@@ -29,9 +29,9 @@ class WebcamEnv(Environment):
 
 def action_fn(env: WebcamEnv, action: Action) -> bool | None:
     """The action->env function. Takes the generic action returned by the controller (keyboard) and updates the env"""
-    if action == "pause":
+    if action.name == "pause":
         env.is_paused = not env.is_paused
-    if action == "close":
+    if action.name == "close":
         env.cam.release()
     return True
 
@@ -39,10 +39,10 @@ def main():
     """main fn"""
     env = WebcamEnv(device_id=0 if len(sys.argv) == 0 else int(sys.argv[1])) # change if needed
     data_channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: False) # eq fn: every data is assumed new
-    actions_queue = ActionsQueue(actions=["pause", "close"])
+    actions_queue = ActionsQueue(action_names=["pause", "close"])
     robot = Robot(env, data_channel, actions_queue, action_fn=action_fn)
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue,
-                                         key_to_action={"space": "pause", "Escape": "close"}))
+                                         key_to_action={"space": Action("pause"), "Escape": Action("close")}))
     robot.run()
 
     data_channel.close()

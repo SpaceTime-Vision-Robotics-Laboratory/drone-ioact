@@ -9,19 +9,18 @@ QUEUE_DEFAULT_MAX_SIZE = 100 # needed so .put() doesn't grow the queue indefinit
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
-    def __init__(self, actions: list[Action | str], queue: Queue | None = None):
-        assert len(actions) > 0, "cannot have an empty list of actions"
-        assert all(isinstance(action, (Action, str)) for action in actions), actions
-        self.actions: list[Action] = [act if isinstance(act, Action) else Action(name=act) for act in actions]
+    def __init__(self, action_names: list[str], queue: Queue | None = None):
+        assert len(action_names) > 0, "cannot have an empty list of actions"
+        assert all(isinstance(action_name, str) for action_name in action_names), action_names
         self.queue = queue or Queue(maxsize=QUEUE_DEFAULT_MAX_SIZE)
-        self._action_names = set(a.name for a in self.actions)
+        self.action_names = action_names
 
-    def put(self, action: Action | str, data_ts: datetime | None, *args, **kwargs):
+    def put(self, action: Action, data_ts: datetime | None, *args, **kwargs):
         """Put an action into the queue. data_ts is the ts of the data that produced the action or None (i.e. kb)"""
+        assert isinstance(action, Action), type(action)
         item_ts = datetime.now()
-        assert isinstance(action, (Action, str)), type(action)
         action = Action(action) if isinstance(action, str) else action
-        assert action.name in self._action_names, f"{action} not in {self._action_names}"
+        assert action.name in self.action_names, f"{action} not in {self.action_names}"
         if (storer := DataStorer.get_instance()) is not None:
             storer.push(item={"action": action, "data_ts": None if data_ts is None else data_ts.isoformat()},
                         tag="ActionsQueue", timestamp=item_ts)
@@ -35,4 +34,4 @@ class ActionsQueue:
         return self.queue.qsize()
 
     def __repr__(self):
-        return f"[ActionsQueue] Actions: {self.actions}. Size: {len(self)}"
+        return f"[ActionsQueue] Actions: {self.action_names} ({len(self.action_names)}). Size: {len(self)}"

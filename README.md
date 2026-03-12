@@ -38,7 +38,7 @@ def main():
     """main fn"""
     drone_env = XXXDrone(ip="192.168.0.101") # XXX = specific real or simulated drone like Olympe
     drone_env.connect() # establish connection to the drone before any callbacks
-    actions_queue = ActionsQueue(actions=["a1", "a2", ...]) # defines the generic actions
+    actions_queue = ActionsQueue(action_names=["a1", "a2", ...]) # defines the generic actions. Actions can have parameters via Action("a1", (param, ...))
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # action_fn converts generic "a1", "a2" to raw drone-specific action e.g. parrot.piloting(...)
@@ -103,8 +103,8 @@ def main():
     """main fn"""
     drone_env = XXXDrone(ip="192.168.0.101") # XXX = specific real or simulated drone like Olympe
     drone_env.connect() # establish connection to the drone before any callbacks
-    actions = ["a1", "a2", ...] # Actions can have parameters via Action("a1", (param1, param2, ...)).
-    actions_queue = ActionsQueue(actions, queue=Queue()) # defines the generic actions and the queue type.
+    action_names = ["a1", "a2", ...] # Actions can have parameters via Action("a1", (param1, param2, ...)).
+    actions_queue = ActionsQueue(action_names, queue=Queue()) # defines the generic actions and the queue type.
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.
@@ -112,7 +112,7 @@ def main():
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here)
-    key_to_action = {"space": "a1", "w": "a2"} # define the mapping between a key release and an action pushed in the queue
+    key_to_action = {"space": Action("a1"), "w": Action("a2")} # define the mapping between a key release and an action pushed in the queue
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
     def XXXaction_fn(env: XXXDrone, action: Action) -> bool:

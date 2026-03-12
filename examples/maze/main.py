@@ -26,7 +26,7 @@ def random_controller_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=
     """random planner"""
     res = random.choice(["up", "down", "left", "right"])
     logger.debug(f"Doing action: {res}")
-    return res
+    return Action(res)
 
 @dataclass
 class State:
@@ -40,7 +40,7 @@ class Strategy1:
         self.pos_to_distance: dict[PointIJ, float] = {} # {relative position: score}, -inf if wall or empty path
         self.state = State(position=PointIJ(0, 0), distance=2**31, move=None, prev_state=None)
 
-    def move(self, move: str) -> str:
+    def move(self, move: str) -> Action:
         """wrapper to update stuff before returning"""
         self.state.move = move
         move_to_delta = {"up": (-1, 0), "down": (1, 0), "left": (0, -1), "right": (0, 1)}
@@ -48,7 +48,7 @@ class Strategy1:
         if self.pos_to_distance.get(self.state.position + move_to_delta[self.state.move], 0) == INF:
             logger.debug(self.pos_to_distance)
             raise ValueError("stuck most likely")
-        return move
+        return Action(move)
 
     def __call__(self, data: dict[str, DataItem]) -> Action:
         move_to_rev = {"up": "down", "right": "left", "down": "up", "left": "right"}
@@ -125,7 +125,7 @@ def main(args: Namespace):
     logger.info(f"Maze started. initial distance of: {maze.initial_distance}")
     maze.print_maze()
 
-    actions_queue = ActionsQueue(actions=["up", "down", "left", "right"])
+    actions_queue = ActionsQueue(action_names=["up", "down", "left", "right"])
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 

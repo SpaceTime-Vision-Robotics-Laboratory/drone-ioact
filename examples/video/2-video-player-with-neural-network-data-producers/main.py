@@ -8,10 +8,10 @@ import logging
 from vre_video import VREVideo
 import numpy as np
 
-from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action
+from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as A
 from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color
 
@@ -66,7 +66,7 @@ def main(args: Namespace):
     if args.weights_path_yolo:
         supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
-    actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     if args.weights_path_phg is not None:
@@ -76,9 +76,9 @@ def main(args: Namespace):
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Left": Action("GO_BACK", (video_player.fps, )),
-                     "Right": Action("GO_FORWARD", (video_player.fps, )), "comma": Action("GO_BACK", (1, )),
-                     "period": Action("GO_FORWARD", (1, ))}
+    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (video_player.fps, )),
+                     "Right": A("GO_FORWARD", (video_player.fps, )), "comma": A("GO_BACK", (1, )),
+                     "period": A("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, "Screen Displayer")

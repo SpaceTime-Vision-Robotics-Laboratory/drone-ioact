@@ -37,9 +37,11 @@ class ScreenDisplayer(BaseController):
                  toggle_info_key: str | None = None):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.initial_resolution = resolution
-        self.key_to_action = key_to_action = key_to_action or {}
-        self.toggle_info_key = toggle_info_key or ("i" if "i" not in self.key_to_action else None)
-        assert all(v in actions_queue.actions for v in key_to_action.values()), f"{key_to_action}\n{actions_queue}"
+        self.key_to_action = k2a = key_to_action or {}
+        self.toggle_info_key = toggle_info_key or "i"
+        assert all(isinstance(a, Action) for a in k2a.values()), [(a, type(a)) for a in k2a.values()]
+        assert all(v.name in actions_queue.action_names for v in k2a.values()), f"\n-{k2a=}\n-Actions: {actions_queue}"
+        assert self.toggle_info_key not in k2a, f"{self.toggle_info_key=} clash with {key_to_action=}"
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         # state of the canvas: initialized at startup time.
         self.root: tk.Tk | None = None
@@ -56,11 +58,16 @@ class ScreenDisplayer(BaseController):
         self.actions_queue.put(action, data_ts=None, block=True)
 
     def _on_key_release(self, event: tk.Event):
-        action: Action | None = self.key_to_action.get(key := event.keysym)
-        if action is None:
-            logger.debug(f"Unused char: {key}")
+        if event.keysym == self.toggle_info_key:
+            logger.debug(f"Pressed '{event.keysym}' (key info). TODO: not implemented")
             return
-        logger.debug(f"Pressed '{key}'. Pushing: {action} to the actions queue.")
+
+        action: Action | None = self.key_to_action.get(event.keysym)
+        if action is None:
+            logger.debug(f"Unused char: {event.keysym}")
+            return
+
+        logger.debug(f"Pressed '{event.keysym}'. Pushing: {action} to the actions queue.")
         self.add_to_queue(action)
 
     def _get_initial_height_width(self, prev_data: dict[str, DataItem]) -> tuple[int, int]:
