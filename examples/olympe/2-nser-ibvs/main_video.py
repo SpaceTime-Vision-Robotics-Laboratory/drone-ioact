@@ -15,9 +15,9 @@ from loggez import loggez_logger as logger
 from detection.mask_splitter_data_producer import MaskSplitterDataProducer
 from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 
-from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action
+from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action as A
 from roboimpl.data_producers.object_detection import YOLODataProducer
-from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
@@ -82,7 +82,7 @@ def main(args: Namespace):
     supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
                        "bbox_oriented", "segmentation_xy", "segmentation", "bbox_confidence", "back_mask"]
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
-    actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=bgr)
@@ -92,9 +92,9 @@ def main(args: Namespace):
     robot.add_data_producer(yolo_data_producer)
     robot.add_data_producer(mask_splitter_data_producer)
 
-    key_to_action = {"space": "PLAY_PAUSE", "Escape": "DISCONNECT", "Left": Action("GO_BACK", (video_player.fps, )),
-                     "Right": Action("GO_FORWARD", (video_player.fps, )), "comma": Action("GO_BACK", (1, )),
-                     "period": Action("GO_FORWARD", (1, ))}
+    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (video_player.fps, )),
+                     "Right": A("GO_FORWARD", (video_player.fps, )), "comma": A("GO_BACK", (1, )),
+                     "period": A("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, name="Screen displayer")

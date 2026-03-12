@@ -6,7 +6,7 @@ import numpy as np
 from loggez import make_logger
 from robobase import Robot, DataChannel, ActionsQueue, Action
 from roboimpl.controllers import ScreenDisplayer
-from roboimpl.envs.gym import GymEnv, GymState, gym_action_fn, GYM_ACTIONS
+from roboimpl.envs.gym import GymEnv, GymState, gym_action_fn, GYM_ACTION_NAMES
 
 logger = make_logger("GYM")
 
@@ -22,12 +22,12 @@ def main():
     """main fn"""
     env = GymEnv(gym.make("CartPole-v1", render_mode="rgb_array"))
     data_channel = DataChannel(["state"], lambda a, b: np.allclose(a["state"].observation, b["state"].observation))
-    actions_queue = ActionsQueue(actions=GYM_ACTIONS)
+    actions_queue = ActionsQueue(action_names=GYM_ACTION_NAMES)
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=gym_action_fn)
     robot.add_controller(partial(controller_fn, action_space=env.action_space))
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render(),
-                                         key_to_action={"Escape": "close"}))
+                                         key_to_action={"Escape": Action("close")}))
 
     robot.run()
     env.close()

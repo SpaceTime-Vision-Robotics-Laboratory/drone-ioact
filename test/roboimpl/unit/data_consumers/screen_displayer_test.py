@@ -1,13 +1,12 @@
 from pytest_mock import MockerFixture
-from queue import Queue
-from robobase import ActionsQueue, DataChannel
+from robobase import ActionsQueue, DataChannel, Action as A
 from roboimpl.controllers import ScreenDisplayer
 
-def test_KeyboardController_mock_queue(mocker: MockerFixture):
-    key_to_action = {"Q": "act_Q", "X": "act_X", "Key.esc": "act_esc"}
-    actions_queue = ActionsQueue(actions=list(key_to_action.values()), queue=(q := Queue()))
+def test_ScreenDisplayer_keyboard_mock_queue(mocker: MockerFixture):
+    key_to_action = {"Q": A("act_Q"), "X": A("act_X"), "Key.esc": A("act_esc")}
+    aq = ActionsQueue(action_names=[a.name for a in key_to_action.values()])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=actions_queue, key_to_action=key_to_action)
+    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action)
 
     def make_keypress(keysym: str):
         mock_event = mocker.Mock()
@@ -15,17 +14,24 @@ def test_KeyboardController_mock_queue(mocker: MockerFixture):
         sd._on_key_release(mock_event)
 
     make_keypress("a")
-    assert len(q.queue) == 0
+    assert len(aq) == 0
     make_keypress("Q")
-    assert len(q.queue) == 1
+    assert len(aq) == 1
     make_keypress("X")
-    assert len(q.queue) == 2
-    assert q.get() == "act_Q"
-    assert len(q.queue) == 1
+    assert len(aq) == 2
+    assert aq.get().name == "act_Q"
+    assert len(aq) == 1
     make_keypress("Key.esc")
-    assert len(q.queue) == 2
+    assert len(aq) == 2
     make_keypress("Key.QQ")
-    assert len(q.queue) == 2
-    assert q.get() == "act_X"
-    assert q.get() == "act_esc"
-    assert len(q.queue) == 0
+    assert len(aq) == 2
+    assert aq.get().name == "act_X"
+    assert aq.get().name == "act_esc"
+    assert len(aq) == 0
+
+def test_ScreenDisplayer_key_to_actions():
+    aq = ActionsQueue(action_names=["act1", "act2"])
+    data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
+    key_to_action = {"A": A("act1", (5, )), "B": A("act2")}
+    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action)
+    assert {a.name for a in sd.key_to_action.values()} == {"act1", "act2"}

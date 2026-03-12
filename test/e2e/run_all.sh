@@ -1,6 +1,9 @@
 #!/usr/bin/bash
-# set -ex
+set -e
 export CWD=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
+
+export ROBOBASE_LOGLEVEL=2
+export ROBOIMPL_LOGLEVEL=2
 
 echo "================= Video UDP Screenshot ================="
 bash $CWD/video-udp-screenshot/run.sh

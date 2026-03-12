@@ -8,25 +8,25 @@ from roboimpl.utils import logger
 from .olympe_env import OlympeEnv
 
 # the list of all supported actions from our generic ones to the drone's internal ones.
-OLYMPE_SUPPORTED_ACTIONS: set[str] = {
+OLYMPE_ACTION_NAMES = [
     "DISCONNECT", "LIFT", "LAND", "FORWARD", "BACKWARD", "LEFT", "RIGHT", "ROTATE_LEFT", "ROTATE_RIGHT",
     "INCREASE_HEIGHT", "DECREASE_HEIGHT", "GIMBAL_UP", "GIMBAL_DOWN", "GIMBAL_ABSOLUTE", "PILOTING"
-}
+]
 
 def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
     """the actions callback from generic actions to drone-specific ones. Note: all actions are in (velocity, time) !"""
     drone = env.drone
-    if action == "DISCONNECT":
+    if action.name == "DISCONNECT":
         drone.streaming.stop()
         return True
-    if action == "LIFT":
+    if action.name == "LIFT":
         return drone(TakeOff()).wait().success()
-    if action == "LAND":
+    if action.name == "LAND":
         return drone(Landing()).wait().success()
-    if action == "PILOTING":
+    if action.name == "PILOTING":
         roll, pitch, yaw, gaz, piloting_time = action.parameters
         return drone.piloting(roll, pitch, yaw, gaz, piloting_time)
-    if action == "GIMBAL_ABSOLUTE":
+    if action.name == "GIMBAL_ABSOLUTE":
         gimbal_kwargs = {"gimbal_id": 0, "control_mode": "position", "yaw_frame_of_reference": "none", "yaw": 0,
                          "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute"}
         drone(gimbal.set_target(pitch=action.parameters[0], **gimbal_kwargs))
@@ -39,30 +39,30 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
         logger.error(f"Velocity not in [-100:100]. Got: {velocity}")
         return False
 
-    if action == "FORWARD":
+    if action.name == "FORWARD":
         return drone.piloting(roll=0, pitch=velocity, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action == "BACKWARD":
+    if action.name == "BACKWARD":
         return drone.piloting(roll=0, pitch=-velocity, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action == "LEFT":
+    if action.name == "LEFT":
         return drone.piloting(roll=-velocity, pitch=0, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action == "RIGHT":
+    if action.name == "RIGHT":
         return drone.piloting(roll=velocity, pitch=0, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action == "ROTATE_LEFT":
+    if action.name == "ROTATE_LEFT":
         return drone.piloting(roll=0, pitch=0, yaw=-velocity, gaz=0, piloting_time=piloting_time)
-    if action == "ROTATE_RIGHT":
+    if action.name == "ROTATE_RIGHT":
         return drone.piloting(roll=0, pitch=0, yaw=velocity, gaz=0, piloting_time=piloting_time)
-    if action == "INCREASE_HEIGHT":
+    if action.name == "INCREASE_HEIGHT":
         return drone.piloting(roll=0, pitch=0, yaw=0, gaz=velocity, piloting_time=piloting_time)
-    if action == "DECREASE_HEIGHT":
+    if action.name == "DECREASE_HEIGHT":
         return drone.piloting(roll=0, pitch=0, yaw=0, gaz=-velocity, piloting_time=piloting_time)
     # gimbal stuff
     gimbal_kwargs = {"gimbal_id": 0, "control_mode": "velocity", "yaw_frame_of_reference": "none", "yaw": 0,
                      "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute"}
-    if action == "GIMBAL_UP":
+    if action.name == "GIMBAL_UP":
         drone(gimbal.set_target(pitch=velocity / 100, **gimbal_kwargs)) # pitch is in [-1:1] for this API
         threading.Timer(piloting_time, lambda: drone(gimbal.set_target(pitch=0, **gimbal_kwargs))).start()
         return True
-    if action == "GIMBAL_DOWN":
+    if action.name == "GIMBAL_DOWN":
         drone(gimbal.set_target(pitch=-velocity / 100, **gimbal_kwargs)) # pitch is in [-1:1] for this API
         threading.Timer(piloting_time, lambda: drone(gimbal.set_target(pitch=0, **gimbal_kwargs))).start()
         return True

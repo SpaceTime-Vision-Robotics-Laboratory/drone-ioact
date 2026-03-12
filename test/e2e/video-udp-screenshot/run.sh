@@ -1,12 +1,12 @@
 #!/usr/bin/bash
-# set -x
+# set -e
 export CWD=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 export PROJ_ROOT=$CWD/../../../
 PORT=9999
 
-export ROBOBASE_LOGLEVEL=0
-export ROBOIMPL_LOGLEVEL=0
-export VRE_VIDEO_LOGLEVEL=0
+export ROBOBASE_LOGLEVEL=${ROBOBASE_LOGLEVEL:-0}
+export ROBOIMPL_LOGLEVEL=${ROBOIMPL_LOGLEVEL:-0}
+export VRE_VIDEO_LOGLEVEL=${VRE_VIDEO_LOGLEVEL:-0}
 
 function wait_for_start {
     n_tries=$1

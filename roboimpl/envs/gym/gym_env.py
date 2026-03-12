@@ -12,7 +12,7 @@ MAX_STEPS = 1000000
 INITIAL_SEED = 42
 RenderFrame = Any
 
-GYM_ACTIONS = ["step", "reset", "close"]
+GYM_ACTION_NAMES = ["step", "reset", "close"]
 
 def gym_action_fn(env: GymEnv, act: Action):
     """generic actions to gym-specific actions"""

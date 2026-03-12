@@ -4,8 +4,8 @@ from datetime import datetime
 import time
 import numpy as np
 
-from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels,
-                      Actions2Environment, LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
+from robobase import (ActionsQueue, DataChannel, DataItem, ThreadGroup, DataProducers2Channels, Actions2Environment,
+                      LambdaDataProducer, Controller, Action, Environment, RawDataProducer)
 from robobase.utils import freq_barrier
 
 N_FRAMES = 60
@@ -60,7 +60,7 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     frames = np.random.randint(0, 255, size=(N_FRAMES, 30, 30, 3), dtype=np.uint8)
     video_player = FakeVideo(frames, fps=30)
 
-    actions_queue = ActionsQueue(actions=["a"])
+    actions_queue = ActionsQueue(action_names=["a"])
     dc1 = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     dc2 = DataChannel(supported_types=["rgb", "frame_ix", "rgb_rev"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 

@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# set -ex
+set -e
 export CWD=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 export PROJ_ROOT=$CWD/../../../
 

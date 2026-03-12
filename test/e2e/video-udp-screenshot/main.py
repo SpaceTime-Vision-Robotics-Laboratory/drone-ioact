@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, Robot
-from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_SUPPORTED_ACTIONS
+from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import UDPController
 
 SCREEN_HEIGHT = 420
@@ -26,7 +26,7 @@ def main(args: Namespace):
     reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
     (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
 
-    actions_queue = ActionsQueue(actions=VIDEO_SUPPORTED_ACTIONS)
+    actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)

@@ -20,7 +20,6 @@ class UDPController(BaseController):
     def __init__(self, data_channel: DataProducer, actions_queue: ActionsQueue, port: int):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.port = port
-        self.actions = set(actions_queue.actions)
 
     def add_to_queue(self, action: Action):
         """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""

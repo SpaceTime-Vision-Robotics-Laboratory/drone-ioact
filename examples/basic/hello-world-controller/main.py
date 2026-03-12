@@ -3,7 +3,7 @@
 import threading
 from copy import deepcopy
 from datetime import datetime
-from robobase import Robot, Environment, DataChannel, ActionsQueue, DataItem
+from robobase import Robot, Environment, DataChannel, ActionsQueue, DataItem, Action
 from robobase.utils import wait_and_clear
 
 TARGET = "helloworld"
@@ -32,16 +32,16 @@ class BasicEnv(Environment):
 def controller_fn(data: dict[str, DataItem]):
     """Basic controller function. Returns the next character given the current state, i.e. push 'e' if state==['h']"""
     match "".join(data["state"]):
-        case "": return "h"
-        case "h": return "e"
-        case "he": return "l"
-        case "hel": return "l"
-        case "hell": return "o"
-        case "hello": return "w"
-        case "hellow": return "o"
-        case "hellowo": return "r"
-        case "hellowor": return "l"
-        case "helloworl": return "d"
+        case "": return Action("h")
+        case "h": return Action("e")
+        case "he": return Action("l")
+        case "hel": return Action("l")
+        case "hell": return Action("o")
+        case "hello": return Action("w")
+        case "hellow": return Action("o")
+        case "hellowo": return Action("r")
+        case "hellowor": return Action("l")
+        case "helloworl": return Action("d")
         case "helloworld": return None
     raise ValueError(data["state"])
 
@@ -49,7 +49,7 @@ def main():
     """main fn"""
     env = BasicEnv()
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
-    actions_queue = ActionsQueue(actions=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
+    actions_queue = ActionsQueue(action_names=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
     robot = Robot(env, data_channel, actions_queue, action_fn = lambda env, action: env.push(action.name))
     robot.add_controller(controller=controller_fn)
