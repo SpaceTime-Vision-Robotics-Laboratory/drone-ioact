@@ -55,15 +55,14 @@ class DataStorer(threading.Thread):
         """Push a data item to the queue so it's later stored on disk. A 'tag' of the source must be provided."""
         logger.trace(f"Pushing item at {self.path}/{tag}/{timestamp}. Q size: {len(self)}")
         assert not self.is_closed, "DataStorer is closed, cannot push."
-        self.data_queue.put({"item": item, "tag": tag, "timestamp": timestamp.isoformat()})
+        self.data_queue.put({"arr_0": item, "tag": tag, "timestamp": timestamp.isoformat()}) # arr_0 for compat!
 
     def get_and_store(self):
         """gets one item from the data queue and stores it to the disk"""
-        x = self.data_queue.get_nowait()
-
+        x: dict[str, Any] = self.data_queue.get_nowait()
         (path := self.path / x["tag"] / x["timestamp"]).parent.mkdir(exist_ok=True, parents=True)
-        data = {k: np.array(v, dtype=object) for k, v in x["item"].items()}
-        np.savez_compressed(path, **data) # the actual keys will be mapped in the .npz file (instead of arr_0)
+        data = {k: np.array(v, dtype=object) for k, v in x.items()}
+        np.savez_compressed(path, **data) # the actual keys will be mapped in the .npz file (additional to 'arr_0')
         logger.log_every_s(f"Stored at '{path}'", "DEBUG", True)
 
     @overrides
