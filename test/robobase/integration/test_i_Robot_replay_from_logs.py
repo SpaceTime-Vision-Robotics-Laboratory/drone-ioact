@@ -85,7 +85,7 @@ def test_i_Robot_replay_from_logs_ReplayDataProducer(tmp_path: Path, monkeypatch
     DataStorer.get_instance().close()
 
     # just read the data that was created via the data channel
-    replay_data_producer = ReplayDataProducer(tmp_path, prefix="replay_")
+    replay_data_producer = ReplayDataProducer(tmp_path / "DataChannel", prefix="replay_")
     for i in range(len(replay_data_producer._data)):
         data = replay_data_producer.produce()
         assert "".join(data["replay_state"]) == TARGET[0:i]

@@ -26,6 +26,8 @@ class ReplayDataProducer(DataProducer):
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         file = self._data[self._keys[self._current_ix]]
         data = np.load(file, allow_pickle=True)
+        if "arr_0" in data.keys() and len(data.keys()) == 1: # compat mode
+            return data["arr_0"].item()
         res = {}
         for k, v in data.items():
             if v.shape == (0, ) or (len(v.shape) > 0 and v.shape[0] > 0 and isinstance(v[0], str)): # npz is hard :/
@@ -37,13 +39,17 @@ class ReplayDataProducer(DataProducer):
 
     def _build_data(self) -> dict[str, Path]:
         """returns an (oredered) dict {timestamp: list of npz files to read}. Matches actions to data if needed"""
-        assert (data_dir := self.data_dir / "DataChannel").exists()
-        res = {item.stem: item for item in sorted(data_dir.iterdir(), key=lambda p: p.name)}
+        assert self.data_dir.exists(), self.data_dir
+        res = {item.stem: item for item in sorted(self.data_dir.iterdir(), key=lambda p: p.name)}
         assert len(res) > 0, f"No data items fround at '{self.data_dir}'"
         return res
 
     def _build_modalities(self) -> list[str]:
         """returns the list of modalities from the first data item"""
         file = self._data[self._keys[0]]
-        res = list(np.load(file, allow_pickle=True).keys())
+        data = np.load(file, allow_pickle=True)
+        if "arr_0" in data.keys() and len(data.keys()) == 1: # compat mode
+            res = list(data["arr_0"].item().keys())
+        else:
+            res = list(data.keys())
         return [f"{self.prefix}{modality}" for modality in res]
