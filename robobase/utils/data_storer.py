@@ -80,7 +80,7 @@ class DataStorer(threading.Thread):
             except Empty:
                 if self.is_closed:
                     break
-                logger.log_every_s("Empty queue on DataStorer.", "DEBUG", True)
+                logger.log_every_s("Empty queue on DataStorer.", "TRACE", True)
                 time.sleep(SLEEP_INTERVAL)
 
         if (n := self.data_queue.qsize()) > 0:
