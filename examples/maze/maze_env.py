@@ -78,7 +78,8 @@ class MazeEnv(Environment):
 
     @overrides
     def get_state(self) -> dict[str, PointIJ | float]:
-        """gets the current state of the maze w.r.t the player position"""
+        """gets the current state of the maze w.r.t the player position. If you call this from outside (i.e. main), also
+           do env.data_ready.set() otherwise the env will lock because this is done at env.step() time usually."""
         wait_and_clear(self.data_ready) # wait for green light and set red light
         distance_to_exit = abs(self.exit_pos.i - self.player_pos.i) + abs(self.exit_pos.j - self.player_pos.j)
         return {"distance_to_exit": distance_to_exit, "n_moves": self.n_moves}

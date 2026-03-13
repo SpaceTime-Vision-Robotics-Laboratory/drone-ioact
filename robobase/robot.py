@@ -31,6 +31,8 @@ class Robot:
 
     def add_data_producer(self, data_producer: DataProducer):
         """Add a data producer (i.e. yolo, semantic, optical flow etc.) to this robot. Has access to 'raw' env data"""
+        if not all(modality in self.data_channel.supported_types for modality in data_producer.modalities):
+            raise ValueError(f"Unknown modality:\n-{data_producer.modalities=}\n-{self.data_channel.supported_types=}")
         self._data_producers.append(data_producer)
 
     def add_controller(self, controller: BaseController | ControllerFn, name: str | None = None):

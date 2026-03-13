@@ -31,7 +31,6 @@ class ThreadGroup(dict):
 
     def join(self, timeout: float | None=1.0):
         """joins all the threads"""
-        logger.debug(f"Joining threads:\n{self}")
         for k, v in self.items():
             logger.debug(f"Joining thread '{k}' (timeout: {timeout})")
             if hasattr(v, "close"):
