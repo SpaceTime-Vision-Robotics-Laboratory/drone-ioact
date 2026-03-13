@@ -1,5 +1,5 @@
 import pytest
-from robobase.actions2env import ActionsQueue, Action as A
+from robobase import ActionsQueue, Action as A
 
 def test_ActionsQueue_ctor():
     with pytest.raises(AssertionError):
