@@ -3,7 +3,7 @@ from queue import Queue
 from datetime import datetime
 
 from .action import Action
-from .utils import DataStorer
+from .utils import DataStorer, logger
 
 QUEUE_DEFAULT_MAX_SIZE = 100 # needed so .put() doesn't grow the queue indefinitely
 
@@ -16,17 +16,22 @@ class ActionsQueue:
         self.action_names = action_names
 
     def put(self, action: Action, data_ts: datetime | None, *args, **kwargs):
-        """Put an action into the queue. data_ts is the ts of the data that produced the action or None (i.e. kb)"""
+        """
+        Put an action into the queue. data_ts is the ts of the data that produced the action or None (i.e. kb).
+        args and kwargs are passed to the queue as we can have different queue implementations (i.e. priority queue).
+        """
         assert isinstance(action, Action), type(action)
-        item_ts = datetime.now()
-        action = Action(action) if isinstance(action, str) else action
         assert action.name in self.action_names, f"{action} not in {self.action_names}"
-        if (storer := DataStorer.get_instance()) is not None:
-            storer.push(item={"action": action, "data_ts": None if data_ts is None else data_ts.isoformat()},
-                        tag="ActionsQueue", timestamp=item_ts)
-        self.queue.put(action, *args, **kwargs)
+        action_ts = datetime.now()
+        logger.log_every_s(f"Got action (action_ts='{action_ts}'): {action} (#queue: {len(self)})", "DEBUG", True)
 
-    def get(self, *args, **kwargs) -> Action:
+        if (storer := DataStorer.get_instance()) is not None:
+            item = {"action": action, "data_ts": None if data_ts is None else data_ts.isoformat()} # correlate act-data
+            storer.push(item=item, tag="ActionsQueue", timestamp=action_ts)
+
+        self.queue.put((action, action_ts), *args, **kwargs)
+
+    def get(self, *args, **kwargs) -> tuple[Action, datetime]:
         """Remove and return an item from the queue"""
         return self.queue.get(*args, **kwargs)
 

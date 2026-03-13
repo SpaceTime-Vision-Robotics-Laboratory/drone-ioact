@@ -88,6 +88,8 @@ class DataProducers2Channels(threading.Thread):
             time.sleep(1)
 
     def _worker_fn(self, dp_list: _DataProducerList):
+        # This function operates at one DataChannel and the DataProducers of this singular channel. We have 1 thread for
+        # each DataChannel and its list.
         while True:
             try:
                 data = dp_list.produce_all()

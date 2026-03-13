@@ -5,7 +5,6 @@ import traceback
 from queue import Empty
 
 from .environment import Environment
-from .action import Action
 from .actions_queue import ActionsQueue
 from .types import ActionFn
 from .utils import logger
@@ -32,9 +31,8 @@ class Actions2Environment(threading.Thread):
     def run(self):
         while res := self.env.is_running():
             try:
-                action: Action = self.actions_queue.get(block=True, timeout=1)
-                logger.log_every_s(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})", "DEBUG")
-                logger.trace(f"Received action: '{action}' (#in queue: {len(self.actions_queue)})")
+                action, action_ts = self.actions_queue.get(block=True, timeout=1)
+                logger.log_every_s(f"Processing action (action_ts={action_ts}) '{action}'", "DEBUG", True)
                 res = self.action_fn(self.env, action)
                 if res is False:
                     logger.warning(f"Could not perform action '{action}'")

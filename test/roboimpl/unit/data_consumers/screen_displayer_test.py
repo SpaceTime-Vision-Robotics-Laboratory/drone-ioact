@@ -19,14 +19,14 @@ def test_ScreenDisplayer_keyboard_mock_queue(mocker: MockerFixture):
     assert len(aq) == 1
     make_keypress("X")
     assert len(aq) == 2
-    assert aq.get().name == "act_Q"
+    assert aq.get()[0].name == "act_Q"
     assert len(aq) == 1
     make_keypress("Key.esc")
     assert len(aq) == 2
     make_keypress("Key.QQ")
     assert len(aq) == 2
-    assert aq.get().name == "act_X"
-    assert aq.get().name == "act_esc"
+    assert aq.get()[0].name == "act_X"
+    assert aq.get()[0].name == "act_esc"
     assert len(aq) == 0
 
 def test_ScreenDisplayer_key_to_actions():
