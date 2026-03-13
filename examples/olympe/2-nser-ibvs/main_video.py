@@ -31,23 +31,24 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
     res = data["rgb"].copy()
 
-    if data["segmentation"] is not None:
-        all_segmentations = data["segmentation"].sum(0).repeat(3, axis=-1) * Color.GREENISH
-        image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
+    # if data["segmentation"] is not None:
+    #     all_segmentations = data["segmentation"].sum(0).repeat(3, axis=2) * Color.GREENISH
+    #     image_paste(res, all_segmentations.astype(np.uint8), inplace=True)
 
-    if data["bbox_oriented"] is not None:
+    if data.get("bbox_oriented") is not None:
         p1, p2, p3, p4 = [p[::-1] for p in data["bbox_oriented"]]
         image_draw_circle(res, p1, radius=CIRCLE_RADIUS, color=Color.RED, fill=True, inplace=True)
         image_draw_circle(res, p2, radius=CIRCLE_RADIUS, color=Color.GREEN, fill=True, inplace=True)
         image_draw_circle(res, p3, radius=CIRCLE_RADIUS, color=Color.BLUE, fill=True, inplace=True)
         image_draw_circle(res, p4, radius=CIRCLE_RADIUS, color=Color.WHITE, fill=True, inplace=True)
 
-    if data["front_mask"] is not None:
-        image_paste(res, (data["front_mask"].repeat(3, axis=-1) * Color.RED).astype(np.uint8), inplace=True)
-    if data["back_mask"] is not None:
-        image_paste(res, (data["back_mask"].repeat(3, axis=-1) * Color.GREEN).astype(np.uint8), inplace=True)
+    if data.get("front_mask") is not None:
+        image_paste(res, (data["front_mask"].repeat(3, axis=2) * Color.RED).astype(np.uint8), inplace=True)
 
-    if data["bbox"] is not None:
+    if data.get("back_mask") is not None:
+        image_paste(res, (data["back_mask"].repeat(3, axis=2) * Color.GREEN).astype(np.uint8), inplace=True)
+
+    if data.get("bbox") is not None:
         data["bbox"] = data["bbox"][0:1]
         for bbox in data["bbox"]: # plot all bboxes
             x1, y1, x2, y2 = bbox
@@ -60,10 +61,10 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("video_path", type=Path)
     # yolo params
-    parser.add_argument("--weights_path_yolo", required=True)
+    parser.add_argument("--yolo_weights_path")
     parser.add_argument("--yolo_threshold", default=0.75, type=float)
     # spliter network params
-    parser.add_argument("--weights_path_mask_splitter_network", required=True)
+    parser.add_argument("--mask_splitter_network_weights_path")
     parser.add_argument("--mask_splitter_network_mask_threshold", default=0.5, type=float)
     parser.add_argument("--mask_splitter_network_bbox_threshold", default=0.5, type=float)
     args = parser.parse_args()
@@ -73,35 +74,41 @@ def main(args: Namespace):
     """main fn"""
     # TODO: make sure that the returned RGB is exactly IMAGE_SIZE_SPLITTER_NET in size.
     if args.video_path.name == "res": # TODO: we should get rid of this once we are done comparing with the orig. code
-        video_player = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=True)
+        env = VideoPlayerEnv(VREVideo(AutoFollowLogsFrameReader(args.video_path)), loop=True)
+        # TODO? env = NullEnv(); env.add_data_producer(ReplayDataProducer(output/res))
     else:
-        video_player = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
-    bgr = isinstance(video_player.video.reader, AutoFollowLogsFrameReader)
-    logger.info(f"{video_player}")
+        env = VideoPlayerEnv(VREVideo(args.video_path), loop=True)
+    bgr = isinstance(env.video.reader, AutoFollowLogsFrameReader)
+    logger.info(f"{env}")
 
-    supported_types = ["bbox", "rgb", "splitter_segmentation", "frame_ix", "front_mask",
-                       "bbox_oriented", "segmentation_xy", "segmentation", "bbox_confidence", "back_mask"]
+    dps = []
+    supported_types = env.get_modalities()
+    if args.yolo_weights_path is not None:
+        dps.append(YOLODataProducer(args.yolo_weights_path, threshold=args.yolo_threshold, bgr=bgr))
+        supported_types.extend(dps[-1].modalities)
+    if args.mask_splitter_network_weights_path is not None:
+        dps.append(MaskSplitterDataProducer(args.mask_splitter_network_weights_path,
+                                            mask_threshold=args.mask_splitter_network_mask_threshold,
+                                            bbox_threshold=args.mask_splitter_network_bbox_threshold))
+        supported_types.extend(dps[-1].modalities)
+
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
 
-    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
-    yolo_data_producer = YOLODataProducer(weights_path=args.weights_path_yolo, threshold=args.yolo_threshold, bgr=bgr)
-    mask_splitter_data_producer = MaskSplitterDataProducer(splitter_model_path=args.weights_path_mask_splitter_network,
-                                                           mask_threshold=args.mask_splitter_network_mask_threshold,
-                                                           bbox_threshold=args.mask_splitter_network_bbox_threshold)
-    robot.add_data_producer(yolo_data_producer)
-    robot.add_data_producer(mask_splitter_data_producer)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
+    for dp in dps:
+        robot.add_data_producer(dp)
 
-    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (video_player.fps, )),
-                     "Right": A("GO_FORWARD", (video_player.fps, )), "comma": A("GO_BACK", (1, )),
+    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (env.fps, )),
+                     "Right": A("GO_FORWARD", (env.fps, )), "comma": A("GO_BACK", (1, )),
                      "period": A("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, name="Screen displayer")
-    robot.add_other_thread(video_player, name="Video player")
+    robot.add_other_thread(env, name="Video player")
 
     robot.run()
-    video_player.close()
+    env.close()
     data_channel.close()
 
 if __name__ == "__main__":
