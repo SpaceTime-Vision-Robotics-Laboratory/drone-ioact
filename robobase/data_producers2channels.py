@@ -52,8 +52,9 @@ class _DataProducerList:
         data: dict[str, DataItem] = {}
         for data_producer in self.data_producers:
             producer_data = data_producer.produce(deps=data)
+            assert isinstance(producer_data, dict), f"Producer '{data_producer}' didn't produce a dict: {producer_data}"
             if (A := set(producer_data.keys())) != set(B := data_producer.modalities):
-                raise KeyError(f"Producer {data_producer} with modalities {B} produced {A}.")
+                raise KeyError(f"Producer '{data_producer}' with modalities {B} produced {A}.")
             data |= producer_data
         return data
 

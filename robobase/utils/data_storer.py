@@ -62,7 +62,8 @@ class DataStorer(threading.Thread):
         x = self.data_queue.get_nowait()
 
         (path := self.path / x["tag"] / x["timestamp"]).parent.mkdir(exist_ok=True, parents=True)
-        np.savez_compressed(path, x["item"])
+        data = {k: np.array(v, dtype=object) for k, v in x["item"].items()}
+        np.savez_compressed(path, **data) # the actual keys will be mapped in the .npz file (instead of arr_0)
         logger.log_every_s(f"Stored at '{path}'", "DEBUG", True)
 
     @overrides
