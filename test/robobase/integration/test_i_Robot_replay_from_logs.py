@@ -7,7 +7,7 @@ from copy import deepcopy
 from datetime import datetime
 import pytest
 import numpy as np
-from robobase import Robot, Environment, DataChannel, ActionsQueue, Action
+from robobase import Robot, Environment, DataChannel, ActionsQueue, Action, ReplayDataProducer
 from robobase.utils import wait_and_clear, DataStorer
 
 TARGET = "helloworld"
@@ -64,6 +64,31 @@ def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     for i in range(len(actions)):
         assert actions[i]["action"].item().name == TARGET[i], (actions[i], TARGET[i])
         assert actions[i]["data_ts"].item() == data_files[i].stem
+
+def test_i_Robot_replay_from_logs_ReplayDataProducer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    env = BasicEnv()
+    monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
+    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
+    actions_queue = ActionsQueue(action_names=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
+
+    robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
+    # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
+    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+
+    robot.run()
+    data_channel.close()
+    print(f"Final state: '{''.join(env._state)}'") # pylint: disable=protected-access
+    assert "".join(env._state) == TARGET # pylint: disable=protected-access
+
+    DataStorer.get_instance().close()
+
+    # just read the data that was created via the data channel
+    replay_data_producer = ReplayDataProducer(tmp_path, prefix="replay_")
+    for i in range(len(replay_data_producer._data)):
+        data = replay_data_producer.produce()
+        assert "".join(data["replay_state"]) == TARGET[0:i]
 
 if __name__ == "__main__":
     test_i_Robot_replay_from_logs(Path(__file__).parent / Path(__file__).stem)
