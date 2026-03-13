@@ -14,11 +14,16 @@ import numpy as np
 from .utils import logger
 
 SLEEP_INTERVAL = 0.01
-DATA_STORER_QUEUE_MAXSIZE = 100
+DATA_STORER_QUEUE_MAXSIZE = int(os.getenv("ROBOBASE_DATA_STORER_QUEUE_SIZE", "100"))
 _INSTANCE: DataStorer | None = None # pylint: disable=invalid-name
 
 class DataStorer(threading.Thread):
-    """Thread that operates a queue for storing data from other threads i.e. DataChannel or ActionsQueue"""
+    """
+    Thread that operates a queue for storing data from other threads i.e. DataChannel or ActionsQueue.
+    Note: you can control the queue size with `ROBOBASE_DATA_STORER_QUEUE_SIZE` env variable. If the queue is full, then
+    the data producer and actions consumers will also be throthled, making the robot lag. So be careful if you have too
+    much stuff you want to log to the disk, becuase it may propagate. See issue (!11) as well.
+    """
     def __init__(self, path: Path):
         super().__init__(daemon=True)
         path.mkdir(parents=True, exist_ok=True)
@@ -51,19 +56,20 @@ class DataStorer(threading.Thread):
         self.is_closed = True
         self.join()
 
-    def push(self, item: Any, tag: str, timestamp: datetime):
+    def push(self, item: dict[str, Any], tag: str, timestamp: datetime):
         """Push a data item to the queue so it's later stored on disk. A 'tag' of the source must be provided."""
-        logger.trace(f"Pushing item at {self.path}/{tag}/{timestamp}. Q size: {len(self)}")
         assert not self.is_closed, "DataStorer is closed, cannot push."
-        self.data_queue.put({"arr_0": item, "tag": tag, "timestamp": timestamp.isoformat()}) # arr_0 for compat!
+        assert isinstance(item, dict), f"Can only push dicts to DataStorer. Got {type(item)}"
+        logger.trace(f"Pushing item at {self.path}/{tag}/{timestamp} (#queue: {len(self)})")
+        self.data_queue.put({"item": item, "tag": tag, "timestamp": timestamp.isoformat()}) # arr_0 for compat!
 
     def get_and_store(self):
         """gets one item from the data queue and stores it to the disk"""
         x: dict[str, Any] = self.data_queue.get_nowait()
         (path := self.path / x["tag"] / x["timestamp"]).parent.mkdir(exist_ok=True, parents=True)
-        data = {k: np.array(v, dtype=object) for k, v in x.items()}
-        np.savez_compressed(path, **data) # the actual keys will be mapped in the .npz file (additional to 'arr_0')
-        logger.log_every_s(f"Stored at '{path}'", "DEBUG", True)
+        data = {k: np.array(v, dtype=object) for k, v in x["item"].items()}
+        np.savez_compressed(path, **data) # the actual keys will be mapped in the .npz file
+        logger.log_every_s(f"Stored at '{path}' (#storer queue: {self.data_queue.qsize()})", "DEBUG", True)
 
     @overrides
     def run(self):
@@ -74,8 +80,8 @@ class DataStorer(threading.Thread):
             except Empty:
                 if self.is_closed:
                     break
+                logger.log_every_s("Empty queue on DataStorer.", "DEBUG", True)
                 time.sleep(SLEEP_INTERVAL)
-                logger.log_every_s(f"Empty queue on DataStorer. Q size: {len(self)}", "DEBUG", True)
 
         if (n := self.data_queue.qsize()) > 0:
             logger.info(f"Waiting for DataChannel to write {n} left data logs to '{self.path}'")

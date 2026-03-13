@@ -36,7 +36,7 @@ def scan_logs(after=None):  # pylint: disable=too-many-branches
             if stem in cache["DataChannel"]:
                 continue
             try:
-                data = np.load(entry.path, allow_pickle=True).item()
+                data = np.load(entry.path, allow_pickle=True)
                 keys = sorted(data.keys())
             except Exception:
                 keys = []
@@ -53,7 +53,7 @@ def scan_logs(after=None):  # pylint: disable=too-many-branches
             if stem in cache["ActionsQueue"]:
                 continue
             try:
-                data = np.load(entry.path, allow_pickle=True).item()
+                data = np.load(entry.path, allow_pickle=True)
                 action = data.get("action")
                 action_name = (
                     str(action.name) if hasattr(action, "name") else str(action)
@@ -72,7 +72,7 @@ def scan_logs(after=None):  # pylint: disable=too-many-branches
                     "keys": sorted(data.keys()),
                     "action_name": action_name,
                     "action_params": action_params,
-                    "data_ts": data_ts,
+                    "data_ts": data_ts.item(),
                 }
             except Exception:
                 cache["ActionsQueue"][stem] = {

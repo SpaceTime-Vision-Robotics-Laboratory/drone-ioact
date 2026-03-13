@@ -17,11 +17,11 @@ def test_ActionsQueue_push_pop():
     aq.put(A("a1"), data_ts=None)
     aq.put(A("a2"), data_ts=None)
     assert len(aq) == 2
-    assert aq.get().name == "a1"
+    assert aq.get()[0].name == "a1"
     assert len(aq) == 1
     with pytest.raises(AssertionError): # not an action
         aq.put(0, data_ts=None)
     with pytest.raises(AssertionError): # wrong action (not in action_names)
         aq.put(A("a3"), data_ts=None)
-    assert aq.get().name == "a2"
+    assert aq.get()[0].name == "a2"
     assert len(aq) == 0

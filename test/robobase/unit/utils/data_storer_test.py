@@ -21,9 +21,11 @@ def test_push_and_get_and_store_flow(tmp_path):
     # Calling before push should raise
     with pytest.raises(Empty):
         ds.get_and_store()
+    with pytest.raises(AssertionError, match="Can only push dicts to DataStorer"):
+        ds.push(arr1, "test", t1)
 
-    ds.push(arr1, "test", t1)
-    ds.push(arr2, "test", t2)
+    ds.push({"my_key": arr1}, "test", t1)
+    ds.push({"my_key2": arr2}, "test", t2)
     assert ds.data_queue.qsize() == 2
 
     # store and check twice
@@ -37,6 +39,6 @@ def test_push_and_get_and_store_flow(tmp_path):
     # verify data on disk
     files = sorted(list((tmp_path / "test").iterdir()), key=lambda p: p.name) # sort for consistency
     assert len(files) == 2
-    saved_arrays = [np.load(f, allow_pickle=True)["arr_0"] for f in files]
-    assert np.array_equal(saved_arrays[0], arr1)
-    assert np.array_equal(saved_arrays[1], arr2)
+    saved_arrays = [np.load(f, allow_pickle=True) for f in files]
+    assert np.array_equal(saved_arrays[0]["my_key"], arr1)
+    assert np.array_equal(saved_arrays[1]["my_key2"], arr2)

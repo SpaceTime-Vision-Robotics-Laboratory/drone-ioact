@@ -2,6 +2,7 @@
 from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime
+from pprint import pformat
 import threading
 import numpy as np
 
@@ -12,7 +13,7 @@ from robobase.utils.data_storer import DataStorer
 SLEEP_INTERVAL = 0.01
 
 def _fmt(item: dict[str, DataItem]) -> str:
-    return f"{ {k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() } }"
+    return pformat({k: v.shape if isinstance(v, np.ndarray) else type(v) for k, v in item.items() })
 
 class DataChannelClosedError(ValueError): pass # pylint: disable=all # noqa
 
@@ -36,7 +37,7 @@ class DataChannel:
 
     def put(self, item: dict[str, DataItem]):
         """Put data into the queue"""
-        item_ts = datetime.now()
+        data_ts = datetime.now()
         assert isinstance(item, dict), type(item)
         assert (ks := set(item.keys())) == (st := self.supported_types), f"Data keys: {ks} vs. Supported types: {st}"
         with self._lock:
@@ -46,15 +47,15 @@ class DataChannel:
             if self._data != {} and self.eq_fn(item, self._data): # duplicate data
                 return
 
-            logger.trace(f"New data ({item_ts}): '{_fmt(item)}'")
+            logger.log_every_s(f"Got data (data_ts='{data_ts}'):\n'{_fmt(item)}'", "DEBUG", True)
             if (storer := DataStorer.get_instance()) is not None:
-                storer.push(item, tag="DataChannel", timestamp=item_ts) # only push different items to logger
+                storer.push(item, tag="DataChannel", timestamp=data_ts) # only push different items to logger
 
             for subscriber_event in self._subscribers_events: # announce each 'subscriber' of new data too
                 subscriber_event.set()
 
             self._data = item
-            self._data_ts = item_ts
+            self._data_ts = data_ts
 
     def get(self) -> tuple[dict[str, DataItem], datetime]:
         """Return the current item from the channel + its the timestamp when it was received"""
