@@ -10,7 +10,7 @@ from .controller import BaseController, Controller
 from .actions2env import Actions2Environment
 from .data_producers2channels import DataProducers2Channels
 from .types import ActionFn, ControllerFn
-from .utils import ThreadGroup, logger
+from .utils import ThreadGroup, ThreadStatus, logger
 
 SLEEP_TIME = 1
 
@@ -54,7 +54,7 @@ class Robot:
         assert len(self._controllers) > 0, "At least one controller expected. Use `robot.add_controller`"
         self._env2data = DataProducers2Channels(data_producers=self._data_producers, data_channels=[self.data_channel])
 
-    def run(self, sleep_duration: float = SLEEP_TIME):
+    def run(self, sleep_duration: float = SLEEP_TIME) -> dict[str, ThreadStatus]:
         """start the robot's main loop which in turn starts all the threads: data producer + controllers + actuator"""
         self._setup_run()
         tg = ThreadGroup({
@@ -70,4 +70,4 @@ class Robot:
                 time.sleep(sleep_duration)
         finally:
             logger.info(f"Joining threads: \n{tg}")
-            tg.join(timeout=sleep_duration)
+            return tg.join(timeout=sleep_duration) # pylint: disable=lost-exception return-in-finally

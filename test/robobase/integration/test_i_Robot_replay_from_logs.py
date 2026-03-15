@@ -101,6 +101,52 @@ def test_i_Robot_replay_from_logs_ReplayDataProducer_ReplayActionsQueue(tmp_path
     with pytest.raises(RuntimeError, match="ReplayActionsQueue depleeted"):
         replay_actions_queue.get()
 
+def test_i_Robot_replay_from_logs_offline_exception(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """this mostly makes sure that we cannot push() in ReplaActionsQueue mode='offline'"""
+    env = BasicEnv()
+    monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
+    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
+    actions_queue = ActionsQueue(action_names := [chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
+
+    robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
+    # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
+    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+
+    robot.run()
+    data_channel.close()
+    print(f"Final state: '{''.join(env._state)}'") # pylint: disable=protected-access
+    assert "".join(env._state) == TARGET # pylint: disable=protected-access
+
+    DataStorer.get_instance().close()
+
+    def replay_controller_fn(data: dict[str, DataItem]):
+        if len(data["state"]) == len(TARGET):
+            return None
+        assert data["state"] == data["replay_state"].tolist(), (data["state"], data["replay_state"])
+        return Action(TARGET[len(data["state"])])
+
+    # just read the data that was created via the data channel
+    print("="*80)
+    monkeypatch.setenv("ROBOBASE_STORE_LOGS", "0")
+    replay_env = BasicEnv()
+    print(f"Start state: '{''.join(replay_env._state)}'") # pylint: disable=protected-access
+    replay_data_channel = DataChannel(supported_types=["ts", "state", "replay_ts", "replay_state"],
+                                      eq_fn=lambda a, b: a["state"] == b["state"])
+    replay_data_producer = ReplayDataProducer(tmp_path / "DataChannel", prefix="replay_")
+    replay_actions_queue = ReplayActionsQueue(tmp_path / "ActionsQueue", mode="offline", action_names=action_names)
+    robot = Robot(replay_env, replay_data_channel, replay_actions_queue,
+                  action_fn=lambda env, action: env.push(action.name))
+    robot.add_data_producer(replay_data_producer)
+    robot.add_controller(replay_controller_fn)
+
+    res = robot.run()
+    replay_data_channel.close()
+    print(f"Final state: '{''.join(replay_env._state)}'") # pylint: disable=protected-access
+    assert "".join(replay_env._state) == TARGET # pylint: disable=protected-access
+    assert res["Controller-0"].exception.__str__() == "Can only add new actions (from controllers) if mode=='online'"
+
 def test_i_Robot_replay_from_logs_online_compare(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     env = BasicEnv()
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
@@ -134,19 +180,17 @@ def test_i_Robot_replay_from_logs_online_compare(tmp_path: Path, monkeypatch: py
     replay_data_channel = DataChannel(supported_types=["ts", "state", "replay_ts", "replay_state"],
                                       eq_fn=lambda a, b: a["state"] == b["state"])
     replay_data_producer = ReplayDataProducer(tmp_path / "DataChannel", prefix="replay_")
-    replay_actions_queue = ReplayActionsQueue(tmp_path / "ActionsQueue", mode="online",
-                                              action_names=action_names)
+    replay_actions_queue = ReplayActionsQueue(tmp_path / "ActionsQueue", mode="online", action_names=action_names)
     robot = Robot(replay_env, replay_data_channel, replay_actions_queue,
                   action_fn=lambda env, action: env.push(action.name))
     robot.add_data_producer(replay_data_producer)
     robot.add_controller(replay_controller_fn)
 
-    # TODO(!16): make a test with mode='offline' that throws and we check that here!
-    # Also a test with 'offline' and we tamper with the actions and we assert that it fails
-    robot.run()
+    res = robot.run()
     replay_data_channel.close()
     print(f"Final state: '{''.join(replay_env._state)}'") # pylint: disable=protected-access
     assert "".join(replay_env._state) == TARGET # pylint: disable=protected-access
+    assert all(v.exception is None for v in res.values()), res
 
 if __name__ == "__main__":
-    test_i_Robot_replay_from_logs_online_compare(Path(__file__).parent / Path(__file__).stem, pytest.MonkeyPatch())
+    test_i_Robot_replay_from_logs_offline_exception(Path(__file__).parent / Path(__file__).stem, pytest.MonkeyPatch())

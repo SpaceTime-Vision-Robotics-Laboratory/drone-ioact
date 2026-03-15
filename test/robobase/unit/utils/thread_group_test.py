@@ -1,4 +1,4 @@
-from robobase.utils import ThreadGroup
+from robobase.utils.thread_group import ThreadGroup, ThreadStatus
 import threading
 import pytest
 import time
@@ -12,7 +12,7 @@ def test_ThreadGroup_ctor():
 
 def test_ThreadGroup_status():
     tg = ThreadGroup({"a": threading.Thread(target=lambda: 0)})
-    assert tg.status() == [False]
+    assert tg.status() == {"a": ThreadStatus(is_alive=False)}
     assert tg.is_any_dead() is True
 
 def test_ThreadGroup_dict_overrides():
@@ -32,5 +32,18 @@ def test_ThreadGroup_start():
     tg = ThreadGroup({"a": threading.Thread(target=f, daemon=True)})
     assert x == 0
     tg.start()
+    assert tg.status() == {"a": ThreadStatus(is_alive=True)}
     time.sleep(0.001)
     assert x == 1
+
+def test_ThreadGroup_with_exceptions():
+    tg = ThreadGroup({
+        "a": threading.Thread(target=lambda: 0),
+        "b": threading.Thread(target=lambda: (_ for _ in ()).throw(ValueError("errorXYZ"))), # generator can throw :o
+    })
+    assert tg.status() == {"a": ThreadStatus(is_alive=False), "b": ThreadStatus(is_alive=False)}
+    assert tg.is_any_dead() is True
+    tg.start()
+    res = tg.join(timeout=1)
+    assert res["a"] == ThreadStatus(is_alive=False)
+    assert res["b"].exception.__str__() == "errorXYZ"
