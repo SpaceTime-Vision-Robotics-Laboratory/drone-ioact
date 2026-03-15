@@ -18,7 +18,7 @@ class ReplayDataProducer(DataProducer):
         self._keys = list(self._data.keys())
         self._modalities = self._build_modalities()
         super().__init__(modalities=self._modalities)
-        logger.debug(f"Built ReplayEnv from {len(self._data)} items on disk. Modalities: {self._modalities}")
+        logger.debug(f"Built ReplayDataProducer from {len(self._data)} items on disk. Modalities: {self._modalities}")
 
         self._current_ix = 0
 
