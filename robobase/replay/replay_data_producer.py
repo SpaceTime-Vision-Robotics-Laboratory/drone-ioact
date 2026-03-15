@@ -3,9 +3,9 @@ from pathlib import Path
 from overrides import overrides
 import numpy as np
 
-from .data_producer import DataProducer
-from .types import DataItem
-from .utils import logger
+from robobase.data_producer import DataProducer
+from robobase.types import DataItem
+from robobase.utils import logger
 
 class ReplayDataProducer(DataProducer):
     """Acts like a RawDataProducer, but operates on the logs/ of ROBOBASE_STORE_LOGS=2 (or similar) from DataChannel"""

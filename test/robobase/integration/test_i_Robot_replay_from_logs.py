@@ -7,7 +7,8 @@ from copy import deepcopy
 from datetime import datetime
 import pytest
 import numpy as np
-from robobase import Robot, Environment, DataChannel, ActionsQueue, Action, ReplayDataProducer
+from robobase import Robot, Environment, DataChannel, ActionsQueue, Action
+from robobase.replay import ReplayDataProducer
 from robobase.utils import wait_and_clear, DataStorer
 
 TARGET = "helloworld"
