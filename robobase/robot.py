@@ -2,6 +2,7 @@
 from typing import Callable
 import threading
 import time
+from datetime import datetime
 from .environment import Environment
 from .data_channel import DataChannel
 from .actions_queue import ActionsQueue
@@ -10,9 +11,25 @@ from .controller import BaseController, Controller
 from .actions2env import Actions2Environment
 from .data_producers2channels import DataProducers2Channels
 from .types import ActionFn, ControllerFn
-from .utils import ThreadGroup, ThreadStatus, logger
+from .utils import ThreadGroup, ThreadStatus, logger, parsed_str_type
 
 SLEEP_TIME = 1
+
+def _make_status(status: dict[str, ThreadStatus], env: Environment, start_time: datetime) -> str:
+    """Print a summary table of thread statuses after robot.run() completes."""
+    duration = (datetime.now() - start_time).total_seconds()
+    lines = [
+        f"Robot ran for: {duration:.2f} seconds.",
+        f"{'Thread':<30} {'Alive':<10} {'Exception':<50}",
+        "-" * 90,
+    ]
+
+    for name, ts in status.items():
+        exc_str = "-" if ts.exception is None else f"{type(ts.exception).__name__}: {str(ts.exception)}"
+        lines.append(f"{name:<30} {str(ts.is_alive):<10} {exc_str:<50}")
+    lines.append(f"Env: {parsed_str_type(env):<25} {str(env.is_running()):<10} {'-':<50}")
+    lines.append("-" * 90 + "\n")
+    return "\n".join(lines)
 
 class Robot:
     """Robot class that interacts with an environment and has a single data channel and a single actions queue"""
@@ -54,8 +71,9 @@ class Robot:
         assert len(self._controllers) > 0, "At least one controller expected. Use `robot.add_controller`"
         self._env2data = DataProducers2Channels(data_producers=self._data_producers, data_channels=[self.data_channel])
 
-    def run(self, sleep_duration: float = SLEEP_TIME) -> dict[str, ThreadStatus]:
+    def run(self, sleep_duration: float = SLEEP_TIME, print_status: bool = True) -> dict[str, ThreadStatus]:
         """start the robot's main loop which in turn starts all the threads: data producer + controllers + actuator"""
+        start = datetime.now()
         self._setup_run()
         tg = ThreadGroup({
             "env2data": self._env2data,
@@ -69,5 +87,9 @@ class Robot:
             while not tg.is_any_dead() and self.env.is_running():
                 time.sleep(sleep_duration)
         finally:
-            logger.info(f"Joining threads: \n{tg}")
-            return tg.join(timeout=sleep_duration) # pylint: disable=lost-exception return-in-finally
+            logger.debug(f"Joining threads: \n{tg}")
+            res = tg.join(timeout=sleep_duration)
+            if print_status:
+                logger.info(_make_status(res, self.env, start))
+
+            return res # pylint: disable=lost-exception return-in-finally
