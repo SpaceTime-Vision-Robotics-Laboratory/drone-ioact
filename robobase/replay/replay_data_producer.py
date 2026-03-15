@@ -5,7 +5,7 @@ import numpy as np
 
 from robobase.data_producer import DataProducer
 from robobase.types import DataItem
-from robobase.utils import logger
+from robobase.utils import logger, load_npz_as_dict
 
 class ReplayDataProducer(DataProducer):
     """Acts like a RawDataProducer, but operates on the logs/ of ROBOBASE_STORE_LOGS=2 (or similar) from DataChannel"""
@@ -25,15 +25,7 @@ class ReplayDataProducer(DataProducer):
     @overrides
     def produce(self, deps: dict[str, DataItem] | None = None) -> dict[str, DataItem]:
         file = self._data[self._keys[self._current_ix]]
-        data = np.load(file, allow_pickle=True)
-        if "arr_0" in data.keys() and len(data.keys()) == 1: # compat mode
-            return data["arr_0"].item()
-        res = {}
-        for k, v in data.items():
-            if v.shape == (0, ) or (len(v.shape) > 0 and v.shape[0] > 0 and isinstance(v[0], str)): # npz is hard :/
-                res[f"{self.prefix}{k}"] = v
-            else:
-                res[f"{self.prefix}{k}"] = v.item()
+        res = {f"{self.prefix}{k}": v for k, v in load_npz_as_dict(file).items()}
         self._current_ix = (self._current_ix + 1) % len(self._data)
         return res
 
