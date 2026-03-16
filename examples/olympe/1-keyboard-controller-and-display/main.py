@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """keyboard controller and display example"""
-import sys
+from argparse import ArgumentParser, Namespace
 from queue import Queue
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as A
@@ -11,9 +11,17 @@ QUEUE_MAX_SIZE = 30
 RESOLUTION = 480, 640
 DT = 0.15
 
-def main():
+def get_args() -> Namespace:
+    """cli args"""
+    parser = ArgumentParser()
+    parser.add_argument("ip", help="IP for olympe simulator: 10.202.0.1")
+    parser.add_argument("--image_size", nargs=2, type=int)
+    args = parser.parse_args()
+    return args
+
+def main(args: Namespace):
     """main fn"""
-    env = OlympeEnv(ip=sys.argv[1])
+    env = OlympeEnv(ip=args.ip, image_size=args.image_size)
     actions_queue = ActionsQueue(action_names=OLYMPE_ACTION_NAMES, queue=Queue(maxsize=QUEUE_MAX_SIZE))
     data_channel = DataChannel(supported_types=env.get_modalities(),
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
@@ -36,4 +44,4 @@ def main():
     env.close()
 
 if __name__ == "__main__":
-    main()
+    main(get_args())

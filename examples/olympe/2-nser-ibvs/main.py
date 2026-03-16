@@ -25,7 +25,7 @@ from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle,
 logger = make_logger("IBVS")
 
 QUEUE_MAX_SIZE = 30
-RESOLUTION = 480, 640
+SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
 CIRCLE_RADIUS = 1
 DT = 0.15
@@ -83,6 +83,7 @@ def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
     parser.add_argument("drone_ip")
+    parser.add_argument("--image_size", nargs=2, type=int, default=IMAGE_SIZE_SPLITTER_NET)
     # yolo params
     parser.add_argument("--yolo_weights_path")
     parser.add_argument("--yolo_threshold", default=0.75, type=float)
@@ -95,7 +96,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    env = OlympeEnv(ip=args.drone_ip, image_size=IMAGE_SIZE_SPLITTER_NET)
+    env = OlympeEnv(ip=args.drone_ip, image_size=args.image_size)
     action_names = [*OLYMPE_ACTION_NAMES, "INITIALIZE_FLIGHT"]
     actions_queue = ActionsQueue(action_names=action_names, queue=Queue(maxsize=QUEUE_MAX_SIZE))
     supported_types = env.get_modalities()
@@ -127,7 +128,7 @@ def main(args: Namespace):
         "k": A("INITIALIZE_FLIGHT", parameters=()),
     }
 
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION,
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer)
     robot.run()
