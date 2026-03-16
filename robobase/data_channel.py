@@ -57,12 +57,15 @@ class DataChannel:
             self._data = item
             self._data_ts = data_ts
 
-    def get(self) -> tuple[dict[str, DataItem], datetime]:
-        """Return the current item from the channel + its the timestamp when it was received"""
+    def get(self, return_copy: bool=True) -> tuple[dict[str, DataItem], datetime]:
+        """
+        Return the current item from the channel + its the timestamp when it was received.
+        Optionally allows to return the actual reference which may be invalidated when new data arives.
+        """
         with self._lock:
             if not self.is_open():
                 raise DataChannelClosedError("Channel is closed, cannot get data.")
-            return deepcopy(self._data), deepcopy(self._data_ts)
+            return (deepcopy(self._data), deepcopy(self._data_ts)) if return_copy else (self._data, self._data_ts)
 
     def has_data(self) -> bool:
         """Checks if the channel has data"""
