@@ -5,7 +5,7 @@ def test_ScreenDisplayer_keyboard_mock_queue():
     key_to_action = {"Q": A("act_Q"), "X": A("act_X"), "Key.esc": A("act_esc")}
     aq = ActionsQueue(action_names=[a.name for a in key_to_action.values()])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action)
+    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action, backend="tkinter")
 
     def make_keypress(keysym: str):
         sd._on_event(keysym)

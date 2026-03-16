@@ -61,14 +61,15 @@ if __name__ == "__main__":
     main()
 ```
 
-### Relevant environment variables for logging
+### Relevant environment variables
 
-We have a few environment variables that control logging:
+We have a few environment variables, moslty that control logging:
 ```bash
 ROBOBASE_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
 ROBOIMPL_LOGLEVEL=0/1/2/3 # 0 = disabled, 1 = info, 2 = debug, 3 = trace
 ROBOBASE_LOGS_DIR=/path/to/logsdir # if not set, will use the 'robobase_repo_root/logs'
-ROBOBASE_STORE_LOGS=0/1/2 # 0 nothing, 1 txt only, 2 DataStorer
+ROBOBASE_STORE_LOGS=0/1/2 # 0 nothing, 1 txt only, 2 DataStorer (defaults to 1)
+ROBOIMPL_SCREEN_DISPLAYER_BACKEND=tkinter/cv2 # For ScreenDisplayer controller. Defaults to 'cv2'
 ```
 Notes on `ROBOBASE_STORE_LOGS`: if set to 0, will not store anything on disk, if set to 1, will store only logger (.txt), if set to 2, will also store all the data that passes through the system (i.e. DataChannel and ActionsQueue). This may consume GBs of disk! Use with caution.
 

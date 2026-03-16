@@ -1,98 +1,22 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 from __future__ import annotations
-from abc import ABC, abstractmethod
+import os
 from datetime import datetime
-import tkinter as tk
 from typing import Callable
-from dataclasses import dataclass
-from PIL import Image, ImageTk
 from overrides import overrides
 import numpy as np
 
 from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger
 
-TIMEOUT_S = 1000
-TKINTER_SLEEP_S = 0.01
+from .screen_displayer_utils import DisplayerState
+from .screen_displayer_tkinter import ScreenDisplayerTkinter
+from .screen_displayer_cv2 import ScreenDisplayerCV2
+
+INITIAL_TIMEOUT_S = 60
+TIMEOUT_S = 0.01
 INITIAL_RESOLUTION_FALLBACK = (480, 640)
-
-@dataclass
-class DisplayerState:
-    """internal class representing the internal state of the UI to differentiate between data/actions updates and UI"""
-    resolution: tuple[int, int]
-    hud: bool
-    ts: datetime = None
-
-    def __post_init__(self):
-        self.ts = datetime.now()
-
-    def __eq__(self, other: DisplayerState):
-        return self.resolution == other.resolution and self.hud == other.hud
-
-class DisplayerBackend(ABC):
-    """internal class representing the possible backends to display stuff to a windows from the controller thread"""
-    @abstractmethod
-    def initialize_window(self, height: int, width: int, title: str):
-        """initializes the windows from within the running thread (not constructor from main thread)"""
-    @abstractmethod
-    def get_current_size(self) -> tuple[int, int]:
-        """returns current (height, width) as a tuple"""
-    @abstractmethod
-    def poll_events(self) -> list[str]: # TODO: only supports key_release. We need a KeyEvent dataclass for more.
-        """Polls the events (key presses) and returns them. In tkinter it calls update() + collects events manually"""
-    @abstractmethod
-    def update_frame(self, frame: np.ndarray):
-        """update the screen with the new frame"""
-    @abstractmethod
-    def close_window(self):
-        """closes and cleans up the window"""
-
-class TkinterBackend(DisplayerBackend):
-    """Tkinter-based screen displayer. The OG one, but lags unfortunetely on larger environments (kb drops)"""
-    def __init__(self):
-        # state of the canvas: initialized at startup time.
-        self.root: tk.Tk | None = None
-        self.canvas: tk.Canvas | None = None
-        self.photo: ImageTk.PhotoImage | None = None
-        self._pending_events: list[str] = []
-        self._previous_resolution: tuple[int, int] = (0, 0)
-
-    def initialize_window(self, height: int, width: int, title: str):
-        """starts the tk window"""
-        assert self.root is None, "cannot call twice"
-        self.root = tk.Tk(className=f" {title}") # space for capital S
-        self.canvas = tk.Canvas(self.root, height=height, width=width)
-        self.canvas.pack(fill="both", expand=True)
-        self.canvas.focus_set()
-        self.root.bind("<KeyRelease>", self._on_key_release)
-
-    def get_current_size(self) -> tuple[int, int]:
-        return self.canvas.winfo_height(), self.canvas.winfo_width()
-
-    def poll_events(self) -> list[str]:
-        self.root.update()
-        events = self._pending_events
-        self._pending_events = []
-        if len(events) > 0:
-            logger.log_every_s(f"Returning {len(events)} events", "DEBUG", True)
-            if len(events) > 1:
-                logger.error(f"Returning {len(events)} events")
-        return events
-
-    def update_frame(self, frame: np.ndarray):
-        if self._previous_resolution != (current_resolution := self.get_current_size()):
-            self.photo = ImageTk.PhotoImage(Image.fromarray(frame))
-            self.canvas.delete("all")
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
-        else:
-            self.photo.paste(Image.fromarray(frame))
-        self._previous_resolution = current_resolution
-
-    def close_window(self):
-        self.root.destroy()
-
-    def _on_key_release(self, event: tk.Event):
-        self._pending_events.append(event.keysym)
+DEFAULT_BACKEND = os.getenv("ROBOIMPL_SCREEN_DISPLAYER_BACKEND", "cv2")
 
 class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
@@ -105,15 +29,16 @@ class ScreenDisplayer(BaseController):
         self.initial_resolution = resolution
         self.key_to_action = k2a = key_to_action or {}
         self.toggle_info_key = toggle_info_key or "i"
-        self.backend_type = backend or "tkinter"
+        self.backend_type = backend or DEFAULT_BACKEND
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         assert all(isinstance(a, Action) for a in k2a.values()), [(a, type(a)) for a in k2a.values()]
         assert all(v.name in actions_queue.action_names for v in k2a.values()), f"\n-{k2a=}\n-Actions: {actions_queue}"
         assert self.toggle_info_key not in k2a, f"{self.toggle_info_key=} clash with {key_to_action=}"
-        assert self.backend_type in ("tkinter", )
+        assert self.backend_type in ("tkinter", "cv2", ), self.backend_type
 
         self.backend = {
-            "tkinter": lambda: TkinterBackend(),
+            "tkinter": lambda: ScreenDisplayerTkinter(),
+            "cv2": lambda: ScreenDisplayerCV2(),
         }[self.backend_type]()
 
     @staticmethod
@@ -148,7 +73,7 @@ class ScreenDisplayer(BaseController):
 
     @overrides
     def run(self):
-        self.data_channel_event.wait(TIMEOUT_S)
+        self.data_channel_event.wait(INITIAL_TIMEOUT_S)
 
         height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
         self.backend.initialize_window(height, width, title="Screen Displayer")
@@ -164,7 +89,7 @@ class ScreenDisplayer(BaseController):
             new_state = DisplayerState(resolution=self.backend.get_current_size(), hud=False)
 
             ui_events = new_state != old_state # UI events i.e. resize or toggle info
-            data_events = self.data_channel_event.wait(timeout=TKINTER_SLEEP_S) # data events: new frame arived
+            data_events = self.data_channel_event.wait(timeout=TIMEOUT_S) # data events: new frame arived
             if not ui_events and not data_events:
                 continue
             logger.log_every_s(f"Updating UI: {ui_events=}, {data_events=}", "DEBUG", log_to_next_level=True)
@@ -175,7 +100,8 @@ class ScreenDisplayer(BaseController):
             frame = self.screen_frame_callback(curr_data)
             if frame is None:
                 continue
-            frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1]) # can be noop
+            frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1],
+                                     interpolation="nearest") # can be noop. 'nearest' for max speed.
             for event in self.backend.poll_events(): # little hack to get more keyboard events polled before this call
                 self._on_event(event)
             self.backend.update_frame(frame_rsz)
