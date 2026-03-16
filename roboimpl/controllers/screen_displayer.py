@@ -73,6 +73,10 @@ class TkinterBackend(DisplayerBackend):
         self.root.update()
         events = self._pending_events
         self._pending_events = []
+        if len(events) > 0:
+            logger.log_every_s(f"Returning {len(events)} events", "DEBUG", True)
+            if len(events) > 1:
+                logger.error(f"Returning {len(events)} events")
         return events
 
     def update_frame(self, frame: np.ndarray):
@@ -131,7 +135,7 @@ class ScreenDisplayer(BaseController):
             logger.debug(f"Unused char: {event}")
             return
 
-        logger.debug(f"Pressed '{event}'. Pushing: {action} to the actions queue.")
+        logger.log_every_s(f"Pressed '{event}'. Pushing: {action} to the actions queue.", "DEBUG", True)
         self.add_to_queue(action)
 
     def _get_initial_height_width(self, prev_data: dict[str, DataItem]) -> tuple[int, int]:
@@ -172,6 +176,8 @@ class ScreenDisplayer(BaseController):
             if frame is None:
                 continue
             frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1]) # can be noop
+            for event in self.backend.poll_events(): # little hack to get more keyboard events polled before this call
+                self._on_event(event)
             self.backend.update_frame(frame_rsz)
 
             old_state = new_state
