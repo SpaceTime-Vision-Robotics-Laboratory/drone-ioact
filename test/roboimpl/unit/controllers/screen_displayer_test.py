@@ -1,17 +1,14 @@
-from pytest_mock import MockerFixture
 from robobase import ActionsQueue, DataChannel, Action as A
 from roboimpl.controllers import ScreenDisplayer
 
-def test_ScreenDisplayer_keyboard_mock_queue(mocker: MockerFixture):
+def test_ScreenDisplayer_keyboard_mock_queue():
     key_to_action = {"Q": A("act_Q"), "X": A("act_X"), "Key.esc": A("act_esc")}
     aq = ActionsQueue(action_names=[a.name for a in key_to_action.values()])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
     sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action)
 
     def make_keypress(keysym: str):
-        mock_event = mocker.Mock()
-        mock_event.keysym = keysym
-        sd._on_key_release(mock_event)
+        sd._on_event(keysym)
 
     make_keypress("a")
     assert len(aq) == 0
