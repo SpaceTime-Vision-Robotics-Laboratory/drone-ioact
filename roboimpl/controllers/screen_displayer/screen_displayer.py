@@ -60,7 +60,7 @@ class ScreenDisplayer(BaseController):
             logger.debug(f"Unused char: {event}")
             return
 
-        logger.log_every_s(f"Pressed '{event}'. Pushing: {action} to the actions queue.", "DEBUG", True)
+        logger.log_every_s(f"Pressed '{event}'. Pushing: {action} to the actions queue.", "INFO", True)
         self.add_to_queue(action)
 
     def _get_initial_height_width(self, prev_data: dict[str, DataItem]) -> tuple[int, int]:
