@@ -1,13 +1,12 @@
 """screen_displayer.py - This module reads the data from a drone and prints the RGB. No action is produced"""
 from __future__ import annotations
 import os
-from datetime import datetime
 from typing import Callable
 from overrides import overrides
 import numpy as np
 
 from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
-from roboimpl.utils import image_resize, logger
+from roboimpl.utils import image_resize, logger, CircularBuffer
 
 from .screen_displayer_utils import DisplayerState
 from .screen_displayer_tkinter import ScreenDisplayerTkinter
@@ -79,13 +78,12 @@ class ScreenDisplayer(BaseController):
         self.backend.initialize_window(height, width, title="Screen Displayer")
 
         old_state = DisplayerState(self.backend.get_current_size(), hud=False)
-        fpss = [1 / 30] # start with default value to not skew the results.
+        fpss = CircularBuffer(capacity=20)
 
         while self.data_channel.has_data():
             for event in self.backend.poll_events():
                 self._on_event(event)
-            fpss = fpss[-100:] if len(fpss) > 1000 else fpss # poor man's circular buffer
-            logger.log_every_s(f"FPS: {len(fpss) / sum(fpss):.2f}", "INFO")
+            logger.log_every_s(f"FPS: {len(fpss) / (sum(fpss.get()) + 1e-5):.2f}", "INFO")
             new_state = DisplayerState(resolution=self.backend.get_current_size(), hud=False)
 
             ui_events = new_state != old_state # UI events i.e. resize or toggle info
@@ -106,8 +104,8 @@ class ScreenDisplayer(BaseController):
                 self._on_event(event)
             self.backend.update_frame(frame_rsz)
 
+            fpss.add((new_state.ts - old_state.ts).total_seconds())
             old_state = new_state
-            fpss.append((datetime.now() - old_state.ts).total_seconds())
 
         self.backend.close_window()
         logger.warning("ScreenDisplayer thread stopping")
