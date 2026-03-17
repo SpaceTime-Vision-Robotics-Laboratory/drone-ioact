@@ -1,11 +1,11 @@
 from pathlib import Path
 from robobase import DataChannel
-from robobase.utils import DataStorer
+from robobase.utils import DataStorer, logger
 import pytest
 
 def test_DataChannel_data_storer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
+    logger.get_file_handler().file_path = tmp_path / "logs.txt"
     channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: a==b)
     channel.put({"rgb": 0})
     channel.put({"rgb": 0})
@@ -18,4 +18,4 @@ def test_DataChannel_data_storer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
 if __name__ == "__main__":
     from tempfile import TemporaryDirectory
-    test_DataChannel_data_storer(Path(TemporaryDirectory().name))
+    test_DataChannel_data_storer(Path(TemporaryDirectory().name), pytest.MonkeyPatch())

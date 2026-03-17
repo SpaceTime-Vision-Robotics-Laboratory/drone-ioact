@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 from robobase import Robot, Environment, DataChannel, ActionsQueue, Action, DataItem
 from robobase.replay import ReplayDataProducer, ReplayActionsQueue
-from robobase.utils import wait_and_clear, DataStorer
+from robobase.utils import wait_and_clear, DataStorer, logger
 
 TARGET = "helloworld"
 
@@ -38,7 +38,7 @@ class BasicEnv(Environment):
 def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     env = BasicEnv()
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
-    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    logger.get_file_handler().file_path = tmp_path / "logs.txt"
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(action_names=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
@@ -72,7 +72,7 @@ def test_i_Robot_replay_from_logs_ReplayDataProducer_ReplayActionsQueue(tmp_path
     """this test is basically the same as test_i_Robot_replay_from_logs but via the Replay classes"""
     env = BasicEnv()
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
-    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    logger.get_file_handler().file_path = tmp_path / "logs.txt"
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(action_names := [chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
@@ -105,7 +105,7 @@ def test_i_Robot_replay_from_logs_offline_exception(tmp_path: Path, monkeypatch:
     """this mostly makes sure that we cannot push() in ReplaActionsQueue mode='offline'"""
     env = BasicEnv()
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
-    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    logger.get_file_handler().file_path = tmp_path / "logs.txt"
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(action_names := [chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
@@ -150,7 +150,7 @@ def test_i_Robot_replay_from_logs_offline_exception(tmp_path: Path, monkeypatch:
 def test_i_Robot_replay_from_logs_online_compare(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     env = BasicEnv()
     monkeypatch.setenv("ROBOBASE_STORE_LOGS", "2")
-    monkeypatch.setenv("ROBOBASE_LOGS_DIR", str(tmp_path))
+    logger.get_file_handler().file_path = tmp_path / "logs.txt"
     shutil.rmtree(tmp_path, ignore_errors=True)
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(action_names := [chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'

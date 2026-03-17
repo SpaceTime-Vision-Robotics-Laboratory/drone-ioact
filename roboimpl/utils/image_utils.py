@@ -1,4 +1,7 @@
-"""generic utils for images manipulation from gitlab.com/meehai/image_utils.py"""
+"""
+image_utils.py: generic utils for images manipulation. Repo at https://gitlab.com/meehai/image_utils.py.
+Version: 2025.03.02.1
+"""
 from typing import NamedTuple
 from PIL import Image, ImageDraw
 import numpy as np
@@ -20,18 +23,18 @@ class PointIJ(NamedTuple):
 
 class Color(tuple):
     """class for colors: tuples of 3 integers"""
-    BLACK    = (0, 0, 0)
+    BLACK    = (  0,   0,   0)
     WHITE    = (255, 255, 255)
-    RED      = (255, 0, 0)
-    GREEN    = (0, 255, 0)
-    GREENISH = (0, 200, 0)
-    BLUE     = (0, 0, 255)
+    RED      = (255,   0,   0)
+    GREEN    = (  0, 255,   0)
+    GREENISH = (  0, 200,   0)
+    BLUE     = (  0,   0, 255)
 
 # Module utilities
 
 def _check_image(image: np.ndarray):
-    assert image.dtype == np.uint8, f"{image.dtype=}"
-    assert len(image.shape) == 3, image.shape
+    assert image.dtype in (np.uint8, np.float32), f"{image.dtype=}"
+    assert len(image.shape) in (3, 1), image.shape # RGB or grayscale only for now
 
 def _scale(a: int, b: int, c: int) -> int:
     return int(b / a * c)
@@ -68,33 +71,50 @@ def _update(res: np.ndarray, us: np.ndarray, vs: np.ndarray, color: tuple[int, i
 
 # Image manipulation functions (i.e. resizing).
 
+def _image_resize_pil(image: np.ndarray, height: int, width: int, resample: Image.Resampling, **kwargs) -> np.ndarray:
+    """image is supposed to be validated here, 3-sized rgb or grayscale with uint8 or float32 only"""
+    out = np.empty((height, width, channels := image.shape[2]), dtype=image.dtype)
+    if image.dtype == np.uint8:
+        if image.shape[-1] == 1:
+            image = image[..., 0] # grayscale pil uint8 needs to be 2D
+        pil_image = Image.fromarray(image).resize((width, height), resample=resample, **kwargs)
+        out[:] = np.asarray(pil_image).reshape(height, width, channels)
+    elif image.dtype == np.float32:
+        for c in range(channels):
+            pil_image_c = Image.fromarray(image[..., c]).resize((width, height), resample=resample, **kwargs)
+            out[..., c] = np.asarray(pil_image_c)
+    return out
+
+def _image_resize_cv2(image: np.ndarray, height: int, width: int, interpolation: int, **kwargs) -> np.ndarray:
+    res = cv2.resize(image, dsize=(width, height), interpolation=interpolation, **kwargs)
+    return res.astype(image.dtype).reshape(height, width, image.shape[2]) # for e.g. grayscale with (h, w, 1)
+
 def image_resize(image: np.ndarray, height: int | None, width: int | None,
                  interpolation: str = "bilinear", backend: str = DEFAULT_RESIZE_BACKEND, **kwargs) -> np.ndarray:
     """Wrapper on top of Image(arr).resize((w, h), args) or cv2.resize. Sadly cv2 is faster so we cannot remove it."""
+    # TODO: reimplement with image_utils primitives.
     _check_image(image)
     height, width = _get_height_width(image.shape, height, width)
     assert isinstance(height, int) and isinstance(width, int), (type(height), type(width))
     if image.shape[0:2] == (height, width):
         return image
 
-    if backend == "cv2":
-        interpolation = {
+    if backend.upper() == "CV2":
+        interpolation_type = {
             "nearest": cv2.INTER_NEAREST,
             "bilinear": cv2.INTER_LINEAR,
             "lanczos": cv2.INTER_LANCZOS4
         }[interpolation]
-        res = cv2.resize(image, dsize=(width, height), interpolation=interpolation, **kwargs)
-    elif backend == "pil":
+        res = _image_resize_cv2(image, height, width, interpolation=interpolation_type, **kwargs)
+    elif backend.upper() == "PIL":
         interpolation_type: Image.Resampling = {
             "nearest": Image.Resampling.NEAREST,
             "bilinear": Image.Resampling.BILINEAR,
             "lanczos": Image.Resampling.LANCZOS,
         }[interpolation]
-        pil_image = Image.fromarray(image).resize((width, height), resample=interpolation_type, **kwargs)
-        res = np.asarray(pil_image)
+        res = _image_resize_pil(image, height, width, resample=interpolation_type, **kwargs)
     else:
         raise ValueError(str(backend))
-    res = res[..., None] if len(res.shape) == 2 else res # opencv makes it 2D in (H, W, 1) caes.
     return res
 
 def image_paste(image1: np.ndarray, image2: np.ndarray, top_left: PointIJ=(0, 0),
@@ -208,6 +228,7 @@ def image_draw_polygon(image: np.ndarray, points: list[PointIJ], color: Color, t
 def image_draw_circle(image: np.ndarray, center: PointIJ, radius: float, color: Color, fill: bool,
                       outline_thickness: int | None = None, inplace: bool=False) -> np.ndarray:
     """draw a circle at a given center with a radius (in percents). Outline thickness is also in percents (or none)"""
+    # TODO: reimplement with image_utils primitives.
     _check_image(image)
     img_pil = Image.fromarray(image)
     draw = ImageDraw.Draw(img_pil)

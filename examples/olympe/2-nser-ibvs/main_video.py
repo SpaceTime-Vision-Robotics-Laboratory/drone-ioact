@@ -7,7 +7,6 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-import logging
 from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
@@ -20,8 +19,6 @@ from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
-
-logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 DEFAULT_SCREEN_RESOLUTION = 480, 640
 BBOX_THICKNESS = 0.75
