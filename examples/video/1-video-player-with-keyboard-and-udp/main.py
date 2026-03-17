@@ -5,7 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from vre_video import VREVideo
 
-from robobase import ActionsQueue, DataChannel, Robot, Action as A
+from robobase import ActionsQueue, DataChannel, Robot, Action as Act
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer, UDPController
 
@@ -27,9 +27,9 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
-    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (video_player.fps, )),
-                     "Right": A("GO_FORWARD", (video_player.fps, )), "comma": A("GO_BACK", (1, )),
-                     "period": A("GO_FORWARD", (1, ))}
+    key_to_action = {"space": Act("PLAY_PAUSE"), "Escape": Act("DISCONNECT"),
+                     "Left": Act("GO_BACK", (video_player.fps, )), "Right": Act("GO_FORWARD", (video_player.fps, )),
+                     "comma": Act("GO_BACK", (1, )), "period": Act("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)

@@ -16,7 +16,7 @@ from loggez import make_logger
 
 from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAGE_SIZE_SPLITTER_NET
 
-from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as A, DataProducer
+from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act, DataProducer
 from roboimpl.data_producers.object_detection import YOLODataProducer
 from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
@@ -59,7 +59,7 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
 
     return res
 
-def ibvs_olympe_actions_fn(env: OlympeEnv, action: A) -> bool:
+def ibvs_olympe_actions_fn(env: OlympeEnv, action: Act) -> bool:
     """IBVS actions fn. Overrides the generic olympe_actions_fn, but adds other specifics like INITIALIZE_FLIGHT"""
     if action.name in OLYMPE_ACTION_NAMES:
         return olympe_actions_fn(env, action)
@@ -119,13 +119,13 @@ def main(args: Namespace):
         robot.add_data_producer(dp)
 
     key_to_action = {
-        "Escape": A("DISCONNECT"), "space": A("LIFT"), "b": A("LAND"),
-        "w": A("FORWARD", parameters=(50, DT)), "a": A("LEFT", parameters=(50, DT)),
-        "s": A("BACKWARD", parameters=(50, DT)), "d": A("RIGHT", parameters=(50, DT)),
-        "q": A("ROTATE_LEFT", parameters=(50, DT)), "e": A("ROTATE_RIGHT", parameters=(50, DT)),
-        "Up": A("INCREASE_HEIGHT", parameters=(50, DT)), "Down": A("DECREASE_HEIGHT", parameters=(50, DT)),
-        "Prior": A("GIMBAL_UP", parameters=(50, DT)), "Next": A("GIMBAL_DOWN", parameters=(50, DT)),
-        "k": A("INITIALIZE_FLIGHT", parameters=()),
+        "Escape": Act("DISCONNECT"), "space": Act("LIFT"), "b": Act("LAND"),
+        "w": Act("FORWARD", parameters=(50, DT)), "a": Act("LEFT", parameters=(50, DT)),
+        "s": Act("BACKWARD", parameters=(50, DT)), "d": Act("RIGHT", parameters=(50, DT)),
+        "q": Act("ROTATE_LEFT", parameters=(50, DT)), "e": Act("ROTATE_RIGHT", parameters=(50, DT)),
+        "Up": Act("INCREASE_HEIGHT", parameters=(50, DT)), "Down": Act("DECREASE_HEIGHT", parameters=(50, DT)),
+        "Prior": Act("GIMBAL_UP", parameters=(50, DT)), "Next": Act("GIMBAL_DOWN", parameters=(50, DT)),
+        "k": Act("INITIALIZE_FLIGHT", parameters=()),
     }
 
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
