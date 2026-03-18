@@ -15,7 +15,7 @@ from detection.mask_splitter_data_producer import MaskSplitterDataProducer
 from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 
 from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action as A
-from roboimpl.data_producers.object_detection import YOLODataProducer
+from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color

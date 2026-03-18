@@ -4,28 +4,23 @@
 from __future__ import annotations
 from functools import partial
 from argparse import ArgumentParser, Namespace
-from vre_video import VREVideo
 import numpy as np
+from vre_video import VREVideo
+from vre_repository.utils import colorize_depth, colorize_semantic_segmentation # pylint: disable=all
 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act
-from roboimpl.data_producers.semantic_segmentation import PHGMAESemanticDataProducer
-from roboimpl.data_producers.object_detection import YOLODataProducer
+from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer
-from roboimpl.utils import semantic_map_to_image, image_draw_rectangle, image_paste, Color, logger, image_resize
+from roboimpl.utils import image_draw_rectangle, image_paste, Color, image_resize
 from roboimpl.data_producers.vre import build_vre_data_producers
-
-try:
-    from vre_repository.utils import colorize_depth
-except ImportError as e:
-    logger.error(e)
 
 BBOX_THICKNES = 1
 DEFAULT_SCREEN_RESOLUTION = (600, 800)
 
 def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], only_top1_bbox: bool) -> np.ndarray:
     """produces RGB + semantic segmentation as a single frame"""
-    res = data["rgb"]
+    res, (h, w) = data["rgb"], data["rgb"].shape[0:2]
     if "bbox" in data and data["bbox"] is not None:
         data["bbox"] = data["bbox"][0:1] if only_top1_bbox else data["bbox"]
         for bbox in data["bbox"]:
@@ -39,17 +34,16 @@ def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], onl
         all_segmentations = (data["segmentation"].sum(0).repeat(3, axis=-1) * Color.GREENISH).astype(np.uint8)
         res = image_paste(res, all_segmentations)
 
-    if "semantic" in data:
-        sema_rgb = semantic_map_to_image(data["semantic"].argmax(-1), color_map)
-        res = np.concatenate([res, sema_rgb], axis=1)
+    if "safeuav" in data:
+        sema_rgb = colorize_semantic_segmentation(data["safeuav"].argmax(-1)[None], color_map, method="fast_simple")[0]
+        sema_rgb_rsz = image_resize(sema_rgb, h, w, "nearest") # (Hs, Ws, 3) -> (H, W, 3)
+        res = np.concatenate([res, sema_rgb_rsz], axis=1)
 
     if "depth_dpt" in data:
-        depth_resized = image_resize(data["depth_dpt"], *res.shape[0:2]) # (H_d, W_d, 1) -> (H, W, 1)
-        depth_rgb = (colorize_depth(depth_resized[None], percentiles=[1, 95]) * 255).astype(np.uint8)[0]
-        res = np.concatenate([res, depth_rgb], axis=1)
-
+        depth_rgb = (colorize_depth(data["depth_dpt"][None], percentiles=[1, 95]) * 255).astype("uint8")[0]
+        depth_rgb_rsz = image_resize(depth_rgb, h, w, "nearest") # (Hd, Wd, 3) -> (H, W, 3)
+        res = np.concatenate([res, depth_rgb_rsz], axis=1)
     return res
-
 
 def get_args() -> Namespace:
     """cli args"""
@@ -61,8 +55,6 @@ def get_args() -> Namespace:
     parser.add_argument("--yolo_weights_path")
     parser.add_argument("--yolo_threshold", default=0.75, type=float, help="applied to both bbox and segmentation")
     parser.add_argument("--yolo_only_top1_bbox", action="store_true")
-    # phg-mae params
-    parser.add_argument("--phg_weight_path")
     # vre params
     parser.add_argument("--vre_config_path")
     args = parser.parse_args()
@@ -72,11 +64,9 @@ def main(args: Namespace):
     """main fn"""
     reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
     (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
+    color_map = None
 
     supported_types, dps = ["rgb", "frame_ix"], []
-    if args.phg_weight_path is not None:
-        supported_types = [*supported_types, "semantic"]
-        dps.append(PHGMAESemanticDataProducer(weights_path=args.phg_weight_path))
     if args.yolo_weights_path is not None:
         supported_types.extend(["bbox", "bbox_confidence", "segmentation", "segmentation_xy"])
         dps.append(YOLODataProducer(weights_path=args.yolo_weights_path, threshold=args.yolo_threshold))
@@ -84,6 +74,8 @@ def main(args: Namespace):
         for dp in build_vre_data_producers(args.vre_config_path):
             supported_types.append(dp.repr.name)
             dps.append(dp)
+            if dp.repr.name == "safeuav":
+                color_map = dp.repr.color_map
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
@@ -91,7 +83,7 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    f_screen_frame_callback = partial(screen_frame_callback, color_map=PHGMAESemanticDataProducer.COLOR_MAP,
+    f_screen_frame_callback = partial(screen_frame_callback, color_map=color_map,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
     key_to_action = {"space": Act("PLAY_PAUSE"), "Escape": Act("DISCONNECT"),
                      "Left": Act("GO_BACK", (video_player.fps, )), "Right": Act("GO_FORWARD", (video_player.fps, )),

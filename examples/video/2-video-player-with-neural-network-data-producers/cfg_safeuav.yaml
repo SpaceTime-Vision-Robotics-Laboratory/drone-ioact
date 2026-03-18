@@ -1,0 +1,10 @@
+default_learned_parameters:
+  device: ${oc.env:VRE_DEVICE,cpu}
+
+representations:
+  safeuav:
+    type: semantic-segmentation/safeuav
+    dependencies: []
+    parameters:
+      disk_data_argmax: False
+      variant: ${oc.env:MODEL_VARIANT,model_430k}

@@ -1,0 +1,8 @@
+default_learned_parameters:
+  device: ${oc.env:VRE_DEVICE,cpu}
+
+representations:
+  depth_dpt:
+    type: depth/dpt
+    dependencies: []
+    parameters: {}
