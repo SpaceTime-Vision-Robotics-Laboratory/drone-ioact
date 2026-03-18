@@ -1,5 +1,4 @@
 """yolo_data_producer.py - produces bounding boxes using a yolo pre-trained checkpoint"""
-import logging
 import numpy as np
 from overrides import overrides
 from ultralytics import YOLO # pylint: disable=import-error
@@ -8,7 +7,6 @@ from torch.nn import functional as F
 from loggez import make_logger
 from robobase import DataProducer, DataItem
 
-logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 logger = make_logger("ROBOIMPL_YOLO")
 
 Bbox = tuple[int, int, int, int]

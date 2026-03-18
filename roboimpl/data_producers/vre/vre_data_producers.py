@@ -1,15 +1,12 @@
 """vre_data_producers.py - Interface between video-representations-extractor and robobase"""
 from pathlib import Path
+from vre.representations import build_representations_from_cfg # pylint: disable=all
+from vre import MemoryData, Representation, ReprOut # pylint: disable=all
+from vre.representations.mixins import LearnedRepresentationMixin # pylint: disable=all
+from vre_repository import get_vre_repository # pylint: disable=all
+
 from robobase import DataProducer, DataItem
 from roboimpl.utils import logger
-
-try:
-    from vre.representations import build_representations_from_cfg
-    from vre import MemoryData, Representation, ReprOut
-    from vre.representations.mixins import LearnedRepresentationMixin
-    from vre_repository import get_vre_repository
-except ImportError as e:
-    logger.error(f"{e}\nPerhpaphs vre not installed? Try 'pip install vre-representations-extractor'")
 
 class VREDataProducer(DataProducer):
     """Interface between video-representations-extractor and robobase"""

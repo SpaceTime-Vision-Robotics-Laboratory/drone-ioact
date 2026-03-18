@@ -23,11 +23,11 @@ bash test/e2e/run_all.sh
 
 ### First steps: Running the provided examples
 
-For an example you can run, see our [hello-world-controller](examples/basic/hello-world-controller/main.py) & [hello-world-webcam](examples/basic/hello-world-webcam/main.py) examples.
-
-Another runnable example is this [yolo + webcam example](examples/video/2-video-player-with-neural-network-data-producers/README.md) from  the end of the README.
- - You need [yolo11n.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt) or [yolo11s.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt).
-
+The 'hello world' runnable examples are:
+- [hello-world-controller](./examples/basic/hello-world-controller/main.py)
+- [hello-world-webcam](./examples/basic/hello-world-webcam/main.py).
+- [video-player + neural-network](./examples/video/2-video-player-with-neural-network-data-producers/README.md)
+  - In the readme you can see a nice yolo + public webcam example, as well as how to download some standard nn checkpoints easily.
 
 ### Creating your controllers: Using the `Robot` high-level wrapper
 
@@ -47,9 +47,9 @@ def main():
     # Define the data producers. The 'raw' one is added by default (env to raw data). Controllers receive the latest available data.
     robot.add_data_producer(SemanticDataProducer(ckpt_path=path_to_model, ...))
     # Define the controllers: the logic of the robot to act in the environment
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, key_to_action={"space": "a1", "w": "a2"}),
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, key_to_action={"space": Act("a1"), "w": Act("a2")}),
                          name="Screen displayer") # manual controls via keyboard + UI display
-    robot.add_controller(lambda data, actions_queue: actions_queue.put(random.choice(["a1", "a2"])),
+    robot.add_controller(lambda data, actions_queue: actions_queue.put(Act(random.choice(["a1", "a2"]))),
                          name="Trajectory planner") # controller algorithmic logic
     # Run the main loop which starts and monitors the threads behind the scenes (data producers, controllers, env communication etc.)
     robot.run()
@@ -104,16 +104,15 @@ def main():
     """main fn"""
     drone_env = XXXDrone(ip="192.168.0.101") # XXX = specific real or simulated drone like Olympe
     drone_env.connect() # establish connection to the drone before any callbacks
-    action_names = ["a1", "a2", ...] # Actions can have parameters via Action("a1", (param1, param2, ...)).
-    actions_queue = ActionsQueue(action_names, queue=Queue()) # defines the generic actions and the queue type.
+    actions_queue = ActionsQueue(action_names=["a1", "a2", ...], queue=Queue()) # defines the generic actions and the queue type.
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
     # define the data producers.
     raw_data = RawDataProducer(drone_env) # populates the data channel with RGB & pose from drone (raw data)
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
-    # define the controllers (only screen displayer + keyboard controls here)
-    key_to_action = {"space": Action("a1"), "w": Action("a2")} # define the mapping between a key release and an action pushed in the queue
+    # define the controllers (only screen displayer + keyboard controls here). Actions can have parameters via Action("a1", (param1, ...)).
+    key_to_action = {"space": Action("a1", parameters=()), "w": Action("a2")}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
     def XXXaction_fn(env: XXXDrone, action: Action) -> bool:
@@ -130,8 +129,11 @@ def main():
         time.sleep(1) # important to not throttle everything with this main thread
 
     drone_env.disconnect() # disconnect from the drone.
-    threads.join(timeout=1) # stop all the threads
+    status = threads.join(timeout=1) # stop all the threads.
     data_channel.close() # close the data channel as well which also waits for logs (if enabled) to be written to disk.
+    for k, v in status.items(): # join() returns a dict[str, ThreadStatus] allowing us to see exceptions and tracebacks
+        if v.exception is not None:
+            print(v.exception)
 
 if __name__ == "__main__":
     main()
