@@ -2,8 +2,26 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum, auto
 from datetime import datetime
 import numpy as np
+
+# pylint: disable=invalid-name
+class Key(Enum):
+    """Generic ScreenDisplayer keys across multiple backends (tkinter/cv2)"""
+    locals().update({chr(c): auto() for c in range(ord("a"), ord("z") + 1)}) # generated a-z
+    # add supported keys here!
+    Left = auto()
+    Up = auto()
+    Right = auto()
+    Down = auto()
+    Esc = auto()
+    Enter = auto()
+    Space = auto()
+    PageUp = auto()
+    PageDown = auto()
+    Comma = auto()
+    Period = auto()
 
 @dataclass
 class DisplayerState:
@@ -27,7 +45,7 @@ class DisplayerBackend(ABC):
     def get_current_size(self) -> tuple[int, int]:
         """returns current (height, width) as a tuple"""
     @abstractmethod
-    def poll_events(self) -> list[str]: # TODO: only supports key_release. We need a KeyEvent dataclass for more.
+    def poll_events(self) -> list[Key]: # TODO: only supports key_release. We need a KeyEvent dataclass for more.
         """Polls the events (key presses) and returns them. In tkinter it calls update() + collects events manually"""
     @abstractmethod
     def update_frame(self, frame: np.ndarray):

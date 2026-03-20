@@ -8,7 +8,7 @@ import numpy as np
 from robobase import DataChannel, DataItem, BaseController, ActionsQueue, Action
 from roboimpl.utils import image_resize, logger, CircularBuffer
 
-from .screen_displayer_utils import DisplayerState
+from .screen_displayer_utils import DisplayerState, Key, DisplayerBackend
 from .screen_displayer_tkinter import ScreenDisplayerTkinter
 from .screen_displayer_cv2 import ScreenDisplayerCV2
 
@@ -31,11 +31,12 @@ class ScreenDisplayer(BaseController):
         self.backend_type = backend or DEFAULT_BACKEND
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
         assert all(isinstance(a, Action) for a in k2a.values()), [(a, type(a)) for a in k2a.values()]
+        assert all(isinstance(k, Key) for k in k2a.keys()), [(k, type(k)) for k in k2a.keys()]
         assert all(v.name in actions_queue.action_names for v in k2a.values()), f"\n-{k2a=}\n-Actions: {actions_queue}"
         assert self.toggle_info_key not in k2a, f"{self.toggle_info_key=} clash with {key_to_action=}"
         assert self.backend_type in ("tkinter", "cv2", ), self.backend_type
 
-        self.backend = {
+        self.backend: DisplayerBackend = {
             "tkinter": lambda: ScreenDisplayerTkinter(),
             "cv2": lambda: ScreenDisplayerCV2(),
         }[self.backend_type]()
@@ -49,7 +50,7 @@ class ScreenDisplayer(BaseController):
         """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
         self.actions_queue.put(action, data_ts=None, block=True)
 
-    def _on_event(self, event: str): # Note: only key_release events, see todo.
+    def _on_event(self, event: Key): # Note: only key_release events, see todo.
         if event == self.toggle_info_key:
             logger.debug(f"Pressed '{event}' (key info). TODO: not implemented")
             return
@@ -75,9 +76,9 @@ class ScreenDisplayer(BaseController):
         self.data_channel_event.wait(INITIAL_TIMEOUT_S)
 
         height, width = self._get_initial_height_width(prev_data=self.data_channel.get()[0])
-        self.backend.initialize_window(height, width, title="Screen Displayer")
+        self.backend.initialize_window(height, width, title=f"Screen Displayer ({self.backend_type})")
 
-        old_state = DisplayerState(self.backend.get_current_size(), hud=False)
+        old_state = DisplayerState((height, width), hud=False)
         fpss = CircularBuffer(capacity=20)
 
         while self.data_channel.has_data():

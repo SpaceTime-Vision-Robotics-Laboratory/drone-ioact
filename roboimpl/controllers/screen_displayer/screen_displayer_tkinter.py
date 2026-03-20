@@ -5,7 +5,14 @@ import numpy as np
 from overrides import overrides
 
 from roboimpl.utils import logger
-from .screen_displayer_utils import DisplayerBackend
+from .screen_displayer_utils import DisplayerBackend, Key
+
+_KEYCODE_MAP: dict[str, Key] = {
+    **{chr(k): getattr(Key, chr(k)) for k in range(ord("a"), ord("z") + 1)},
+    "Left": Key.Left, "Up": Key.Up, "Right": Key.Right, "Down": Key.Down,
+    "Escape": Key.Esc, "Return": Key.Enter, "space": Key.Space, "Prior": Key.PageUp, "Next": Key.PageDown,
+    "comma": Key.Comma, "period": Key.Period
+}
 
 class ScreenDisplayerTkinter(DisplayerBackend):
     """Tkinter-based screen displayer. The OG one, but lags unfortunetely on larger environments (keyboard drops)"""
@@ -14,7 +21,7 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.root: tk.Tk | None = None
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
-        self._pending_events: list[str] = []
+        self._pending_events: list[Key] = []
         self._previous_resolution: tuple[int, int] = (0, 0)
 
     @overrides
@@ -32,7 +39,7 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         return self.canvas.winfo_height(), self.canvas.winfo_width()
 
     @overrides
-    def poll_events(self) -> list[str]:
+    def poll_events(self) -> list[Key]:
         self.root.update()
         events = self._pending_events
         self._pending_events = []
@@ -57,4 +64,4 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.root.destroy()
 
     def _on_key_release(self, event: tk.Event):
-        self._pending_events.append(event.keysym)
+        self._pending_events.append(_KEYCODE_MAP[event.keysym])

@@ -7,7 +7,7 @@ from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer, UDPController
+from roboimpl.controllers import ScreenDisplayer, UDPController, Key
 
 DEFAULT_SCREEN_RESOLUTION = (420, 640)
 
@@ -21,15 +21,15 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    (video_player := VideoPlayerEnv(VREVideo(args.video_path))).start() # start the video player
+    (env := VideoPlayerEnv(VREVideo(args.video_path))).start() # start the video player
 
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
-    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
-    key_to_action = {"space": Act("PLAY_PAUSE"), "Escape": Act("DISCONNECT"),
-                     "Left": Act("GO_BACK", (video_player.fps, )), "Right": Act("GO_FORWARD", (video_player.fps, )),
-                     "comma": Act("GO_BACK", (1, )), "period": Act("GO_FORWARD", (1, ))}
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
+    key_to_action = {Key.Space: Act("PLAY_PAUSE"), Key.Esc: Act("DISCONNECT"), Key.Left: Act("GO_BACK", (env.fps, )),
+                     Key.Right: Act("GO_FORWARD", (env.fps, )), Key.Comma: Act("GO_BACK", (1, )),
+                     Key.Period: Act("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        key_to_action=key_to_action)
     udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
@@ -38,7 +38,7 @@ def main(args: Namespace):
     robot.run()
 
     data_channel.close()
-    video_player.close()
+    env.close()
 
 if __name__ == "__main__":
     main(get_args())
