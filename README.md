@@ -1,7 +1,16 @@
 # Robobase - Robotics communication library
 
-Robotics communication library between common robotics parts: environment (real or simulated), robot perception modules and robot actuators.
-The library is built in a generic way, and it can be used for pure Reinforcement Learning applications as well (i.e. we wrap `GymEnv` natively).
+Robotics communication library between common robotics parts: environment (real or simulated), robot perception modules and robot actuators. The library is built in a generic way, and it can be used for pure Reinforcement Learning applications as well (i.e. we wrap `GymEnv` natively), as well as interacting with real world SDKs (i.e. parrot) or simulated environments (i.e. olympe/unreal).
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────┐     ┌───────────────┐     ┌──────────────┐
+│ Environment │────▶│ DataProducer(s) │────▶│ DataChannel │────▶│ Controller(s) │────▶│ ActionsQueue │
+│  (sensors)  │     │  (algos, nns)   │     │ (last-value)│     │   (decide)    │     │   (buffer)   │
+└─────────────┘     └─────────────────┘     └─────────────┘     └───────────────┘     └──────────────┘
+       ▲                                                                                       │
+       │                                Actions2Environment                                    │
+       └───────────────────────────────────(execute)───────────────────────────────────────────┘
+```
 
 The library is built around 2 modules:
 - `robobase` Generic primitives for thread-safe, concurrent and hopefully performant communication
@@ -76,22 +85,29 @@ Notes on `ROBOBASE_STORE_LOGS`: if set to 0, will not store anything on disk, if
 Additionally, you can use the [vizualization tool](tools/logsviz/) to see (in real time or after the fact) the interaction between the data and controller's action of your robot. For now, it only supports tracking data to action.
 
 
-## Architecture:
-
-<img alt="arch" src="./arch.png" width="50%">
-
 The two 'core' components of any robotics application are: the *data channel* and the *actions queue*. The data consumers interact with the drone (or any robot) to get raw data and write them to the data channel, while the data consumers interact with the channel and always have access to the latest data. Some data consumers are also action products and write to the actions queue. Then, the actions consumer reads one action at a time from the actions queue and sends raw actions to the drone.
 
 The usual flow is like this:
 ```
-
- Drone  -- raw data --> Data Producer List --> Data Channel       Actions Queue  <-- Action2Env -- raw action --> Drone
-(robot)                                       (rgb, pose...)     (LIFT, MOVE...)     (action_fn)                 (robot)
-               |                ↑                  |                    ↑
-               |-------> pose                      |-> [Controller 1] --|
-                         rgb -> semantic           |-- [Controller 2] --|
-                             -> depth              |       ...          |
-                                  -> normals       |-- [Controller n] --|
+┌─────────────┐     ┌──────────────────────────────────────────────────────────────────────┐
+│ Environment │────▶│                   DataProducers2Channels (topo-DAG)                  ├────────┐
+│   (robot)   │     │                                                                      │        │
+└─────────────┘     │   ┌───────┐    ┌──────────┐    ┌───────┐    ┌─────────┐              │        │
+       ▲            │   │  raw  │───▶│ semantic │───▶│ depth │───▶│ normals │              │        │
+       │            │   └───┬───┘    └──────────┘    └───────┘    └─────────┘              │        │
+       │            │       │                                                              │        │
+       │            │       └───────▶┌──────┐                                              │        ▼
+       │            │                │ pose │                                              │  ┌─────────────┐
+       │            │                └──────┘                                              │  │ DataChannel │
+       │            └──────────────────────────────────────────────────────────────────────┘  │ (last-value)│
+       │                                                                                      └─────────────┘
+       │                                      ┌────────────────────────────────────────────┐         │
+       │                                      │              Controllers                   │         |
+       │              ┌──────────────┐        │ ┌─────────┐ ┌─────────┐ ┌────────────┐     │         |
+       └──────────────┤ ActionsQueue │◀───────┤ │ Ctrl 1  │ │ Ctrl 2  │ │  Ctrl N    │     │◀────────┘
+                      │ LIFT,MOVE... │        │ │(display)│ │(planner)│ │  (safety)  │     │
+                      └──────────────┘        │ └─────────┘ └─────────┘ └────────────┘     │
+               Actions2Environment (action_fn)└────────────────────────────────────────────┘
 ```
 
 
