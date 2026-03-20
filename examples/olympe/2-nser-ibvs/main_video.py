@@ -17,7 +17,7 @@ from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action as A
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
 DEFAULT_SCREEN_RESOLUTION = 480, 640
@@ -96,9 +96,9 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    key_to_action = {"space": A("PLAY_PAUSE"), "Escape": A("DISCONNECT"), "Left": A("GO_BACK", (env.fps, )),
-                     "Right": A("GO_FORWARD", (env.fps, )), "comma": A("GO_BACK", (1, )),
-                     "period": A("GO_FORWARD", (1, ))}
+    key_to_action = {Key.Space: A("PLAY_PAUSE"), Key.Esc: A("DISCONNECT"), Key.Left: A("GO_BACK", (env.fps, )),
+                     Key.Right: A("GO_FORWARD", (env.fps, )), Key.Comma: A("GO_BACK", (1, )),
+                     Key.Period: A("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, name="Screen displayer")

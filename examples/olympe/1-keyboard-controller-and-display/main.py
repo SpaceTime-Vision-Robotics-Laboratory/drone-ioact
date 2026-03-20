@@ -5,7 +5,7 @@ from queue import Queue
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
 from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer, Key
 
 QUEUE_MAX_SIZE = 30
 RESOLUTION = 480, 640
@@ -28,13 +28,13 @@ def main(args: Namespace):
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
     key_to_action = {
-        "Escape": Act("DISCONNECT"), "space": Act("LIFT"), "b": Act("LAND"),
-        "w": Act("FORWARD", parameters=(50, DT)), "a": Act("LEFT", parameters=(50, DT)),
-        "s": Act("BACKWARD", parameters=(50, DT)), "d": Act("RIGHT", parameters=(50, DT)),
-        "q": Act("ROTATE_LEFT", parameters=(50, DT)), "e": Act("ROTATE_RIGHT", parameters=(50, DT)),
-        "Up": Act("INCREASE_HEIGHT", parameters=(50, DT)), "Down": Act("DECREASE_HEIGHT", parameters=(50, DT)),
-        "Prior": Act("GIMBAL_UP", parameters=(50, DT)), "Next": Act("GIMBAL_DOWN", parameters=(50, DT)),
-        "k": Act("GIMBAL_ABSOLUTE", parameters=(-45, )),
+        Key.Esc: Act("DISCONNECT"), Key.Space: Act("LIFT"), Key.b: Act("LAND"),
+        Key.w: Act("FORWARD", parameters=(50, DT)), Key.a: Act("LEFT", parameters=(50, DT)),
+        Key.s: Act("BACKWARD", parameters=(50, DT)), Key.d: Act("RIGHT", parameters=(50, DT)),
+        Key.q: Act("ROTATE_LEFT", parameters=(50, DT)), Key.e: Act("ROTATE_RIGHT", parameters=(50, DT)),
+        Key.Up: Act("INCREASE_HEIGHT", parameters=(50, DT)), Key.Down: Act("DECREASE_HEIGHT", parameters=(50, DT)),
+        Key.PageUp: Act("GIMBAL_UP", parameters=(50, DT)), Key.PageDown: Act("GIMBAL_DOWN", parameters=(50, DT)),
+        Key.k: Act("GIMBAL_ABSOLUTE", parameters=(-45, )),
     }
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action, resolution=RESOLUTION)
     robot.add_controller(screen_displayer, name="Screen Displayer")

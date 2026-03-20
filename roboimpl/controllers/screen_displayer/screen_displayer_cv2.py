@@ -8,13 +8,13 @@ try:
 except ImportError:
     logger.error("OpenCV is not installed. Set `ROBOIMPL_SCREEN_DISPLAYER_BACKEND='tkinter' or install opencv")
 
-from .screen_displayer_utils import DisplayerBackend
+from .screen_displayer_utils import DisplayerBackend, Key
 
-_KEYCODE_MAP = {
-    **{k: chr(k) for k in range(ord("a"), ord("z") + 1)},
-    **{k: chr(k) for k in range(ord("A"), ord("Z") + 1)},
-    81: "Left", 82: "Up", 83: "Right", 84: "Down",  # arrow keys (Linux)
-    27: "Escape", 13: "Return", 32: "space",
+_KEYCODE_MAP: dict[int, Key] = {
+    **{k: getattr(Key, chr(k)) for k in range(ord("a"), ord("z") + 1)},
+    81: Key.Left, 82: Key.Up, 83: Key.Right, 84: Key.Down,  # arrow keys (Linux)
+    27: Key.Esc, 13: Key.Enter, 32: Key.Space, 85: Key.PageUp, 86: Key.PageDown,
+    ord(","): Key.Comma, ord("."): Key.Period,
 }
 
 class ScreenDisplayerCV2(DisplayerBackend):
@@ -37,10 +37,10 @@ class ScreenDisplayerCV2(DisplayerBackend):
         return height, width
 
     @overrides
-    def poll_events(self) -> list[str]:
+    def poll_events(self) -> list[Key]:
         # waitKey(1) is required to pump the event loop
-        key = cv2.waitKey(1) & 0xFF
-        if key == 255:  # no key pressed
+        key = cv2.waitKey(1)
+        if key == -1:  # no key pressed
             return []
 
         # Check if window was closed
@@ -48,8 +48,10 @@ class ScreenDisplayerCV2(DisplayerBackend):
             self._is_open = False
             return []
 
-        if keysym := _KEYCODE_MAP.get(key):
-            return [keysym] # TODO: KeyEvent(keysym=keysym) later on
+        if key := _KEYCODE_MAP.get(key):
+            return [key] # TODO: KeyEvent(key=key) later on
+        else:
+            logger.error(f"Unknown CV2 key: {key}")
         return []
 
     @overrides

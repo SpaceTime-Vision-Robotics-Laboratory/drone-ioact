@@ -19,7 +19,7 @@ from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAG
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act, DataProducer
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
 logger = make_logger("IBVS")
@@ -119,13 +119,13 @@ def main(args: Namespace):
         robot.add_data_producer(dp)
 
     key_to_action = {
-        "Escape": Act("DISCONNECT"), "space": Act("LIFT"), "b": Act("LAND"),
-        "w": Act("FORWARD", parameters=(50, DT)), "a": Act("LEFT", parameters=(50, DT)),
-        "s": Act("BACKWARD", parameters=(50, DT)), "d": Act("RIGHT", parameters=(50, DT)),
-        "q": Act("ROTATE_LEFT", parameters=(50, DT)), "e": Act("ROTATE_RIGHT", parameters=(50, DT)),
-        "Up": Act("INCREASE_HEIGHT", parameters=(50, DT)), "Down": Act("DECREASE_HEIGHT", parameters=(50, DT)),
-        "Prior": Act("GIMBAL_UP", parameters=(50, DT)), "Next": Act("GIMBAL_DOWN", parameters=(50, DT)),
-        "k": Act("INITIALIZE_FLIGHT", parameters=()),
+        Key.Esc: Act("DISCONNECT"), Key.Space: Act("LIFT"), Key.b: Act("LAND"),
+        Key.w: Act("FORWARD", parameters=(50, DT)), Key.a: Act("LEFT", parameters=(50, DT)),
+        Key.s: Act("BACKWARD", parameters=(50, DT)), Key.d: Act("RIGHT", parameters=(50, DT)),
+        Key.q: Act("ROTATE_LEFT", parameters=(50, DT)), Key.e: Act("ROTATE_RIGHT", parameters=(50, DT)),
+        Key.Up: Act("INCREASE_HEIGHT", parameters=(50, DT)), Key.Down: Act("DECREASE_HEIGHT", parameters=(50, DT)),
+        Key.PageUp: Act("GIMBAL_UP", parameters=(50, DT)), Key.PageDown: Act("GIMBAL_DOWN", parameters=(50, DT)),
+        Key.k: Act("INITIALIZE_FLIGHT", parameters=()),
     }
 
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,

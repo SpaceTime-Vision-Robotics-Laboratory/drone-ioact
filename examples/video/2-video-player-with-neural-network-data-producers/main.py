@@ -11,7 +11,7 @@ from vre_repository.utils import colorize_depth, colorize_semantic_segmentation 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.utils import image_draw_rectangle, image_paste, Color, image_resize
 from roboimpl.data_producers.vre import build_vre_data_producers
 
@@ -63,7 +63,7 @@ def get_args() -> Namespace:
 def main(args: Namespace):
     """main fn"""
     reader_kwargs = {} if args.video_path != "-" else {"resolution": args.frame_resolution, "fps": args.fps}
-    (video_player := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
+    (env := VideoPlayerEnv(VREVideo(args.video_path, **reader_kwargs))).start() # start the video player
     color_map = None
 
     supported_types, dps = ["rgb", "frame_ix"], []
@@ -79,21 +79,21 @@ def main(args: Namespace):
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
-    robot = Robot(env=video_player, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
     for dp in dps:
         robot.add_data_producer(dp)
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=color_map,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    key_to_action = {"space": Act("PLAY_PAUSE"), "Escape": Act("DISCONNECT"),
-                     "Left": Act("GO_BACK", (video_player.fps, )), "Right": Act("GO_FORWARD", (video_player.fps, )),
-                     "comma": Act("GO_BACK", (1, )), "period": Act("GO_FORWARD", (1, ))}
+    key_to_action = {Key.Space: Act("PLAY_PAUSE"), Key.Esc: Act("DISCONNECT"), Key.Left: Act("GO_BACK", (env.fps, )),
+                     Key.Right: Act("GO_FORWARD", (env.fps, )), Key.Comma: Act("GO_BACK", (1, )),
+                     Key.Period: Act("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                        screen_frame_callback=f_screen_frame_callback, key_to_action=key_to_action)
     robot.add_controller(screen_displayer, "Screen Displayer")
 
     robot.run()
-    video_player.close()
+    env.close()
     data_channel.close()
 
 if __name__ == "__main__":

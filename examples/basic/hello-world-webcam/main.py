@@ -3,7 +3,7 @@
 import sys
 import cv2
 from robobase import Environment, Robot, DataChannel, ActionsQueue, Action
-from roboimpl.controllers import ScreenDisplayer
+from roboimpl.controllers import ScreenDisplayer, Key
 
 class WebcamEnv(Environment):
     """Basic OpenCV-based environment to get the current RGB frame from a webcam"""
@@ -42,7 +42,7 @@ def main():
     actions_queue = ActionsQueue(action_names=["pause", "close"])
     robot = Robot(env, data_channel, actions_queue, action_fn=action_fn)
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue,
-                                         key_to_action={"space": Action("pause"), "Escape": Action("close")}))
+                                         key_to_action={Key.Space: Action("pause"), Key.Esc: Action("close")}))
     robot.run()
 
     data_channel.close()

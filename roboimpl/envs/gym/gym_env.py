@@ -16,9 +16,9 @@ GYM_ACTION_NAMES = ["step", "reset", "close"]
 
 def gym_action_fn(env: GymEnv, act: Action):
     """generic actions to gym-specific actions"""
-    if act == "reset":
+    if act == Action("reset"):
         env.reset()
-    elif act == "close":
+    elif act == Action("close"):
         env.close()
     else:
         env.step(act.parameters[0])
