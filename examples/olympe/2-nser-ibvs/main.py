@@ -19,7 +19,7 @@ from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAG
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act, DataProducer
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
 logger = make_logger("IBVS")
@@ -149,9 +149,9 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
-                                       screen_frame_callback=screen_frame_callback, keyboard_fn=keyboard_fn)
-    robot.add_controller(screen_displayer)
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
+                                         screen_frame_callback=screen_frame_callback))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
     robot.run()
 
     env.close()

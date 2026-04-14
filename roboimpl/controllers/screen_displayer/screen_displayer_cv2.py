@@ -1,5 +1,4 @@
 """screen_displayer_cv2.py - OpenCV2 screen displayer"""
-import threading
 import numpy as np
 from overrides import overrides
 from roboimpl.utils import logger
@@ -9,15 +8,13 @@ try:
 except ImportError:
     logger.error("OpenCV is not installed. Set `ROBOIMPL_SCREEN_DISPLAYER_BACKEND='tkinter' or install opencv")
 
-from .screen_displayer_utils import DisplayerBackend, Key, make_keyboard_listener, PYNPUT
+from .screen_displayer_utils import DisplayerBackend
 
 class ScreenDisplayerCV2(DisplayerBackend):
     """CV2-based screen displayer."""
     def __init__(self):
         self._window_name: str | None = None
         self._is_open = False
-        self._key_event: threading.Event = None
-        self._pressed: set[Key] = None
 
     @overrides
     def initialize_window(self, height: int, width: int, title: str):
@@ -26,8 +23,6 @@ class ScreenDisplayerCV2(DisplayerBackend):
         cv2.namedWindow(self._window_name, cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO | cv2.WINDOW_GUI_NORMAL)
         cv2.resizeWindow(self._window_name, width, height)
         self._is_open = True
-        if PYNPUT:
-            self._pressed, self._key_event = make_keyboard_listener()
 
     @overrides
     def get_current_size(self) -> tuple[int, int]:
@@ -35,17 +30,9 @@ class ScreenDisplayerCV2(DisplayerBackend):
         return height, width
 
     @overrides
-    def poll_events(self) -> set[Key]:
+    def poll_events(self):
         # waitKey(1) pumps the event loop. We don't do any keyboard stuff because cv2 doesn't support multikey.
         cv2.waitKey(1)
-        if not PYNPUT:
-            return set()
-        return self._pressed
-
-    @property
-    @overrides
-    def key_event(self) -> threading.Event:
-        return self._key_event
 
     @overrides
     def update_frame(self, frame: np.ndarray):

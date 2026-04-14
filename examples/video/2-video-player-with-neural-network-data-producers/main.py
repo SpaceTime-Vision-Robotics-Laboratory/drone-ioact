@@ -11,7 +11,7 @@ from vre_repository.utils import colorize_depth, colorize_semantic_segmentation 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 from roboimpl.utils import image_draw_rectangle, image_paste, Color, image_resize
 from roboimpl.data_producers.vre import build_vre_data_producers
 
@@ -105,10 +105,9 @@ def main(args: Namespace):
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=color_map,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
-                                       screen_frame_callback=f_screen_frame_callback,
-                                       keyboard_fn=partial(keyboard_fn, fps=env.fps))
-    robot.add_controller(screen_displayer, "Screen Displayer")
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
+                                         screen_frame_callback=f_screen_frame_callback))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=partial(keyboard_fn, fps=env.fps)))
 
     robot.run()
     env.close()

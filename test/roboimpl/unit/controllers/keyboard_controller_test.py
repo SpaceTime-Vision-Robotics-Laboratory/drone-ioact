@@ -1,8 +1,8 @@
 from robobase import ActionsQueue, DataChannel, Action as Act
-from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers import KeyboardController, Key
 import pytest
 
-def test_ScreenDisplayer_keyboard_mock_queue():
+def test_KeyboardController_keyboard_mock_queue():
     def _keyboard_fn(pressed: set[Key]) -> list[Act]:
         if Key.q in pressed:
             return [Act("act_Q")]
@@ -16,7 +16,7 @@ def test_ScreenDisplayer_keyboard_mock_queue():
 
     aq = ActionsQueue(action_names=["act_Q", "act_X", "act_esc"])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, keyboard_fn=_keyboard_fn, backend="tkinter")
+    sd = KeyboardController(data_channel, actions_queue=aq, keyboard_fn=_keyboard_fn)
 
     def make_keypress(key: Key):
         for action in sd.keyboard_fn({key}):

@@ -8,7 +8,7 @@ from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer, UDPController, Key
+from roboimpl.controllers import ScreenDisplayer, UDPController, Key, KeyboardController
 
 DEFAULT_SCREEN_RESOLUTION = (420, 640)
 
@@ -48,11 +48,9 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
-                                       keyboard_fn=partial(keyboard_fn, fps=env.fps))
-    udp_controller = UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue)
-    robot.add_controller(screen_displayer, name="Screen displayer")
-    robot.add_controller(udp_controller, name="UDP controller")
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION))
+    robot.add_controller(UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=partial(keyboard_fn, fps=env.fps)))
     robot.run()
 
     data_channel.close()
