@@ -187,7 +187,7 @@ class TrajectoryController(BaseController):
 
                 if traj is not None:
                     res = self.env.send_recv_packet({"cmd": "mission_start", "trajectory": [x.tolist() for x in traj]})
-                    logger.info(f"Starting mission for uav: {state["robot"]['type']}: {res}")
+                    logger.info(f"Starting mission for uav: {state['robot']['type']}: {res}")
                     if "error" in res:
                         logger.error(res)
                     else:
