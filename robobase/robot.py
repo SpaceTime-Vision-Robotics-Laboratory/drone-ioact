@@ -32,7 +32,10 @@ def _make_status(status: dict[str, ThreadStatus], env: Environment, start_time: 
     return "\n".join(lines)
 
 class Robot:
-    """Robot class that interacts with an environment and has a single data channel and a single actions queue"""
+    """
+    Robot class that interacts with an environment and has a single data channel and a single actions queue.
+    The action_fn is the callback that converts generic actions to env-specific commands.
+    """
     def __init__(self, env: Environment, data_channel: DataChannel, actions_queue: ActionsQueue, action_fn: ActionFn):
         self.env = env
         self.data_channel = data_channel

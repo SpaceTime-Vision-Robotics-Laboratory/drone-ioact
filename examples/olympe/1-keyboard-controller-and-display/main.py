@@ -10,6 +10,37 @@ from roboimpl.controllers import ScreenDisplayer, Key
 QUEUE_MAX_SIZE = 30
 RESOLUTION = 480, 640
 DT = 0.15
+VELOCITY_PERC = 50
+
+def keyboard_fn(pressed: set[Key]) -> list[Act]:
+    """The keyboard to actions function"""
+    if Key.Esc in pressed:
+        return [Act("DISCONNECT")]
+    acts = []
+    if Key.Space in pressed:
+        acts.append(Act("LIFT"))
+        pressed.discard(Key.Space)
+    if Key.b in pressed:
+        acts.append(Act("LAND"))
+        pressed.discard(Key.b)
+    if Key.k in pressed:
+        acts.append(Act("GIMBAL_ABSOLUTE", parameters=(-45, )))
+        pressed.discard(Key.k)
+
+    # piloting: (roll, pitch, yaw, gaz, piloting_time)
+    roll = (Key.d in pressed) - (Key.a in pressed)
+    pitch = (Key.w in pressed) - (Key.s in pressed)
+    yaw = (Key.e in pressed) - (Key.q in pressed)
+    gaz = (Key.Up in pressed) - (Key.Down in pressed)
+    if roll or pitch or yaw or gaz:
+        parameters = (roll * VELOCITY_PERC, pitch * VELOCITY_PERC, yaw * VELOCITY_PERC, gaz * VELOCITY_PERC, DT)
+        acts.append(Act("PILOTING", parameters=parameters))
+    # gimbal
+    if Key.PageUp in pressed:
+        acts.append(Act("GIMBAL_UP", parameters=(VELOCITY_PERC, DT)))
+    if Key.PageDown in pressed:
+        acts.append(Act("GIMBAL_DOWN", parameters=(VELOCITY_PERC, DT)))
+    return acts
 
 def get_args() -> Namespace:
     """cli args"""
@@ -27,16 +58,7 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
-    key_to_action = {
-        Key.Esc: Act("DISCONNECT"), Key.Space: Act("LIFT"), Key.b: Act("LAND"),
-        Key.w: Act("FORWARD", parameters=(50, DT)), Key.a: Act("LEFT", parameters=(50, DT)),
-        Key.s: Act("BACKWARD", parameters=(50, DT)), Key.d: Act("RIGHT", parameters=(50, DT)),
-        Key.q: Act("ROTATE_LEFT", parameters=(50, DT)), Key.e: Act("ROTATE_RIGHT", parameters=(50, DT)),
-        Key.Up: Act("INCREASE_HEIGHT", parameters=(50, DT)), Key.Down: Act("DECREASE_HEIGHT", parameters=(50, DT)),
-        Key.PageUp: Act("GIMBAL_UP", parameters=(50, DT)), Key.PageDown: Act("GIMBAL_DOWN", parameters=(50, DT)),
-        Key.k: Act("GIMBAL_ABSOLUTE", parameters=(-45, )),
-    }
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action=key_to_action, resolution=RESOLUTION)
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue, keyboard_fn=keyboard_fn, resolution=RESOLUTION)
     robot.add_controller(screen_displayer, name="Screen Displayer")
     robot.run()
 

@@ -9,7 +9,7 @@ from argparse import ArgumentParser, Namespace
 import random
 from loggez import make_logger
 
-from robobase import (Robot, DataChannel, ActionsQueue, DataItem, Action)
+from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action
 
 sys.path.append(Path(__file__).parent.__str__())
 from examples.maze.maze_env import MazeEnv, PointIJ # pylint: disable=all
@@ -22,11 +22,11 @@ MAZE_MAX_TRIES = 200
 INF = 2**31
 PRINT = os.getenv("MAZE_PRINT", "0") == "1"
 
-def random_controller_fn(data: dict[str, DataItem]) -> Action: # pylint:disable=unused-argument
+def random_controller_fn(data: dict[str, DataItem]) -> list[Action]: # pylint:disable=unused-argument
     """random planner"""
     res = random.choice(["up", "down", "left", "right"])
     logger.debug(f"Doing action: {res}")
-    return Action(res)
+    return [Action(res)]
 
 @dataclass
 class State:
@@ -40,7 +40,7 @@ class Strategy1:
         self.pos_to_distance: dict[PointIJ, float] = {} # {relative position: score}, -inf if wall or empty path
         self.state = State(position=PointIJ(0, 0), distance=2**31, move=None, prev_state=None)
 
-    def move(self, move: str) -> Action:
+    def move(self, move: str) -> list[Action]:
         """wrapper to update stuff before returning"""
         self.state.move = move
         move_to_delta = {"up": (-1, 0), "down": (1, 0), "left": (0, -1), "right": (0, 1)}
@@ -48,9 +48,9 @@ class Strategy1:
         if self.pos_to_distance.get(self.state.position + move_to_delta[self.state.move], 0) == INF:
             logger.debug(self.pos_to_distance)
             raise ValueError("stuck most likely")
-        return Action(move)
+        return [Action(move)]
 
-    def __call__(self, data: dict[str, DataItem]) -> Action:
+    def __call__(self, data: dict[str, DataItem]) -> list[Action]:
         move_to_rev = {"up": "down", "right": "left", "down": "up", "left": "right"}
         move_to_delta = {"up": (-1, 0), "down": (1, 0), "left": (0, -1), "right": (0, 1)}
         moves = list(move_to_rev)

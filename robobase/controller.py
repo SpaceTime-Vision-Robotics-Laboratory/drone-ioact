@@ -55,6 +55,7 @@ class Controller(BaseController):
             except DataChannelClosedError:
                 break
             logger.log_every_s(f"Processing data (data_ts='{data_ts}')", "DEBUG", True)
-            action: Action | None = self.controller_fn(curr_data) # the planner may also return an "IDK" action (None)
-            if action is not None:
+            # the planner may also return 0 actions ("IDK" action basically)
+            actions: list[Action] = self.controller_fn(curr_data)
+            for action in actions:
                 self.actions_queue.put(action, data_ts=data_ts)

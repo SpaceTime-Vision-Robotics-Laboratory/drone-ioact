@@ -30,6 +30,9 @@ unit_tests:
 e2e_tests:
   script:
     - apt-get update
-    - apt install -y lsof netcat ffmpeg
-    - wget https://gitlab.com/video-representations-extractor/video-representations-extractor/-/raw/master/resources/test_video.mp4 -P test/e2e/video-udp-screenshot 2>/dev/null
+    - apt install -y lsof netcat ffmpeg git
+
+    - git clone --depth 1 --filter=blob:none --sparse https://gitlab.com/video-representations-extractor/video-representations-extractor.git /tmp/vre
+    - cd /tmp/vre && git sparse-checkout set resources && cd -
+    - cp /tmp/vre/resources/test_video.mp4 test/e2e/video-udp-screenshot/test_video.mp4
     - bash test/e2e/run_all.sh

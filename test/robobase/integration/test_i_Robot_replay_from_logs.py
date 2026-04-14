@@ -45,7 +45,7 @@ def test_i_Robot_replay_from_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
     robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(lambda data: [Action(TARGET[len(data["state"])])] if len(data["state"]) < len(TARGET) else [])
 
     robot.run()
     data_channel.close()
@@ -79,7 +79,7 @@ def test_i_Robot_replay_from_logs_ReplayDataProducer_ReplayActionsQueue(tmp_path
 
     robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(lambda data: [Action(TARGET[len(data["state"])])] if len(data["state"]) < len(TARGET) else [])
 
     robot.run()
     data_channel.close()
@@ -112,7 +112,7 @@ def test_i_Robot_replay_from_logs_offline_exception(tmp_path: Path, monkeypatch:
 
     robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(lambda data: [Action(TARGET[len(data["state"])])] if len(data["state"]) < len(TARGET) else [])
 
     robot.run()
     data_channel.close()
@@ -121,11 +121,11 @@ def test_i_Robot_replay_from_logs_offline_exception(tmp_path: Path, monkeypatch:
 
     DataStorer.get_instance().close()
 
-    def replay_controller_fn(data: dict[str, DataItem]):
+    def replay_controller_fn(data: dict[str, DataItem]) -> list[Action]:
         if len(data["state"]) == len(TARGET):
-            return None
+            return []
         assert data["state"] == data["replay_state"].tolist(), (data["state"], data["replay_state"])
-        return Action(TARGET[len(data["state"])])
+        return [Action(TARGET[len(data["state"])])]
 
     # just read the data that was created via the data channel
     print("="*80)
@@ -157,7 +157,7 @@ def test_i_Robot_replay_from_logs_online_compare(tmp_path: Path, monkeypatch: py
 
     robot = Robot(env, data_channel, actions_queue, action_fn=lambda env, action: env.push(action.name))
     # push 'h' if env._state==[], 'e' if env._state==['h'] and so on until helloworld
-    robot.add_controller(lambda data: Action(TARGET[len(data["state"])]) if len(data["state"]) < len(TARGET) else None)
+    robot.add_controller(lambda data: [Action(TARGET[len(data["state"])])] if len(data["state"]) < len(TARGET) else [])
 
     robot.run()
     data_channel.close()
@@ -166,11 +166,11 @@ def test_i_Robot_replay_from_logs_online_compare(tmp_path: Path, monkeypatch: py
 
     DataStorer.get_instance().close()
 
-    def replay_controller_fn(data: dict[str, DataItem]):
+    def replay_controller_fn(data: dict[str, DataItem]) -> list[Action]:
         if len(data["state"]) == len(TARGET):
-            return None
+            return []
         assert data["state"] == data["replay_state"].tolist(), (data["state"], data["replay_state"])
-        return Action(TARGET[len(data["state"])])
+        return [Action(TARGET[len(data["state"])])]
 
     # just read the data that was created via the data channel
     print("="*80)

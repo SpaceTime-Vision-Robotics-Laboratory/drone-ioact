@@ -1,56 +1,57 @@
-# SDL2 backend for ScreenDisplayer + multi-key support
+# SDL2 backend for ScreenDisplayer
 
-**Status:** open | **Created:** 2026-04-14 | **Priority:** 1
+**Status:** open | **Created:** 2026-04-14 | **Priority:** 2
 
 ## Problem
 
-Cannot press multiple keys simultaneously. Current backends:
-- **tkinter**: has press/release events (multi-key possible) but slow for real-time display
+- **tkinter**: has press/release events but auto-repeat quirks on Linux, slow for real-time display
 - **cv2**: fast display but `waitKey` returns one key per call (no multi-key, no press/release)
 
 Need: fast display + multi-key tracking + window-scoped (two clients = two windows = independent control).
 
-## Solution
+## What's done
 
-### 1. SDL2 backend via ctypes (no pip dependency)
+### Multi-key keyboard refactor (complete, branch `updates-from-robosim`)
 
-SDL2 is a system library on Linux. Use ctypes to bind ~15 functions:
-- `SDL_Init`, `SDL_Quit`
-- `SDL_CreateWindow`, `SDL_DestroyWindow`
-- `SDL_CreateRenderer`, `SDL_CreateTexture`, `SDL_UpdateTexture`, `SDL_RenderCopy`, `SDL_RenderPresent`
-- `SDL_PollEvent` (gives `SDL_KEYDOWN`, `SDL_KEYUP` with scancodes)
-- `SDL_GetKeyboardState` (multi-key pressed array, window-scoped)
+- `key_to_action` removed entirely — replaced by `keyboard_fn: Callable[[set[Key]], list[Action]]`
+- `_PYNPUT_KEYCODE_MAP` and `make_keyboard_listener()` in `screen_displayer_utils.py` (shared by tkinter + cv2)
+- Both backends use pynput for keyboard, `DisplayerBackend` ABC has `key_event` property
+- `ScreenDisplayer.run()`: `poll_events()` pumps UI every iteration, `keyboard_fn` gated on data frames OR key events
+- `ControllerFn` type returns `list[Action]`, `Controller.run()` iterates directly
+- All examples migrated (robosim, video, olympe, gym, maze, hello-world)
+- All tests pass (35/35)
 
-~100-150 lines of wrapper code. Zero dead code. Fast (hardware-accelerated). Multi-key. Window-scoped. Works on a thread on Linux.
+### Architecture
 
-### 2. Refactor key_to_action to pressed-set callback
-
-Replace `key_to_action: dict[Key, Action]` with:
 ```
-keyboard_fn(pressed_keys: set[Key], data: dict) -> Action | list[Action] | None
+pynput listener thread          ScreenDisplayer.run() loop
+  _on_press → pressed.add()      poll_events() every iter (pumps UI)
+  _on_release → pressed.discard()  keyboard_fn(pressed) on data OR key events
+  event.set()                       → actions_queue.put()
 ```
 
-Same signature works for all backends:
-- **tkinter**: maintains pressed set from press/release events -> multi-key works
-- **cv2**: pressed set has at most 1 key per poll (known limitation, not a bug)
-- **SDL2**: full multi-key via `SDL_GetKeyboardState`
+## Remaining
 
-User code never knows which backend — just gets a pressed set and returns actions.
+### SDL2 backend
 
-### 3. Core principle: minimize dependencies
+New `screen_displayer_sdl2.py` implementing `DisplayerBackend`, using `pysdl2` (thin ctypes wrapper over system `libSDL2`).
 
-SDL2 via ctypes means zero pip dependencies. The library (`libSDL2`) is pre-installed on virtually every Linux desktop. Aligns with project principle of near-zero dead code.
+Key SDL2 features:
+- `SDL_CreateWindow` / `SDL_CreateRenderer` / `SDL_CreateTexture` — hardware-accelerated display
+- `SDL_PollEvent` — pump event loop (window resize, close, etc.)
+- `SDL_GetKeyboardState` — snapshot of all held keys → map to `Key` enum → `set[Key]`
+- Events include `windowID` — window-scoped input for free (no pynput needed)
 
-## Context
+Add `"sdl2"` to the backend dict in `screen_displayer.py`, selectable via `ROBOIMPL_SCREEN_DISPLAYER_BACKEND=sdl2`.
 
-- See `client2.py` in uav-trajectories-raylib for the pynput-based pattern that inspired this (global capture, not window-scoped — insufficient for multi-client)
-- GitLab #1 originally wanted to get rid of opencv; #18 added the Key enum mapper across backends
-- This supersedes both: SDL2 gives fast display + proper keyboard in one backend
+## Dependencies
+
+- System: `libSDL2` (apt/brew/system package)
+- Python: `pysdl2` (pip, pure Python ctypes wrapper)
 
 ## Done when
 
-- SDL2 backend exists as `ScreenDisplayerSDL2` implementing `DisplayerBackend`
-- `ScreenDisplayer` accepts `keyboard_fn(pressed: set[Key], data) -> Action | list[Action] | None` instead of `key_to_action` dict
-- tkinter backend updated to maintain `pressed_keys` set
-- cv2 backend unchanged (single-key limitation documented)
+- `ScreenDisplayerSDL2` exists implementing `DisplayerBackend`
+- `poll_events()` returns `set[Key]` via `SDL_GetKeyboardState` (no pynput needed for SDL2)
+- Selectable via `ROBOIMPL_SCREEN_DISPLAYER_BACKEND=sdl2`
 - Two simultaneous clients can be controlled independently via window focus

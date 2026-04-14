@@ -1,18 +1,11 @@
-"""screen_displayer_tkinter.py - Tkinter-based screen displayer"""
+"""screen_displayer_tkinter.py - Tkinter-based screen displayer. Uses pynput for multi-key support. Sadly global."""
+import threading
 import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 from overrides import overrides
 
-from roboimpl.utils import logger
-from .screen_displayer_utils import DisplayerBackend, Key
-
-_KEYCODE_MAP: dict[str, Key] = {
-    **{chr(k): getattr(Key, chr(k)) for k in range(ord("a"), ord("z") + 1)},
-    "Left": Key.Left, "Up": Key.Up, "Right": Key.Right, "Down": Key.Down,
-    "Escape": Key.Esc, "Return": Key.Enter, "space": Key.Space, "Prior": Key.PageUp, "Next": Key.PageDown,
-    "comma": Key.Comma, "period": Key.Period
-}
+from .screen_displayer_utils import DisplayerBackend, Key, PYNPUT, make_keyboard_listener
 
 class ScreenDisplayerTkinter(DisplayerBackend):
     """Tkinter-based screen displayer. The OG one, but lags unfortunetely on larger environments (keyboard drops)"""
@@ -21,8 +14,9 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.root: tk.Tk | None = None
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
-        self._pending_events: list[Key] = []
         self._previous_resolution: tuple[int, int] = (0, 0)
+        self._pressed: set[Key] = set()
+        self._key_event: threading.Event = None
 
     @overrides
     def initialize_window(self, height: int, width: int, title: str):
@@ -32,22 +26,25 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.canvas = tk.Canvas(self.root, height=height, width=width)
         self.canvas.pack(fill="both", expand=True)
         self.canvas.focus_set()
-        self.root.bind("<KeyRelease>", self._on_key_release)
+
+        if PYNPUT:
+            self._pressed, self._key_event = make_keyboard_listener()
 
     @overrides
     def get_current_size(self) -> tuple[int, int]:
         return self.canvas.winfo_height(), self.canvas.winfo_width()
 
     @overrides
-    def poll_events(self) -> list[Key]:
+    def poll_events(self) -> set[Key]:
         self.root.update()
-        events = self._pending_events
-        self._pending_events = []
-        if len(events) > 0:
-            logger.log_every_s(f"Returning {len(events)} events", "DEBUG", True)
-            if len(events) > 1:
-                logger.error(f"Returning {len(events)} events")
-        return events
+        if not PYNPUT:
+            return set()
+        return self._pressed
+
+    @property
+    @overrides
+    def key_event(self) -> threading.Event:
+        return self._key_event
 
     @overrides
     def update_frame(self, frame: np.ndarray):
@@ -62,6 +59,3 @@ class ScreenDisplayerTkinter(DisplayerBackend):
     @overrides
     def close_window(self):
         self.root.destroy()
-
-    def _on_key_release(self, event: tk.Event):
-        self._pending_events.append(_KEYCODE_MAP[event.keysym])

@@ -1,17 +1,29 @@
-from robobase import ActionsQueue, DataChannel, Action as A
+from robobase import ActionsQueue, DataChannel, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
 import pytest
 
 def test_ScreenDisplayer_keyboard_mock_queue():
-    key_to_action = {Key.q: A("act_Q"), Key.x: A("act_X"), Key.Esc: A("act_esc")}
-    aq = ActionsQueue(action_names=[a.name for a in key_to_action.values()])
+    def _keyboard_fn(pressed: set[Key]) -> list[Act]:
+        if Key.q in pressed:
+            return [Act("act_Q")]
+        if Key.x in pressed:
+            return [Act("act_X")]
+        if Key.Esc in pressed:
+            return [Act("act_esc")]
+        if len(pressed) > 0:
+            raise ValueError
+        return []
+
+    aq = ActionsQueue(action_names=["act_Q", "act_X", "act_esc"])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action, backend="tkinter")
+    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, keyboard_fn=_keyboard_fn, backend="tkinter")
 
     def make_keypress(key: Key):
-        sd._on_event(key)
+        for action in sd.keyboard_fn({key}):
+            sd.actions_queue.put(action, data_ts=None, block=True)
 
-    make_keypress(Key.a)
+    with pytest.raises(ValueError):
+        make_keypress(Key.a)
     assert len(aq) == 0
     make_keypress(Key.q)
     assert len(aq) == 1
@@ -27,10 +39,3 @@ def test_ScreenDisplayer_keyboard_mock_queue():
     assert aq.get()[0].name == "act_X"
     assert aq.get()[0].name == "act_esc"
     assert len(aq) == 0
-
-def test_ScreenDisplayer_key_to_actions():
-    aq = ActionsQueue(action_names=["act1", "act2"])
-    data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    key_to_action = {Key.a: A("act1", (5, )), Key.b: A("act2")}
-    sd = ScreenDisplayer(data_channel=data_channel, actions_queue=aq, key_to_action=key_to_action)
-    assert {a.name for a in sd.key_to_action.values()} == {"act1", "act2"}
