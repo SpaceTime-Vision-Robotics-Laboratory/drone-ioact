@@ -3,13 +3,14 @@
 from argparse import ArgumentParser, Namespace
 import socket
 import zlib
-import numpy as np
 import threading
+import numpy as np
 from loggez import make_logger
 import matplotlib
 
 from robobase import Environment, Robot, DataChannel, ActionsQueue, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers.keyboard_controller import KeyboardController
 #from robosim.utils import Point6D, Pose4x4, fmt, pose_to_trans_euler, relative_velocity_from_poses
 from robosim.network import send_packet, recv_packet # noqa pylint: disable=all
 
@@ -167,7 +168,9 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(action_names=action_names)
     robot = Robot(env, data_channel, actions_queue, actions_fn)
 
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, keyboard_fn=keyboard_fn))
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn))
+
     robot.run()
     env.close()
 

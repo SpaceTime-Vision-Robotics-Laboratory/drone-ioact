@@ -1,11 +1,10 @@
 """screen_displayer_tkinter.py - Tkinter-based screen displayer. Uses pynput for multi-key support. Sadly global."""
-import threading
 import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 from overrides import overrides
 
-from .screen_displayer_utils import DisplayerBackend, Key, PYNPUT, make_keyboard_listener
+from .screen_displayer_utils import DisplayerBackend
 
 class ScreenDisplayerTkinter(DisplayerBackend):
     """Tkinter-based screen displayer. The OG one, but lags unfortunetely on larger environments (keyboard drops)"""
@@ -15,8 +14,6 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.canvas: tk.Canvas | None = None
         self.photo: ImageTk.PhotoImage | None = None
         self._previous_resolution: tuple[int, int] = (0, 0)
-        self._pressed: set[Key] = set()
-        self._key_event: threading.Event = None
 
     @overrides
     def initialize_window(self, height: int, width: int, title: str):
@@ -27,24 +24,13 @@ class ScreenDisplayerTkinter(DisplayerBackend):
         self.canvas.pack(fill="both", expand=True)
         self.canvas.focus_set()
 
-        if PYNPUT:
-            self._pressed, self._key_event = make_keyboard_listener()
-
     @overrides
     def get_current_size(self) -> tuple[int, int]:
         return self.canvas.winfo_height(), self.canvas.winfo_width()
 
     @overrides
-    def poll_events(self) -> set[Key]:
+    def poll_events(self):
         self.root.update()
-        if not PYNPUT:
-            return set()
-        return self._pressed
-
-    @property
-    @overrides
-    def key_event(self) -> threading.Event:
-        return self._key_event
 
     @overrides
     def update_frame(self, frame: np.ndarray):

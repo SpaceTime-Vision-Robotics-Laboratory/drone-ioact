@@ -5,7 +5,7 @@ import gymnasium as gym
 import numpy as np
 from loggez import make_logger
 from robobase import Robot, DataChannel, ActionsQueue, Action
-from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 from roboimpl.envs.gym import GymEnv, GymState, gym_action_fn, GYM_ACTION_NAMES
 
 logger = make_logger("GYM")
@@ -26,8 +26,9 @@ def main():
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=gym_action_fn)
     robot.add_controller(partial(controller_fn, action_space=env.action_space))
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render(),
-                                         keyboard_fn=lambda pressed: [Action("close")] if Key.Esc in pressed else []))
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render()))
+    keyboard_fn = lambda pressed: [Action("close")] if Key.Esc in pressed else []
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
 
     robot.run()
     env.close()

@@ -57,10 +57,14 @@ class Robot:
 
     def add_controller(self, controller: BaseController | ControllerFn, name: str | None = None):
         """Add a controller with optionally a name to this robot. If name is not set, it will be Controller-{i}"""
+        if name is None:
+            if isinstance(controller, BaseController) and not isinstance(controller, Controller):
+                name = f"Controller: {parsed_str_type(controller)}"
+            else:
+                name = f"Controller-{len(self._controllers)}"
         if isinstance(controller, Callable):
             controller = Controller(self.data_channel, self.actions_queue, controller_fn=controller)
         assert isinstance(controller, BaseController), f"Expected 'robobase.Controller', got {type(controller)}"
-        name = name or f"Controller-{len(self._controllers)}"
         self._controllers[name] = controller
 
     def add_other_thread(self, thread: threading.Thread, name: str | None = None):

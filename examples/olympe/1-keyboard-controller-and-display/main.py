@@ -5,7 +5,7 @@ from queue import Queue
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
 from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
-from roboimpl.controllers import ScreenDisplayer, Key
+from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 
 QUEUE_MAX_SIZE = 30
 RESOLUTION = 480, 640
@@ -58,8 +58,8 @@ def main(args: Namespace):
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, keyboard_fn=keyboard_fn, resolution=RESOLUTION)
-    robot.add_controller(screen_displayer, name="Screen Displayer")
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
     robot.run()
 
     data_channel.close()
