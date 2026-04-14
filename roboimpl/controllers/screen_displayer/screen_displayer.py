@@ -22,19 +22,14 @@ class ScreenDisplayer(BaseController):
     def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
                  resolution: tuple[int, int] | None = None,
                  screen_frame_callback: Callable[[DataItem], np.ndarray | None] | None = None,
-                 key_to_action: dict[str, Action] | None = None,
+                 keyboard_fn: Callable[[set[Key]], Action | list[Action] ] = None,
                  toggle_info_key: str | None = None, backend: str | None = None):
         super().__init__(data_channel=data_channel, actions_queue=actions_queue)
         self.initial_resolution = resolution
-        self.key_to_action = k2a = key_to_action or {}
+        self.keyboard_fn = keyboard_fn or self._keyboard_fn
         self.toggle_info_key = toggle_info_key or "i"
         self.backend_type = backend or DEFAULT_BACKEND
         self.screen_frame_callback = screen_frame_callback or ScreenDisplayer.rgb_only_displayer
-        assert all(isinstance(a, Action) for a in k2a.values()), [(a, type(a)) for a in k2a.values()]
-        assert all(isinstance(k, Key) for k in k2a.keys()), [(k, type(k)) for k in k2a.keys()]
-        assert all(v.name in actions_queue.action_names for v in k2a.values()), f"\n-{k2a=}\n-Actions: {actions_queue}"
-        assert self.toggle_info_key not in k2a, f"{self.toggle_info_key=} clash with {key_to_action=}"
-        assert self.backend_type in ("tkinter", "cv2", ), self.backend_type
 
         self.backend: DisplayerBackend = {
             "tkinter": lambda: ScreenDisplayerTkinter(),
@@ -46,22 +41,10 @@ class ScreenDisplayer(BaseController):
         """returns the final frame as RGB from the current data (rgb, semantic etc.)"""
         return data["rgb"]
 
-    def add_to_queue(self, action: Action):
-        """pushes an action to queue. Separate method so we can easily override it (i.e. priority queue put)"""
-        self.actions_queue.put(action, data_ts=None, block=True)
-
-    def _on_event(self, event: Key): # Note: only key_release events, see todo.
-        if event == self.toggle_info_key:
-            logger.debug(f"Pressed '{event}' (key info). TODO: not implemented")
-            return
-
-        action: Action | None = self.key_to_action.get(event)
-        if action is None:
-            logger.debug(f"Unused char: {event}")
-            return
-
-        logger.log_every_s(f"Pressed '{event}'. Pushing: {action} to the actions queue.", "INFO", True)
-        self.add_to_queue(action)
+    def _keyboard_fn(self, events: set[Key]) -> list[Action]:
+        logger.log_every_s(f"Pressed '{events}'", "INFO", True)
+        events.clear()
+        return []
 
     def _get_initial_height_width(self, prev_data: dict[str, DataItem]) -> tuple[int, int]:
         """try hard to get the initial h,w. Either provided in ctor, from data (if 'rgb' is found) or default"""
@@ -82,16 +65,23 @@ class ScreenDisplayer(BaseController):
         fpss = CircularBuffer(capacity=20)
 
         while self.data_channel.has_data():
-            for event in self.backend.poll_events():
-                self._on_event(event)
+            events = self.backend.poll_events() # need to call this to also update the frames
             logger.log_every_s(f"FPS: {len(fpss) / (sum(fpss.get()) + 1e-5):.2f}", "INFO")
             new_state = DisplayerState(resolution=self.backend.get_current_size(), hud=False)
 
-            ui_events = new_state != old_state # UI events i.e. resize or toggle info
-            data_events = self.data_channel_event.wait(timeout=TIMEOUT_S) # data events: new frame arived
-            if not ui_events and not data_events:
+            ui_event = new_state != old_state # UI events i.e. resize or toggle info
+            data_event = self.data_channel_event.wait(timeout=TIMEOUT_S) # data events: new frame arived
+            key_event = self.backend.key_event is not None and self.backend.key_event.is_set()
+            if not ui_event and not data_event and not key_event:
                 continue
-            logger.log_every_s(f"Updating UI: {ui_events=}, {data_events=}", "DEBUG", log_to_next_level=True)
+            logger.log_every_s(f"Updating UI: {ui_event=}, {data_event=}", "DEBUG", log_to_next_level=True)
+
+            # call the keyboard function only if there's new data to process.
+            if key_event:
+                if self.toggle_info_key in events:
+                    logger.debug(f"Pressed '{self.toggle_info_key}' (key info). TODO: not implemented")
+                for action in self.keyboard_fn(events):
+                    self.actions_queue.put(action, data_ts=None, block=True)
 
             self.data_channel_event.clear() # if green, make it red again
             curr_data, _ = self.data_channel.get(return_copy=False)
@@ -101,8 +91,6 @@ class ScreenDisplayer(BaseController):
                 continue
             frame_rsz = image_resize(frame, height=new_state.resolution[0], width=new_state.resolution[1],
                                      interpolation="nearest") # can be noop. 'nearest' for max speed.
-            for event in self.backend.poll_events(): # little hack to get more keyboard events polled before this call
-                self._on_event(event)
             self.backend.update_frame(frame_rsz)
 
             fpss.add((new_state.ts - old_state.ts).total_seconds())

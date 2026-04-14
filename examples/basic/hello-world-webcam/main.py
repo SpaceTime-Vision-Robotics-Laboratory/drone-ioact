@@ -35,14 +35,23 @@ def action_fn(env: WebcamEnv, action: Action) -> bool | None:
         env.cam.release()
     return True
 
+def keyboard_fn(pressed: set[Key]) -> list[Action]:
+    """keyboard to actions function"""
+    res = []
+    if Key.Space in pressed:
+        res.append(Action("pause"))
+        pressed.discard(Key.Space)
+    if Key.Esc in pressed:
+        return [Action("close")]
+    return res
+
 def main():
     """main fn"""
-    env = WebcamEnv(device_id=0 if len(sys.argv) == 0 else int(sys.argv[1])) # change if needed
+    env = WebcamEnv(device_id=0 if len(sys.argv) == 1 else int(sys.argv[1])) # change if needed
     data_channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: False) # eq fn: every data is assumed new
     actions_queue = ActionsQueue(action_names=["pause", "close"])
     robot = Robot(env, data_channel, actions_queue, action_fn=action_fn)
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue,
-                                         key_to_action={Key.Space: Action("pause"), Key.Esc: Action("close")}))
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, keyboard_fn=keyboard_fn))
     robot.run()
 
     data_channel.close()

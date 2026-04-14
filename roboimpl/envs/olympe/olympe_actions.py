@@ -9,8 +9,7 @@ from .olympe_env import OlympeEnv
 
 # the list of all supported actions from our generic ones to the drone's internal ones.
 OLYMPE_ACTION_NAMES = [
-    "DISCONNECT", "LIFT", "LAND", "FORWARD", "BACKWARD", "LEFT", "RIGHT", "ROTATE_LEFT", "ROTATE_RIGHT",
-    "INCREASE_HEIGHT", "DECREASE_HEIGHT", "GIMBAL_UP", "GIMBAL_DOWN", "GIMBAL_ABSOLUTE", "PILOTING"
+    "DISCONNECT", "LIFT", "LAND", "PILOTING", "GIMBAL_UP", "GIMBAL_DOWN", "GIMBAL_ABSOLUTE"
 ]
 
 def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
@@ -19,42 +18,32 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
     if action.name == "DISCONNECT":
         drone.streaming.stop()
         return True
+
     if action.name == "LIFT":
         return drone(TakeOff()).wait().success()
+
     if action.name == "LAND":
         return drone(Landing()).wait().success()
+
     if action.name == "PILOTING":
         roll, pitch, yaw, gaz, piloting_time = action.parameters
+        if any(not -100 <= v <= 100 for v in [roll, pitch, yaw, gaz]):
+            logger.error(f"Velocity not in [-100:100]. Got: {action}")
+            return False
         return drone.piloting(roll, pitch, yaw, gaz, piloting_time)
+
     if action.name == "GIMBAL_ABSOLUTE":
         gimbal_kwargs = {"gimbal_id": 0, "control_mode": "position", "yaw_frame_of_reference": "none", "yaw": 0,
                          "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute"}
         drone(gimbal.set_target(pitch=action.parameters[0], **gimbal_kwargs))
         return True
 
-    # All actions below are in (velocity, time), meaning we apply that velocity for some time. drone.piloting() does
-    # this for us, but for gimbal, we do it ourselves (blocking for now).
+    # drone.piloting() does this for us, but for gimbal, we do it ourselves (blocking for now).
     velocity, piloting_time = action.parameters
     if not -100 <= velocity <= 100:
         logger.error(f"Velocity not in [-100:100]. Got: {velocity}")
         return False
 
-    if action.name == "FORWARD":
-        return drone.piloting(roll=0, pitch=velocity, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action.name == "BACKWARD":
-        return drone.piloting(roll=0, pitch=-velocity, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action.name == "LEFT":
-        return drone.piloting(roll=-velocity, pitch=0, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action.name == "RIGHT":
-        return drone.piloting(roll=velocity, pitch=0, yaw=0, gaz=0, piloting_time=piloting_time)
-    if action.name == "ROTATE_LEFT":
-        return drone.piloting(roll=0, pitch=0, yaw=-velocity, gaz=0, piloting_time=piloting_time)
-    if action.name == "ROTATE_RIGHT":
-        return drone.piloting(roll=0, pitch=0, yaw=velocity, gaz=0, piloting_time=piloting_time)
-    if action.name == "INCREASE_HEIGHT":
-        return drone.piloting(roll=0, pitch=0, yaw=0, gaz=velocity, piloting_time=piloting_time)
-    if action.name == "DECREASE_HEIGHT":
-        return drone.piloting(roll=0, pitch=0, yaw=0, gaz=-velocity, piloting_time=piloting_time)
     # gimbal stuff
     gimbal_kwargs = {"gimbal_id": 0, "control_mode": "velocity", "yaw_frame_of_reference": "none", "yaw": 0,
                      "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute"}

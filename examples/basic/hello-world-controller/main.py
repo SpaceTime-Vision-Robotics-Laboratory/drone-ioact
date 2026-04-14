@@ -29,20 +29,20 @@ class BasicEnv(Environment):
     def get_modalities(self) -> list[str]:
         return ["ts", "state"]
 
-def controller_fn(data: dict[str, DataItem]):
+def controller_fn(data: dict[str, DataItem]) -> list[Action]:
     """Basic controller function. Returns the next character given the current state, i.e. push 'e' if state==['h']"""
     match "".join(data["state"]):
-        case "": return Action("h")
-        case "h": return Action("e")
-        case "he": return Action("l")
-        case "hel": return Action("l")
-        case "hell": return Action("o")
-        case "hello": return Action("w")
-        case "hellow": return Action("o")
-        case "hellowo": return Action("r")
-        case "hellowor": return Action("l")
-        case "helloworl": return Action("d")
-        case "helloworld": return None
+        case "": return [Action("h")]
+        case "h": return [Action("e")]
+        case "he": return [Action("l")]
+        case "hel": return [Action("l")]
+        case "hell": return [Action("o")]
+        case "hello": return [Action("w")]
+        case "hellow": return [Action("o")]
+        case "hellowo": return [Action("r")]
+        case "hellowor": return [Action("l")]
+        case "helloworl": return [Action("d")]
+        case "helloworld": return []
     raise ValueError(data["state"])
 
 def main():

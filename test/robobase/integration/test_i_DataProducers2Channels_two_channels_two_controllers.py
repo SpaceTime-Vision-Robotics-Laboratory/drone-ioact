@@ -45,15 +45,15 @@ def rgb_rev_produce_fn(deps: dict[str, DataItem] | None = None) -> dict[str, Dat
     time.sleep(0.5)
     return {"rgb_rev": deps["rgb"][:, ::-1]}
 
-def controller_fn1(data: dict[str, DataItem]) -> Action:
+def controller_fn1(data: dict[str, DataItem]) -> list[Action]:
     global N1
     N1 += 1
-    return None
+    return []
 
-def controller_fn2(data: dict[str, DataItem]) -> Action:
+def controller_fn2(data: dict[str, DataItem]) -> list[Action]:
     global N2
     N2 += 1
-    return None
+    return []
 
 def test_i_DataProducers2Channels_two_channels_two_controllers():
     """main fn"""

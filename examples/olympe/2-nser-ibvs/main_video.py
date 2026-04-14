@@ -7,6 +7,7 @@ Usage: VIDEO_FPS=15 ./main.py ../frames/ --weights_path_yolo 29_05_best__yolo11n
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from functools import partial
 from vre_video import VREVideo
 import numpy as np
 from loggez import loggez_logger as logger
@@ -14,7 +15,7 @@ from loggez import loggez_logger as logger
 from detection.mask_splitter_data_producer import MaskSplitterDataProducer
 from auto_follow_logs_frame_reader import AutoFollowLogsFrameReader
 
-from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action as A
+from robobase import Robot, DataChannel, ActionsQueue, DataItem, Action as Act
 from roboimpl.data_producers.yolo import YOLODataProducer
 from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer, Key
@@ -51,6 +52,26 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
             x1, y1, x2, y2 = bbox
             image_draw_rectangle(res, (y1, x1), (y2, x2), color=Color.BLACK, thickness=BBOX_THICKNESS, inplace=True)
 
+    return res
+
+def keyboard_fn(pressed: set[Key], fps: float) -> list[Act]:
+    """The keyboard to actions function"""
+    if Key.Esc in pressed:
+        return [Act("DISCONNECT")]
+    res = []
+    if Key.Space in pressed:
+        res.append(Act("PLAY_PAUSE"))
+        pressed.discard(Key.Space)
+    if Key.Left in pressed:
+        res.append(Act("GO_BACK", (fps, )))
+    if Key.Right in pressed:
+        res.append(Act("GO_FORWARD", (fps, )))
+    if Key.Comma in pressed:
+        res.append(Act("GO_BACK", (1, )))
+        pressed.discard(Key.Comma)
+    if Key.Period in pressed:
+        res.append(Act("GO_FORWARD", (1, )))
+        pressed.discard(Key.Period)
     return res
 
 def get_args() -> Namespace:
@@ -96,11 +117,9 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    key_to_action = {Key.Space: A("PLAY_PAUSE"), Key.Esc: A("DISCONNECT"), Key.Left: A("GO_BACK", (env.fps, )),
-                     Key.Right: A("GO_FORWARD", (env.fps, )), Key.Comma: A("GO_BACK", (1, )),
-                     Key.Period: A("GO_FORWARD", (1, ))}
     screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
-                                       screen_frame_callback=screen_frame_callback, key_to_action=key_to_action)
+                                       screen_frame_callback=screen_frame_callback,
+                                       keyboard_fn=partial(keyboard_fn, fps=env.fps))
     robot.add_controller(screen_displayer, name="Screen displayer")
     robot.add_other_thread(env, name="Video player")
 
