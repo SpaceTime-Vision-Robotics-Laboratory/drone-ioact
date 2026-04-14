@@ -20,14 +20,14 @@ def _make_status(status: dict[str, ThreadStatus], env: Environment, start_time: 
     duration = (datetime.now() - start_time).total_seconds()
     lines = [
         f"Robot ran for: {duration:.2f} seconds.",
-        f"{'Thread':<30} {'Alive':<10} {'Exception':<50}",
+        f"{'Thread':<35} {'Alive':<10} {'Exception':<50}",
         "-" * 90,
     ]
 
     for name, ts in status.items():
         exc_str = "-" if ts.exception is None else f"{type(ts.exception).__name__}: {str(ts.exception)}"
-        lines.append(f"{name:<30} {str(ts.is_alive):<10} {exc_str:<50}")
-    lines.append(f"Env: {parsed_str_type(env):<25} {str(env.is_running()):<10} {'-':<50}")
+        lines.append(f"{name:<35} {str(ts.is_alive):<10} {exc_str:<50}")
+    lines.append(f"Env: {parsed_str_type(env):<30} {str(env.is_running()):<10} {'-':<50}")
     lines.append("-" * 90 + "\n")
     return "\n".join(lines)
 

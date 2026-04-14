@@ -1,100 +1,29 @@
 #!/usr/bin/env python3
 """A simple TCP client to connect to the simulator server and interact with the robot/UAV"""
 from argparse import ArgumentParser, Namespace
-import socket
-import zlib
-import threading
 import numpy as np
 from loggez import make_logger
-import matplotlib
 
-from robobase import Environment, Robot, DataChannel, ActionsQueue, Action as Act
+from robosim_env import RobosimEnv
+from trajectory import TrajectoryController
+
+from robobase import Robot, DataChannel, ActionsQueue, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.controllers.keyboard_controller import KeyboardController
-#from robosim.utils import Point6D, Pose4x4, fmt, pose_to_trans_euler, relative_velocity_from_poses
-from robosim.network import send_packet, recv_packet # noqa pylint: disable=all
 
-logger = make_logger("CLIENT")
+logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
 DT = 1
 
-class Robosim(Environment):
-    """wrapper for thread-safe client->server conn"""
-    def __init__(self, host: str, port: int):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((host, port))
-        self.sock_lock = threading.Lock()
-        assert (recv := self.send_recv_packet({"cmd": "robot_claim_control"})) == {"status": "connected"}, recv
-        logger.info(f"Connected to '{host}:{port}'")
-
-    def send_recv_packet(self, data: dict) -> dict:
-        """send a packet and returns an answer"""
-        with self.sock_lock:
-            if data["cmd"] != "robot_get_state_with_camera":
-                logger.debug(f"Sending: {data}")
-            send_packet(self.sock, data)
-            res = recv_packet(self.sock)
-            if "fpv_compressed" not in res:
-                logger.debug(f"Received: {res}")
-            return res
-
-    def send_recv_packets(self, data: list[dict]) -> list[dict]:
-        """sends many packets and returns the answers"""
-        if len(data) == 0:
-            return []
-        res = []
-        logger.log_every_s(f"Sending {len(data)} messages", "DEBUG", log_to_next_level=True)
-        with self.sock_lock:
-            for msg in data:
-                send_packet(self.sock, msg)
-            for _ in range(len(data)):
-                res.append(recv_packet(self.sock))
-        return res
-
-    def get_state(self):
-        res = self.send_recv_packet({"cmd": "robot_get_state_with_camera"})
-        frame_bytes = zlib.decompress(res["fpv_compressed"])
-        proc = len(res["fpv_compressed"]) / np.prod(res["fpv_shape"]) * 100
-        logger.log_every_s(f"Recv: {len(res['fpv_compressed'])} -> "
-                           f"{np.prod(res['fpv_shape'])} bytes ({proc:.2f}%)", "TRACE")
-        res["rgb"] = np.frombuffer(frame_bytes, dtype=np.uint8).reshape(res["fpv_shape"])
-        return res
-
-    def is_running(self):
-        try:
-            self.sock.getpeername()
-            return True
-        except Exception as e:
-            logger.error(e)
-            return False
-
-    def get_modalities(self):
-        return ["robot", "rgb", "fpv_frame_id", "fpv_compressed", "fpv_shape"]
-
-    def get_maxes(self) -> np.ndarray:
-        """return the max allowed by this uav"""
-        state = self.send_recv_packet({"cmd": "robot_get_state"})
-        uav_type = state["robot"]["type"]
-
-        if uav_type == "UAVLevel1":
-            maxes = np.array(state["robot"]["max_velocities"], "float32")
-        elif uav_type == "UAVLevel2":
-            maxes = np.array(state["robot"]["max_accelerations"], "float32")
-        else:
-            raise ValueError(uav_type)
-        return maxes
-
-    def close(self):
-        self.sock.close()
-
 # utilities
 
-def actions_fn(env: Robosim, action: Act) -> bool:
+def actions_fn(env: RobosimEnv, action: Act) -> bool:
     """converts generic actions to robosim specific ones"""
     if action.name == "DISCONNECT":
         env.close()
         return True
 
+    msg = None
     if action.name == "MOVE":
         maxes = env.get_maxes()
         msg = {"cmd": "move", "control_input": (action.parameters[0] * maxes).tolist()}
@@ -121,7 +50,7 @@ def keyboard_fn(pressed: set[Key]) -> list[Act]:
     """basic keyboard controller - manuallly control the uav"""
     if len(pressed) == 0:
         return []
-    logger.info(pressed)
+    logger.log_every_s(f"Pressed: {pressed}", "DEBUG")
     if Key.Esc in pressed:
         return [Act("DISCONNECT")]
 
@@ -160,7 +89,7 @@ def get_args() -> Namespace:
 
 def main(args: Namespace):
     """main fn"""
-    env = Robosim(args.host, args.port)
+    env = RobosimEnv(args.host, args.port)
     data_channel = DataChannel(supported_types=env.get_modalities(),
                                eq_fn=lambda a, b: a["fpv_frame_id"] == b["fpv_frame_id"])
     action_names = ["MOVE", "DISCONNECT", "RESET", "LOAD_STATE", "SAVE_STATE"]
@@ -169,6 +98,7 @@ def main(args: Namespace):
 
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue))
     robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn))
+    robot.add_controller(TrajectoryController(data_channel, actions_queue, env))
 
     robot.run()
     env.close()
