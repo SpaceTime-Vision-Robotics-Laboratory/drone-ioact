@@ -15,7 +15,6 @@ from roboimpl.controllers.keyboard_controller import KeyboardController
 from robosim.network import send_packet, recv_packet # noqa pylint: disable=all
 
 logger = make_logger("CLIENT")
-matplotlib.rcParams["keymap.quit"] = []
 np.set_printoptions(precision=3, linewidth=120)
 DT = 1
 
