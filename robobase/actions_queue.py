@@ -5,7 +5,7 @@ from datetime import datetime
 from .action import Action
 from .utils import DataStorer, logger
 
-QUEUE_DEFAULT_MAX_SIZE = 100 # needed so .put() doesn't grow the queue indefinitely
+QUEUE_DEFAULT_MAX_SIZE = 20 # needed so .put() doesn't grow the queue indefinitely
 
 class ActionsQueue:
     """Interface defining the actions understandable by a drone and the application. Queue must be thread-safe!"""
@@ -34,6 +34,10 @@ class ActionsQueue:
     def get(self, *args, **kwargs) -> tuple[Action, datetime]:
         """Remove and return an item from the queue"""
         return self.queue.get(*args, **kwargs)
+
+    def get_nowait(self, *args, **kwargs) -> tuple[Action, datetime]:
+        """Remove and return an item from the queue without waiting"""
+        return self.queue.get_nowait(*args, **kwargs)
 
     def __len__(self):
         return self.queue.qsize()

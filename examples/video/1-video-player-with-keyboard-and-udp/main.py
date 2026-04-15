@@ -7,7 +7,7 @@ from functools import partial
 from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
-from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
+from roboimpl.envs.video import VideoPlayerEnv, video_actions_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer, UDPController, Key, KeyboardController
 
 DEFAULT_SCREEN_RESOLUTION = (420, 640)
@@ -47,7 +47,7 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
-    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=video_actions_fn)
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION))
     robot.add_controller(UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue))
     robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=partial(keyboard_fn, fps=env.fps)))

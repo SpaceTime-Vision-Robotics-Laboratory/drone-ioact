@@ -99,11 +99,12 @@ class Strategy1:
         potential_moves = [move for i, move in enumerate(potential_moves) if potential_scores[i] == min_score]
         return self.move(random.choice(potential_moves))
 
-def actions_fn(maze: MazeEnv, action: Action):
-    maze.step(action.name)
-    if PRINT:
-        print("\n" * 20)
-        maze.print_maze()
+def actions_fn(maze: MazeEnv, actions: list[Action]):
+    for action in actions:
+        maze.step(action.name)
+        if PRINT:
+            print("\n" * 20)
+            maze.print_maze()
 
 def get_args() -> Namespace:
     """cli args"""
@@ -129,7 +130,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["distance_to_exit", "n_moves"],
                                eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
-    robot = Robot(env=maze, data_channel=data_channel, actions_queue=actions_queue, action_fn=actions_fn)
+    robot = Robot(env=maze, data_channel=data_channel, actions_queue=actions_queue, actions_fn=actions_fn)
     robot.add_controller(controller_fn, name="Maze Planner")
     robot.run()
     data_channel.close()

@@ -18,7 +18,7 @@ from detection.mask_splitter_data_producer import MaskSplitterDataProducer, IMAG
 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act, DataProducer
 from roboimpl.data_producers.yolo import YOLODataProducer
-from roboimpl.envs.olympe import OlympeEnv, olympe_actions_fn, OLYMPE_ACTION_NAMES
+from roboimpl.envs.olympe import OlympeEnv, olympe_action_fn, OLYMPE_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 from roboimpl.utils import image_draw_rectangle, image_paste, image_draw_circle, Color
 
@@ -60,25 +60,27 @@ def screen_frame_callback(data: dict[str, DataItem]) -> np.ndarray:
 
     return res
 
-def ibvs_olympe_actions_fn(env: OlympeEnv, action: Act) -> bool:
+def ibvs_olympe_actions_fn(env: OlympeEnv, actions: list[Act]) -> bool:
     """IBVS actions fn. Overrides the generic olympe_actions_fn, but adds other specifics like INITIALIZE_FLIGHT"""
-    if action.name in OLYMPE_ACTION_NAMES:
-        return olympe_actions_fn(env, action)
+    all_good = True
+    for action in actions:
+        if action.name in OLYMPE_ACTION_NAMES:
+            all_good = all_good and olympe_action_fn(env, action)
+            continue
 
-    if action.name == "INITIALIZE_FLIGHT":
-        flying_state = env.drone.get_state(FlyingStateChanged)["state"]
-        if flying_state.name == "landed":
-            logger.info("Taking off...")
-            assert env.drone(TakeOff()).wait().success(), "TakeOff failed"
-            time.sleep(3)
-        gimbal_kwargs = {
-            "gimbal_id": 0, "control_mode": "position", "yaw_frame_of_reference": "none", "yaw": 0,
-            "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute",}
-        logger.info("Tilting gimbal to -45...")
-        env.drone(gimbal.set_target(pitch=-45, **gimbal_kwargs)).wait()
-        time.sleep(2)
-        return True
-    return False
+        if action.name == "INITIALIZE_FLIGHT":
+            flying_state = env.drone.get_state(FlyingStateChanged)["state"]
+            if flying_state.name == "landed":
+                logger.info("Taking off...")
+                assert env.drone(TakeOff()).wait().success(), "TakeOff failed"
+                time.sleep(3)
+            gimbal_kwargs = {
+                "gimbal_id": 0, "control_mode": "position", "yaw_frame_of_reference": "none", "yaw": 0,
+                "roll_frame_of_reference": "none", "roll": 0, "pitch_frame_of_reference": "absolute",}
+            logger.info("Tilting gimbal to -45...")
+            env.drone(gimbal.set_target(pitch=-45, **gimbal_kwargs)).wait()
+            time.sleep(2)
+    return all_good
 
 def keyboard_fn(pressed: set[Key]) -> list[Act]:
     """The keyboard to actions function"""
@@ -145,7 +147,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=supported_types,
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
-    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=ibvs_olympe_actions_fn)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=ibvs_olympe_actions_fn)
     for dp in dps:
         robot.add_data_producer(dp)
 

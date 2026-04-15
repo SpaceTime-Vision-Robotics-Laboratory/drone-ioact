@@ -14,37 +14,41 @@ from roboimpl.controllers.keyboard_controller import KeyboardController
 logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
 DT = 1
+MAXES = None
 
 # utilities
 
-def actions_fn(env: RobosimEnv, action: Act) -> bool:
+def actions_fn(env: RobosimEnv, actions: list[Act]) -> bool:
     """converts generic actions to robosim specific ones"""
-    if action.name == "DISCONNECT":
-        env.close()
-        return True
+    global MAXES # pylint: disable=global-statement
+    MAXES = env.get_maxes() if MAXES is None else MAXES
+    msgs = []
+    for action in actions:
+        if action.name == "DISCONNECT":
+            env.close()
+            return True
 
-    msg = None
-    if action.name == "MOVE":
-        maxes = env.get_maxes()
-        msg = {"cmd": "move", "control_input": (action.parameters[0] * maxes).tolist()}
+        if action.name == "MOVE":
+            msgs.append({"cmd": "move", "control_input": (action.parameters[0] * MAXES).tolist()})
 
-    if action.name == "RESET":
-        msg = {"cmd": "reset"}
+        if action.name == "RESET":
+            msgs.append({"cmd": "reset"})
 
-    if action.name == "LOAD_STATE":
-        msg = {"cmd": "load_state", "config_name": action.parameters[0]}
+        if action.name == "LOAD_STATE":
+            msgs.append({"cmd": "load_state", "config_name": action.parameters[0]})
 
-    if action.name == "SAVE_STATE":
-        msg = {"cmd": "save_state", "config_name": action.parameters[0]}
+        if action.name == "SAVE_STATE":
+            msgs.append({"cmd": "save_state", "config_name": action.parameters[0]})
 
-    if action.name == "RESET":
-        msg = {"cmd": "reset"}
-
-    res = env.send_recv_packet(msg)
-    if "error" in res:
-        logger.error(res)
-        return False
-    return True
+    resps = env.send_recv_packets(msgs)
+    had_errors = False
+    for resp in resps:
+        if "error" in resp:
+            logger.error(resp)
+            had_errors = True
+            if "robot" in resp:
+                MAXES = env.get_maxes()
+    return not had_errors
 
 def keyboard_fn(pressed: set[Key]) -> list[Act]:
     """basic keyboard controller - manuallly control the uav"""

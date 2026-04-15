@@ -10,7 +10,7 @@ from vre_repository.utils import colorize_depth, colorize_semantic_segmentation 
 
 from robobase import Robot, ActionsQueue, DataChannel, DataItem, Action as Act
 from roboimpl.data_producers.yolo import YOLODataProducer
-from roboimpl.envs.video import VideoPlayerEnv, video_action_fn, VIDEO_ACTION_NAMES
+from roboimpl.envs.video import VideoPlayerEnv, video_actions_fn, VIDEO_ACTION_NAMES
 from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
 from roboimpl.utils import image_draw_rectangle, image_paste, Color, image_resize
 from roboimpl.data_producers.vre import build_vre_data_producers
@@ -99,7 +99,7 @@ def main(args: Namespace):
 
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
     actions_queue = ActionsQueue(action_names=VIDEO_ACTION_NAMES)
-    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=video_action_fn)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=video_actions_fn)
     for dp in dps:
         robot.add_data_producer(dp)
 

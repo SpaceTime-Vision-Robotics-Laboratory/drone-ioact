@@ -14,14 +14,15 @@ RenderFrame = Any
 
 GYM_ACTION_NAMES = ["step", "reset", "close"]
 
-def gym_action_fn(env: GymEnv, act: Action):
+def gym_actions_fn(env: GymEnv, acts: list[Action]):
     """generic actions to gym-specific actions"""
-    if act == Action("reset"):
-        env.reset()
-    elif act == Action("close"):
-        env.close()
-    else:
-        env.step(act.parameters[0])
+    for act in acts:
+        if act == Action("reset"):
+            env.reset()
+        elif act == Action("close"):
+            env.close()
+        else:
+            env.step(act.parameters[0])
 
 @dataclass
 class GymState:

@@ -1,11 +1,13 @@
-"""replay.py - Example on how to use the replay functionalities (ReplayDataProducer, ActionsQueue [TODO]) of robobase"""
 #!/usr/bin/env python3
+"""replay.py - Example on how to use the replay functionalities (ReplayDataProducer, ActionsQueue [TODO]) of robobase"""
+# TODO: make a readme or something.
 import sys
 from robobase import Robot, DataChannel, ActionsQueue
 from robobase.replay import ReplayDataProducer
 from robobase.utils import logger
 
-from main import MAZE_MAX_TRIES, MAZE_WALLS_PROB, MAZE_SIZE, MazeEnv, Strategy1, actions_fn, random_controller_fn # pylint: disable=all
+from main import ( # pylint: disable=all
+    MAZE_MAX_TRIES, MAZE_WALLS_PROB, MAZE_SIZE, MazeEnv, Strategy1, actions_fn, random_controller_fn)
 
 def main():
     """main fn"""
@@ -23,7 +25,7 @@ def main():
     supported_types = [*supported_types, *[f"replay_{s}" for s in supported_types]]
     data_channel = DataChannel(supported_types=supported_types, eq_fn=lambda a, b: a["n_moves"] == b["n_moves"])
 
-    robot = Robot(env=maze, data_channel=data_channel, actions_queue=actions_queue, action_fn=actions_fn)
+    robot = Robot(env=maze, data_channel=data_channel, actions_queue=actions_queue, actions_fn=actions_fn)
     robot.add_data_producer(ReplayDataProducer(sys.argv[1], prefix="replay_"))
     robot.add_controller(controller_fn, name="Maze Planner")
     robot.run()

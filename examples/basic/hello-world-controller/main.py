@@ -51,7 +51,7 @@ def main():
     data_channel = DataChannel(supported_types=["ts", "state"], eq_fn=lambda a, b: a["state"] == b["state"])
     actions_queue = ActionsQueue(action_names=[chr(x) for x in range(ord("a"), ord("z") + 1)]) # from 'a' to 'z'
 
-    robot = Robot(env, data_channel, actions_queue, action_fn = lambda env, action: env.push(action.name))
+    robot = Robot(env, data_channel, actions_queue, actions_fn=lambda env, acts: [env.push(act.name) for act in acts])
     robot.add_controller(controller=controller_fn)
 
     robot.run()

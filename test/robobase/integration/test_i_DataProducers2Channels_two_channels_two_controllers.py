@@ -69,7 +69,7 @@ def test_i_DataProducers2Channels_two_channels_two_controllers():
     dpl = DataProducers2Channels(data_producers=[video_dp, rgb_rev_dp], data_channels=[dc1, dc2])
     ctrl1 = Controller(dc1, actions_queue, controller_fn1)
     ctrl2 = Controller(dc2, actions_queue, controller_fn2)
-    action2video = Actions2Environment(env=video_player, actions_queue=actions_queue, action_fn=lambda : None)
+    action2video = Actions2Environment(env=video_player, actions_queue=actions_queue, actions_fn=lambda : None)
 
     # start the threads
     threads = ThreadGroup({

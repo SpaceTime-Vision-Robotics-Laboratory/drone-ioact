@@ -10,7 +10,7 @@ from .data_producer import DataProducer, RawDataProducer
 from .controller import BaseController, Controller
 from .actions2env import Actions2Environment
 from .data_producers2channels import DataProducers2Channels
-from .types import ActionFn, ControllerFn
+from .types import ActionsFn, ControllerFn
 from .utils import ThreadGroup, ThreadStatus, logger, parsed_str_type
 
 SLEEP_TIME = 1
@@ -36,17 +36,17 @@ class Robot:
     Robot class that interacts with an environment and has a single data channel and a single actions queue.
     The action_fn is the callback that converts generic actions to env-specific commands.
     """
-    def __init__(self, env: Environment, data_channel: DataChannel, actions_queue: ActionsQueue, action_fn: ActionFn):
+    def __init__(self, env: Environment, data_channel: DataChannel, actions_queue: ActionsQueue, actions_fn: ActionsFn):
         self.env = env
         self.data_channel = data_channel
         self.actions_queue = actions_queue
-        self.action_fn = action_fn
+        self.actions_fn = actions_fn
 
         # setup up at run() time
         self._data_producers: list[DataProducer] = []
         self._env2data: DataProducers2Channels | None = None
         self._controllers: dict[str, Controller] = {}
-        self._actions2env = Actions2Environment(self.env, self.actions_queue, self.action_fn)
+        self._actions2env = Actions2Environment(self.env, self.actions_queue, self.actions_fn)
         self._other_threads: dict[str, threading.Thread] = {} # e.g. maybe we want to start the env at the same time.
 
     def add_data_producer(self, data_producer: DataProducer):

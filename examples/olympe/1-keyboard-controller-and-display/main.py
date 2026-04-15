@@ -57,7 +57,7 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=env.get_modalities(),
                                eq_fn=lambda a, b: a["metadata"]["time"] == b["metadata"]["time"])
 
-    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, action_fn=olympe_actions_fn)
+    robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=olympe_actions_fn)
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=RESOLUTION))
     robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
     robot.run()

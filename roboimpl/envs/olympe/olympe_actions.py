@@ -12,8 +12,8 @@ OLYMPE_ACTION_NAMES = [
     "DISCONNECT", "LIFT", "LAND", "PILOTING", "GIMBAL_UP", "GIMBAL_DOWN", "GIMBAL_ABSOLUTE"
 ]
 
-def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
-    """the actions callback from generic actions to drone-specific ones. Note: all actions are in (velocity, time) !"""
+def olympe_action_fn(env: OlympeEnv, action: Action) -> bool:
+    """non-batch variant as olympe doesn't support ootb batching"""
     drone = env.drone
     if action.name == "DISCONNECT":
         drone.streaming.stop()
@@ -57,3 +57,10 @@ def olympe_actions_fn(env: OlympeEnv, action: Action) -> bool:
         return True
 
     return False
+
+def olympe_actions_fn(env: OlympeEnv, actions: list[Action]) -> bool:
+    """the actions callback from generic actions to drone-specific ones. Note: all move acts are in (velocity, time)"""
+    all_good = True
+    for action in actions:
+        all_good = all_good and olympe_action_fn(env, action)
+    return all_good

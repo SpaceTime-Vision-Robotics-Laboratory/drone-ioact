@@ -158,7 +158,6 @@ class TrajectoryController(BaseController):
 
             event.wait()
             event.clear()
-            state = self.env.send_recv_packet({"cmd": "robot_get_state"})
 
             if "y" in pressed:
                 self.env.send_recv_packet({"cmd": "mission_add_via_point"})
@@ -167,6 +166,7 @@ class TrajectoryController(BaseController):
                 self.env.send_recv_packet({"cmd": "mission_clear_via_points"})
 
             if "u" in pressed:
+                state = self.env.send_recv_packet({"cmd": "robot_get_state"})
                 msg = self.env.send_recv_packet({"cmd": "mission_get_state"})
                 if len(via_points := msg["via_points"]) == 0:
                     logger.error("No via points")
@@ -174,8 +174,8 @@ class TrajectoryController(BaseController):
                 if msg["mission_state"] == "running":
                     logger.error(f"mission is already running: {msg}")
                     continue
-                maxes = _get_maxes(state)
 
+                maxes = _get_maxes(state) # get once per mission
                 traj = None
                 if state["robot"]["type"] == "UAVLevel1":
                     traj = create_traj_level1(np.array(state["robot"]["pose"]), np.array(via_points), maxes)
@@ -193,6 +193,6 @@ class TrajectoryController(BaseController):
                     else:
                         mission_started = True
                 else:
-                    logger.error(f"No trajectory was created. UAV type: {state["robot"]['type']}")
+                    logger.error(f"No trajectory was created. UAV type: {state['robot']['type']}")
 
             pressed.clear()

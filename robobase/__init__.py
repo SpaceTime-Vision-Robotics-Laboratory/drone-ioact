@@ -4,7 +4,7 @@ from .robot import Robot
 from .data_channel import DataChannel
 from .action import Action
 from .actions_queue import ActionsQueue
-from .types import DataItem, ActionFn, ControllerFn, DataEqFn
+from .types import DataItem, ActionsFn, ControllerFn, DataEqFn
 from .data_producer import DataProducer, LambdaDataProducer, RawDataProducer
 from .data_producers2channels import DataProducers2Channels
 from .controller import BaseController, Controller
@@ -17,7 +17,7 @@ __all__ = [
     "DataChannel",
     "Action",
     "ActionsQueue",
-    "DataItem", "ActionFn", "ControllerFn", "DataEqFn",
+    "DataItem", "ActionsFn", "ControllerFn", "DataEqFn",
     "DataProducer", "LambdaDataProducer", "RawDataProducer",
     "DataProducers2Channels",
     "BaseController", "Controller",
