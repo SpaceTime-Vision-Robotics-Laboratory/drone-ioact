@@ -1,0 +1,9 @@
+[submodule "examples/robosim/examples/robosim/uav-trajectories-raylib"]
+	path = examples/robosim/examples/robosim/uav-trajectories-raylib
+	url = https://gitlab.com/meehai/uav-trajectories-raylib
+[submodule "examples/robosim/examples/robosim/robosim"]
+	path = examples/robosim/examples/robosim/robosim
+	url = https://gitlab.com/meehai/uav-trajectories-raylib
+[submodule "examples/robosim/robosim"]
+	path = examples/robosim/robosim
+	url = https://gitlab.com/meehai/uav-trajectories-raylib
