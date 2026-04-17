@@ -1,6 +1,6 @@
 # Refactor ScreenDisplayer: key_to_action dict -> keyboard_fn callback
 
-**Status:** closed | **Created:** 2026-04-14 | **Closed:** 2026-04-14 | **Priority:** 1
+**Created:** 2026-04-14 | **Closed:** 2026-04-14 | **Priority:** 1
 
 ## Problem
 

@@ -1,5 +1,5 @@
 # Robosim robobase client latency — RESOLVED with maxsize=1
-**Status:** open | **Created:** 2026-04-14 | **Priority:** 1
+**Created:** 2026-04-14 | **Priority:** 1
 
 ## Problem
 

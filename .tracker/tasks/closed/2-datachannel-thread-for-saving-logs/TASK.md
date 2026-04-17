@@ -1,6 +1,6 @@
 # DataChannel thread for saving logs
 
-**Status:** closed | **Created:** 2026-01-12 | **Closed:** 2026-01-13 | **GitLab:** #2
+**Created:** 2026-01-12 | **Closed:** 2026-01-13 | **GitLab:** #2
 
 ## Problem
 

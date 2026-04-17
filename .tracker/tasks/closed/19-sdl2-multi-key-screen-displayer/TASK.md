@@ -1,6 +1,6 @@
 # SDL2 backend for ScreenDisplayer + KeyboardController
 
-**Status:** open | **Created:** 2026-04-14 | **Priority:** 2
+**Created:** 2026-04-14 | **Priority:** 2
 
 **Phase 1:** Add SDL2 alongside existing backends (cv2, tkinter, pynput).  
 **Phase 2:** Remove cv2/pynput, tkinter internal keyboard → Task #25

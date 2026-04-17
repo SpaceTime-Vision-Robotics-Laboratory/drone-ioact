@@ -1,6 +1,6 @@
 # Action should be a dataclass and nothing else
 
-**Status:** closed | **Created:** 2026-03-11 | **Closed:** 2026-03-12 | **GitLab:** #14
+**Created:** 2026-03-11 | **Closed:** 2026-03-12 | **GitLab:** #14
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # Extract KeyboardController from ScreenDisplayer
 
-**Status:** closed | **Created:** 2026-04-14 | **Closed:** 2026-04-14 | **Priority:** 2
+**Created:** 2026-04-14 | **Closed:** 2026-04-14 | **Priority:** 2
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # Add events to DataChannel and make controllers wait for it w/o busy waiting
 
-**Status:** closed | **Created:** 2026-02-06 | **Closed:** 2026-02-07 | **GitLab:** #6
+**Created:** 2026-02-06 | **Closed:** 2026-02-07 | **GitLab:** #6
 
 ## Problem
 

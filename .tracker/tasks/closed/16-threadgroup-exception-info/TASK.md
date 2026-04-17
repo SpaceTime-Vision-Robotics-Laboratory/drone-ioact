@@ -1,6 +1,6 @@
 # ThreadGroup with exception info on .join()
 
-**Status:** closed | **Created:** 2026-03-15 | **Closed:** 2026-03-15 | **GitLab:** #16
+**Created:** 2026-03-15 | **Closed:** 2026-03-15 | **GitLab:** #16
 
 ## Problem
 

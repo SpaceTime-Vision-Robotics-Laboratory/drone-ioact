@@ -1,6 +1,6 @@
 # Separation of concerns in DataStorer (singleton) vs. DataChannel
 
-**Status:** closed | **Created:** 2026-02-12 | **Closed:** 2026-02-14 | **GitLab:** #10
+**Created:** 2026-02-12 | **Closed:** 2026-02-14 | **GitLab:** #10
 
 ## Problem
 

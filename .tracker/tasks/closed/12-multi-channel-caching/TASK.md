@@ -1,6 +1,6 @@
 # Multi-Channel caching
 
-**Status:** closed | **Created:** 2026-02-15 | **Closed:** 2026-03-15 | **GitLab:** #12
+**Created:** 2026-02-15 | **Closed:** 2026-03-15 | **GitLab:** #12
 
 ## Problem
 

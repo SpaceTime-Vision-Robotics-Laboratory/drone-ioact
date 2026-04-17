@@ -1,6 +1,6 @@
 # Remove cv2/pynput, tkinter internal keyboard
 
-**Status:** open | **Created:** 2026-04-17 | **Priority:** 3
+**Created:** 2026-04-17 | **Priority:** 3
 
 **Depends on:** #19 (SDL2 backend working first)
 

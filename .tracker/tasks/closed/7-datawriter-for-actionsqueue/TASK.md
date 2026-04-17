@@ -1,6 +1,6 @@
 # DataWriter for ActionsQueue (+data channel ts for linking)
 
-**Status:** closed | **Created:** 2026-02-06 | **Closed:** 2026-02-14 | **GitLab:** #7
+**Created:** 2026-02-06 | **Closed:** 2026-02-14 | **GitLab:** #7
 
 ## Resolution
 

@@ -1,6 +1,6 @@
 # Get rid of opencv
 
-**Status:** closed | **Created:** 2025-11-16 | **Closed:** 2025-11-17 | **GitLab:** #1
+**Created:** 2025-11-16 | **Closed:** 2025-11-17 | **GitLab:** #1
 
 ## Problem
 

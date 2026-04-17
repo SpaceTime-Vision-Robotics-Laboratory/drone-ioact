@@ -1,6 +1,6 @@
 # Generic actions for different types of environments
 
-**Status:** closed | **Created:** 2026-02-06 | **Closed:** 2026-02-10 | **GitLab:** #5
+**Created:** 2026-02-06 | **Closed:** 2026-02-10 | **GitLab:** #5
 
 ## Problem
 

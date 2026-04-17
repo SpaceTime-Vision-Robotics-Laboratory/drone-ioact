@@ -1,6 +1,6 @@
 # Ability to store only certain keys (or opt-out some) in DataStorer
 
-**Status:** open | **Created:** 2026-02-15 | **GitLab:** #11
+**Created:** 2026-02-15 | **GitLab:** #11
 
 ## Problem
 

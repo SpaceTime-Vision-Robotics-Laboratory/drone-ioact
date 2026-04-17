@@ -1,5 +1,5 @@
 # Actions2Environment: batch-drain + pipeline send
-**Status:** open | **Created:** 2026-04-15 | **Priority:** 2
+**Created:** 2026-04-15 | **Priority:** 2
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # VRE Streaming <-> DataProducer interface
 
-**Status:** closed | **Created:** 2026-03-16 | **Closed:** 2026-03-17 | **GitLab:** #17
+**Created:** 2026-03-16 | **Closed:** 2026-03-17 | **GitLab:** #17
 
 ## Problem
 
