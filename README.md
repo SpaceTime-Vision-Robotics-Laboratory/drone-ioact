@@ -50,16 +50,15 @@ def main():
     actions_queue = ActionsQueue(action_names=["a1", "a2", ...]) # defines the generic actions. Actions can have parameters via Action("a1", (param, ...))
     data_channel = DataChannel(supported_types=["rgb", "pose", ...], eq_fn=lambda a, b: a["rgb"] == b["rgb"]) # defines the data types and how to compare equality (i.e. drone produced same frame twice)
 
-    # action_fn converts generic "a1", "a2" to raw drone-specific action e.g. parrot.piloting(...)
+    # actions_fn converts generic "a1", "a2" actions to raw drone-specific action e.g. parrot.piloting(...)
     robot = Robot(env=drone_env, data_channel=data_channel, actions_queue=actions_queue,
-                  action_fn=lambda env, action: env.generic_to_raw(action))
+                  actions_fn=lambda env, actions: [env.generic_to_raw(action) for action in actions])
     # Define the data producers. The 'raw' one is added by default (env to raw data). Controllers receive the latest available data.
     robot.add_data_producer(SemanticDataProducer(ckpt_path=path_to_model, ...))
     # Define the controllers: the logic of the robot to act in the environment
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, key_to_action={"space": Act("a1"), "w": Act("a2")}),
-                         name="Screen displayer") # manual controls via keyboard + UI display
-    robot.add_controller(lambda data, actions_queue: actions_queue.put(Act(random.choice(["a1", "a2"]))),
-                         name="Trajectory planner") # controller algorithmic logic
+    robot.add_controller(KeyboardController(key_to_action={"space": Act("a1"), "w": Act("a2")})) # maunal control from keyboard
+    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, name="Screen displayer")) # UI display
+    robot.add_controller(lambda data, actions_queue: actions_queue.put(Act(random.choice(["a1", "a2"]))), name="Trajectory planner") # controller algorithmic logic
     # Run the main loop which starts and monitors the threads behind the scenes (data producers, controllers, env communication etc.)
     robot.run()
 
@@ -97,17 +96,17 @@ The usual flow is like this:
        │            │   └───┬───┘    └──────────┘    └───────┘    └─────────┘              │        │
        │            │       │                                                              │        │
        │            │       │        ┌──────┐                                              │        ▼
-       │            │       └───────▶│ pose │                                              │  ┌─────────────┐
-       │            │                └──────┘                                              │  │ DataChannel │
-       │            └──────────────────────────────────────────────────────────────────────┘  │ (last-value)│
-       │                                                                                      └─────────────┘
-       │                                      ┌────────────────────────────────────────────┐         │
-       │                                      │              Controllers                   │         |
-       │              ┌──────────────┐        │ ┌─────────┐ ┌─────────┐ ┌────────────┐     │         |
-       └──────────────┤ ActionsQueue │◀───────┤ │ Ctrl 1  │ │ Ctrl 2  │ │  Ctrl N    │     │◀────────┘
-                      │ LIFT,MOVE... │        │ │(display)│ │(planner)│ │  (safety)  │     │
-                      └──────────────┘        │ └─────────┘ └─────────┘ └────────────┘     │
-               Actions2Environment (action_fn)└────────────────────────────────────────────┘
+       │            │       └───────▶│ pose │                                              │  ┌──────────────┐
+       │            │                └──────┘                                              │  │ DataChannel  │
+       │            └──────────────────────────────────────────────────────────────────────┘  │ (last-value) │
+       │                                                                                      └──────────────┘
+       │                                 ┌────────────────────────────────────────────┐         │
+       │                                 │              Controllers                   │         |
+       │         ┌──────────────┐        │ ┌─────────┐ ┌─────────┐ ┌────────────┐     │         |
+       └─────────┤ ActionsQueue │◀───────┤ │ Ctrl 1  │ │ Ctrl 2  │ │  Ctrl N    │     │◀────────┘
+                 │ LIFT,MOVE... │        │ │(display)│ │(planner)│ │  (safety)  │     │
+                 └──────────────┘        │ └─────────┘ └─────────┘ └────────────┘     │
+          Actions2Environment (action_fn)└────────────────────────────────────────────┘
 ```
 
 
@@ -128,17 +127,20 @@ def main():
     semantic_data_producer = SemanticdataProducer(ckpt_path=path_to_model, ...)
     data_producers = DataProducers2Channels([drone2data, semantic_data_producer, ...], [channel, ...]) # data structure for all data
     # define the controllers (only screen displayer + keyboard controls here). Actions can have parameters via Action("a1", (param1, ...)).
-    key_to_action = {"space": Action("a1", parameters=()), "w": Action("a2")}
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, key_to_action) # data consumer + actions producer (keyboard)
+    keyboard_controller = KeyboardController(key_to_action={"space": Action("a1", parameters=()), "w": Action("a2")})
+    screen_displayer = ScreenDisplayer(data_channel, actions_queue) # data consumer + actions producer (keyboard)
     # action->drone converts a generic action to an actual drone action
-    def XXXaction_fn(env: XXXDrone, action: Action) -> bool:
-        return env.generic_to_raw(action) # convert generic "a1", "a2" to raw drone-specific action
-    action2nev = Actions2Environment(drone_env, actions_queue, action_fn=XXXaction_fn)
+    def XXXactions_fn(env: XXXDrone, actions: list[Action]) -> bool:
+        for action in actions:
+            env.generic_to_raw(action) # convert generic "a1", "a2" to raw drone-specific action
+        return True # false if any of it failed for logging
+    actions2nev = Actions2Environment(drone_env, actions_queue, action_fn=XXXactions_fn)
 
     threads = ThreadGroup({ # simple dict[str, Thread] wrapper to manage all of them at once.
         "Drone -> Data": data_producers,
-        "Screen displayer (+keyboard)": screen_displayer,
-        "Action -> Drone": action2nev,
+        "Screen displayer": screen_displayer,
+        "Keyboard controller": keyboard_controller,
+        "Actions -> Drone": actions2nev,
     }).start()
 
     while not threads.is_any_dead(): # wait for any of them to die or drone to disconnect
