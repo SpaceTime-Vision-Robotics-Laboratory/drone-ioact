@@ -151,9 +151,9 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
-                                         screen_frame_callback=screen_frame_callback))
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue, resolution=SCREEN_RESOLUTION,
+                                               screen_frame_callback=screen_frame_callback))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, keyboard_fn=keyboard_fn))
     robot.run()
 
     env.close()

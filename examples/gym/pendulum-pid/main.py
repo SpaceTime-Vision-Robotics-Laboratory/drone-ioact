@@ -26,8 +26,9 @@ def main():
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=gym_actions_fn)
     robot.add_controller(partial(controller_fn, action_space=env.action_space))
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render()))
-    robot.add_controller(KeyboardController(data_channel, actions_queue, key_to_action={Key.Esc: Action("close")}))
+    robot.add_controller(sd:=ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render()))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend,
+                                            key_to_action={Key.Esc: Action("close")}))
 
     robot.run()
     env.close()

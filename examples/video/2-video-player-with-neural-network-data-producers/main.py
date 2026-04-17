@@ -85,12 +85,12 @@ def main(args: Namespace):
 
     f_screen_frame_callback = partial(screen_frame_callback, color_map=color_map,
                                       only_top1_bbox=args.yolo_only_top1_bbox)
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
-                                         screen_frame_callback=f_screen_frame_callback))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
+                                               screen_frame_callback=f_screen_frame_callback))
     key_to_action = {Key.Space: Act("PLAY_PAUSE"), Key.Esc: Act("DISCONNECT"), Key.Left: Act("GO_BACK", (env.fps, )),
                      Key.Right: Act("GO_FORWARD", (env.fps, )), Key.Comma: Act("GO_BACK", (1, )),
                      Key.Period: Act("GO_FORWARD", (1, ))}
-    robot.add_controller(KeyboardController(data_channel, actions_queue, key_to_action=key_to_action))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, key_to_action=key_to_action))
 
     robot.run()
     env.close()

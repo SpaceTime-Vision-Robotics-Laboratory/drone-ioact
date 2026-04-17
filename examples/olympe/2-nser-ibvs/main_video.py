@@ -117,10 +117,10 @@ def main(args: Namespace):
     for dp in dps:
         robot.add_data_producer(dp)
 
-    screen_displayer = ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
-                                       screen_frame_callback=screen_frame_callback)
-    robot.add_controller(screen_displayer, name="Screen displayer")
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=partial(keyboard_fn, fps=env.fps)))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
+                                               screen_frame_callback=screen_frame_callback), name="Screen displayer")
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend,
+                                            keyboard_fn=partial(keyboard_fn, fps=env.fps)))
     robot.add_other_thread(env, name="Video player")
 
     robot.run()

@@ -100,8 +100,8 @@ def main(args: Namespace):
     actions_queue = ActionsQueue(action_names=action_names)
     robot = Robot(env, data_channel, actions_queue, actions_fn)
 
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue))
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, keyboard_fn))
     robot.add_controller(TrajectoryController(data_channel, actions_queue, env))
 
     robot.run()

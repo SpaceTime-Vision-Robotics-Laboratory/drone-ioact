@@ -3,7 +3,6 @@
 # pylint: disable=duplicate-code
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
-from functools import partial
 from vre_video import VREVideo
 
 from robobase import ActionsQueue, DataChannel, Robot, Action as Act
@@ -28,12 +27,12 @@ def main(args: Namespace):
     data_channel = DataChannel(supported_types=["rgb", "frame_ix"], eq_fn=lambda a, b: a["frame_ix"] == b["frame_ix"])
 
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=video_actions_fn)
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION))
     robot.add_controller(UDPController(port=args.port, data_channel=data_channel, actions_queue=actions_queue))
     key_to_action = {Key.Space: Act("PLAY_PAUSE"), Key.Esc: Act("DISCONNECT"), Key.Left: Act("GO_BACK", (env.fps, )),
                      Key.Right: Act("GO_FORWARD", (env.fps, )), Key.Comma: Act("GO_BACK", (1, )),
                      Key.Period: Act("GO_FORWARD", (1, ))}
-    robot.add_controller(KeyboardController(data_channel, actions_queue, key_to_action=key_to_action))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, key_to_action=key_to_action))
     robot.run()
 
     data_channel.close()

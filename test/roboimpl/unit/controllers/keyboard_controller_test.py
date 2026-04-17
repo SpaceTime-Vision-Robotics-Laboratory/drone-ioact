@@ -16,7 +16,7 @@ def test_KeyboardController_keyboard_mock_queue():
 
     aq = ActionsQueue(action_names=["act_Q", "act_X", "act_esc"])
     data_channel = DataChannel(supported_types=["dummy"], eq_fn=lambda a, b: True)
-    sd = KeyboardController(data_channel, actions_queue=aq, keyboard_fn=_keyboard_fn)
+    sd = KeyboardController(data_channel, actions_queue=aq, backend=None, keyboard_fn=_keyboard_fn)
 
     def make_keypress(key: Key):
         for action in sd.keyboard_fn({key}):

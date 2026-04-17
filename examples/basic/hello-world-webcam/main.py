@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Usage ./main.py [device_id]. Space for pause, Esc for exit."""
 import sys
-import cv2
+
 from robobase import Environment, Robot, DataChannel, ActionsQueue, Action
 from roboimpl.controllers import ScreenDisplayer, Key, KeyboardController
+from roboimpl.utils import logger
+
+try:
+    import cv2
+except ImportError as e:
+    logger.error(e)
 
 class WebcamEnv(Environment):
     """Basic OpenCV-based environment to get the current RGB frame from a webcam"""
@@ -52,8 +58,8 @@ def main():
     data_channel = DataChannel(supported_types=["rgb"], eq_fn=lambda a, b: False) # eq fn: every data is assumed new
     actions_queue = ActionsQueue(action_names=["pause", "close"])
     robot = Robot(env, data_channel, actions_queue, actions_fn=actions_fn)
-    robot.add_controller(ScreenDisplayer(data_channel, actions_queue))
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
+    robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, keyboard_fn=keyboard_fn))
     robot.run()
 
     data_channel.close()
