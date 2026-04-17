@@ -27,8 +27,7 @@ def main():
     robot = Robot(env=env, data_channel=data_channel, actions_queue=actions_queue, actions_fn=gym_actions_fn)
     robot.add_controller(partial(controller_fn, action_space=env.action_space))
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue, screen_frame_callback=lambda d: env.render()))
-    keyboard_fn = lambda pressed: [Action("close")] if Key.Esc in pressed else []
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=keyboard_fn))
+    robot.add_controller(KeyboardController(data_channel, actions_queue, key_to_action={Key.Esc: Action("close")}))
 
     robot.run()
     env.close()

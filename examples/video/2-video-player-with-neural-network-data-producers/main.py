@@ -45,26 +45,6 @@ def screen_frame_callback(data: dict[str, DataItem], color_map: list[Color], onl
         res = np.concatenate([res, depth_rgb_rsz], axis=1)
     return res
 
-def keyboard_fn(pressed: set[Key], fps: float) -> list[Act]:
-      """the keyboard fn"""
-      if Key.Esc in pressed:
-          return [Act("DISCONNECT")]
-      res = []
-      if Key.Space in pressed:
-          res.append(Act("PLAY_PAUSE"))
-          pressed.discard(Key.Space)
-      if Key.Left in pressed:
-          res.append(Act("GO_BACK", (fps, )))
-      if Key.Right in pressed:
-          res.append(Act("GO_FORWARD", (fps, )))
-      if Key.Comma in pressed:
-          res.append(Act("GO_BACK", (1, )))
-          pressed.discard(Key.Comma)
-      if Key.Period in pressed:
-          res.append(Act("GO_FORWARD", (1, )))
-          pressed.discard(Key.Period)
-      return res
-
 def get_args() -> Namespace:
     """cli args"""
     parser = ArgumentParser()
@@ -107,7 +87,10 @@ def main(args: Namespace):
                                       only_top1_bbox=args.yolo_only_top1_bbox)
     robot.add_controller(ScreenDisplayer(data_channel, actions_queue, resolution=DEFAULT_SCREEN_RESOLUTION,
                                          screen_frame_callback=f_screen_frame_callback))
-    robot.add_controller(KeyboardController(data_channel, actions_queue, keyboard_fn=partial(keyboard_fn, fps=env.fps)))
+    key_to_action = {Key.Space: Act("PLAY_PAUSE"), Key.Esc: Act("DISCONNECT"), Key.Left: Act("GO_BACK", (env.fps, )),
+                     Key.Right: Act("GO_FORWARD", (env.fps, )), Key.Comma: Act("GO_BACK", (1, )),
+                     Key.Period: Act("GO_FORWARD", (1, ))}
+    robot.add_controller(KeyboardController(data_channel, actions_queue, key_to_action=key_to_action))
 
     robot.run()
     env.close()

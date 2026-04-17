@@ -76,11 +76,15 @@ def make_keyboard_listener() -> set[Key]:
     return pressed
 
 class KeyboardController(BaseController):
-    """Generic multi-key keyboard controller for robosim"""
-    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, keyboard_fn: KeyboardFn = None):
+    """Generic multi-key keyboard controller for robobase"""
+    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, keyboard_fn: KeyboardFn = None,
+                 key_to_action: dict[Key, Action] | None = None):
         self.pressed = None
+        if key_to_action is not None:
+            assert keyboard_fn is None, f"key_to_action cannot be set if keyboard_fn is also set"
         super().__init__(data_channel, actions_queue)
         self.keyboard_fn = keyboard_fn or self._keyboard_fn
+        self.key_to_action = key_to_action or {}
 
     def run(self):
         """default data polling scheduling"""
@@ -100,5 +104,10 @@ class KeyboardController(BaseController):
             time.sleep(max(0, (1 / FREQ) - diff))
 
     def _keyboard_fn(self, pressed: set[Key]) -> list[Action]:
-        logger.log_every_s(f"Pressed '{pressed}'", "INFO", True)
-        return []
+        res: list[Action] = []
+        for key in pressed:
+            if (action := self.key_to_action.get(key)) is not None:
+                res.append(action)
+        if len(pressed) > 0:
+            logger.log_every_s(f"Pressed '{pressed}'. Returning: {res}", "INFO", True)
+        return res
