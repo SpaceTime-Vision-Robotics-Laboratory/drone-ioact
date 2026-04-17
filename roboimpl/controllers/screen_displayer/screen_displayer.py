@@ -10,12 +10,12 @@ from roboimpl.utils import image_resize, logger, CircularBuffer
 
 from .screen_displayer_utils import DisplayerState, DisplayerBackend
 from .screen_displayer_tkinter import ScreenDisplayerTkinter
-from .screen_displayer_cv2 import ScreenDisplayerCV2
+from .screen_displayer_sdl2 import ScreenDisplayerSDL2
 
 INITIAL_TIMEOUT_S = 60
 TIMEOUT_S = 0.01
 INITIAL_RESOLUTION_FALLBACK = (480, 640)
-DEFAULT_BACKEND = os.getenv("ROBOIMPL_SCREEN_DISPLAYER_BACKEND", "cv2")
+DEFAULT_BACKEND = os.getenv("ROBOIMPL_SCREEN_DISPLAYER_BACKEND", "sdl2")
 
 class ScreenDisplayer(BaseController):
     """ScreenDisplayer provides support for displaying the DataChannel at each frame + support for keyboard actions."""
@@ -30,7 +30,7 @@ class ScreenDisplayer(BaseController):
 
         self.backend: DisplayerBackend = {
             "tkinter": lambda: ScreenDisplayerTkinter(),
-            "cv2": lambda: ScreenDisplayerCV2(),
+            "sdl2": lambda: ScreenDisplayerSDL2(),
         }[self.backend_type]()
 
     @staticmethod
