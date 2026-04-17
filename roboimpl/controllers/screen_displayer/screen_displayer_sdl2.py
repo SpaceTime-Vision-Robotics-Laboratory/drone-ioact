@@ -4,6 +4,7 @@ import numpy as np
 from overrides import overrides
 
 from roboimpl.utils import logger
+from .screen_displayer_utils import DisplayerBackend, Key
 
 try:
     import sdl2
@@ -42,8 +43,6 @@ try:
 except ImportError:
     logger.error("sdl2 is not installed. Set ROBOIMPL_SCREEN_DISPLAYER_BACKEND='tkinter' or "
                  "pip install pysdl2 pysdl2-dll")
-
-from .screen_displayer_utils import DisplayerBackend, Key
 
 class ScreenDisplayerSDL2(DisplayerBackend):
     """SDL2-based screen displayer with hardware-accelerated rendering."""
