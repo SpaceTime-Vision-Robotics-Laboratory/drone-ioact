@@ -7,42 +7,43 @@ from roboimpl.utils import logger
 
 try:
     import sdl2
+
+    _SDL2_SCANCODE_MAP: dict[int, Key] = {
+        # Letters a-z
+        **{sdl2.SDL_SCANCODE_A + i: getattr(Key, chr(ord("a") + i)) for i in range(26)},
+        # Arrow keys
+        sdl2.SDL_SCANCODE_LEFT: Key.Left,
+        sdl2.SDL_SCANCODE_RIGHT: Key.Right,
+        sdl2.SDL_SCANCODE_UP: Key.Up,
+        sdl2.SDL_SCANCODE_DOWN: Key.Down,
+        # Special keys
+        sdl2.SDL_SCANCODE_ESCAPE: Key.Esc,
+        sdl2.SDL_SCANCODE_RETURN: Key.Enter,
+        sdl2.SDL_SCANCODE_SPACE: Key.Space,
+        sdl2.SDL_SCANCODE_PAGEUP: Key.PageUp,
+        sdl2.SDL_SCANCODE_PAGEDOWN: Key.PageDown,
+        sdl2.SDL_SCANCODE_COMMA: Key.Comma,
+        sdl2.SDL_SCANCODE_PERIOD: Key.Period,
+        # Function keys
+        sdl2.SDL_SCANCODE_F1: Key.F1,
+        sdl2.SDL_SCANCODE_F2: Key.F2,
+        sdl2.SDL_SCANCODE_F3: Key.F3,
+        sdl2.SDL_SCANCODE_F4: Key.F4,
+        sdl2.SDL_SCANCODE_F5: Key.F5,
+        sdl2.SDL_SCANCODE_F6: Key.F6,
+        sdl2.SDL_SCANCODE_F7: Key.F7,
+        sdl2.SDL_SCANCODE_F8: Key.F8,
+        sdl2.SDL_SCANCODE_F9: Key.F9,
+        sdl2.SDL_SCANCODE_F10: Key.F10,
+        sdl2.SDL_SCANCODE_F11: Key.F11,
+        sdl2.SDL_SCANCODE_F12: Key.F12,
+    }
+
 except ImportError:
     logger.error("sdl2 is not installed. Set ROBOIMPL_SCREEN_DISPLAYER_BACKEND='tkinter' or "
                  "pip install pysdl2 pysdl2-dll")
 
 from .screen_displayer_utils import DisplayerBackend, Key
-
-_SDL2_SCANCODE_MAP: dict[int, Key] = {
-    # Letters a-z
-    **{sdl2.SDL_SCANCODE_A + i: getattr(Key, chr(ord("a") + i)) for i in range(26)},
-    # Arrow keys
-    sdl2.SDL_SCANCODE_LEFT: Key.Left,
-    sdl2.SDL_SCANCODE_RIGHT: Key.Right,
-    sdl2.SDL_SCANCODE_UP: Key.Up,
-    sdl2.SDL_SCANCODE_DOWN: Key.Down,
-    # Special keys
-    sdl2.SDL_SCANCODE_ESCAPE: Key.Esc,
-    sdl2.SDL_SCANCODE_RETURN: Key.Enter,
-    sdl2.SDL_SCANCODE_SPACE: Key.Space,
-    sdl2.SDL_SCANCODE_PAGEUP: Key.PageUp,
-    sdl2.SDL_SCANCODE_PAGEDOWN: Key.PageDown,
-    sdl2.SDL_SCANCODE_COMMA: Key.Comma,
-    sdl2.SDL_SCANCODE_PERIOD: Key.Period,
-    # Function keys
-    sdl2.SDL_SCANCODE_F1: Key.F1,
-    sdl2.SDL_SCANCODE_F2: Key.F2,
-    sdl2.SDL_SCANCODE_F3: Key.F3,
-    sdl2.SDL_SCANCODE_F4: Key.F4,
-    sdl2.SDL_SCANCODE_F5: Key.F5,
-    sdl2.SDL_SCANCODE_F6: Key.F6,
-    sdl2.SDL_SCANCODE_F7: Key.F7,
-    sdl2.SDL_SCANCODE_F8: Key.F8,
-    sdl2.SDL_SCANCODE_F9: Key.F9,
-    sdl2.SDL_SCANCODE_F10: Key.F10,
-    sdl2.SDL_SCANCODE_F11: Key.F11,
-    sdl2.SDL_SCANCODE_F12: Key.F12,
-}
 
 class ScreenDisplayerSDL2(DisplayerBackend):
     """SDL2-based screen displayer with hardware-accelerated rendering."""

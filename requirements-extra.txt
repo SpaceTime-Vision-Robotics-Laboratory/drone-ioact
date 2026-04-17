@@ -8,3 +8,5 @@ opencv-python>=4.12.0.88 # use opencv-python-headless for CI (if ever)
 torch>=2.8.0 # use torch[cpu] for CI (if ever)
 ultralytics==8.3.229
 video-representations-extractor>=1.17.1
+pysdl2-dll==2.32.0
+pysdl2==0.9.17
