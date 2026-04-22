@@ -5,16 +5,14 @@ import numpy as np
 import threading
 from loggez import make_logger
 from pynput import keyboard
-import matplotlib
 from robosim.utils import Point6D, Pose4x4, fmt, pose_to_trans_euler, relative_velocity_from_poses # noqa # pylint: disable=all
+from robosim.robosim_env import RobosimEnv
 
-from robosim_env import RobosimEnv
 
 from robobase import DataChannel, ActionsQueue
 from robobase.controller import BaseController
 
 logger = make_logger("CLIENT", exists_ok=True)
-matplotlib.rcParams["keymap.quit"] = []
 np.set_printoptions(precision=3, linewidth=120)
 
 # utilities
@@ -151,7 +149,7 @@ class TrajectoryController(BaseController):
                     pressed.clear()
                 time.sleep(0.1)
                 msg = self.env.send_recv_packet({"cmd": "mission_get_state"})
-                if msg["mission_state"] == "finished":
+                if msg["mission_state"] != "running":
                     logger.info(f"Mission ended: {msg}")
                     mission_started = False
                 continue
