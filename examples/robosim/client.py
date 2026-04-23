@@ -13,8 +13,8 @@ from roboimpl.controllers.keyboard_controller import KeyboardController
 
 CWD = Path(__file__).resolve().parent
 sys.path.append(str(CWD))
-from robosim_env import RobosimEnv
-from trajectory import TrajectoryController
+from robosim_env import RobosimEnv # pylint: disable=all
+from trajectory import TrajectoryController # pylint: disable=all
 
 logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
@@ -58,8 +58,8 @@ def actions_fn(env: RobosimEnv, actions: list[Act]) -> bool:
                 MAXES = env.get_maxes()
         if {"robots", "state"}.issubset(resp.keys()):
             with open(pth := CWD / "state.json", "w") as fp:
-               logger.log_every_s(f"Saved state at: '{pth}'")
-               json.dump(resp, fp)
+                logger.log_every_s(f"Saved state at: '{pth}'")
+                json.dump(resp, fp)
     return not had_errors
 
 def keyboard_fn(pressed: set[Key]) -> list[Act]:
@@ -99,13 +99,12 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("host")
     parser.add_argument("--port", "-p", type=int)
-    parser.add_argument("--robot_id", type=int, default=0)
     args = parser.parse_args()
     return args
 
 def main(args: Namespace):
     """main fn"""
-    env = RobosimEnv(args.host, args.port, args.robot_id)
+    env = RobosimEnv(args.host, args.port)
     data_channel = DataChannel(supported_types=env.get_modalities(),
                                eq_fn=lambda a, b: a["fpv_frame_id"] == b["fpv_frame_id"])
     action_names = ["MOVE", "DISCONNECT", "RESET", "LOAD_STATE", "GET_STATE"]

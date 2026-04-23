@@ -7,18 +7,18 @@ from overrides import overrides
 from loggez import make_logger
 
 from robobase import Environment
-from robosim.network import send_packet, recv_packet
-from robosim.constants import SOCKET_TIMEOUT_S
+from robosim.network import send_packet, recv_packet # pylint: disable=all
+from robosim.constants import SOCKET_TIMEOUT_S # pylint: disable=all
 
 logger = make_logger("ROBOSIM_ENV")
 
 class RobosimEnv(Environment):
     """wrapper for thread-safe client->server conn"""
-    def __init__(self, host: str, port: int, robot_id: int):
+    def __init__(self, host: str, port: int):
+        super().__init__()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock_lock = threading.Lock()
-        self.robot_id = robot_id
-        self._init_connection_to_robot(host, port, robot_id)
+        self._init_connection_to_robot(host, port)
 
     @overrides
     def is_running(self) -> bool: # noqa
@@ -73,7 +73,7 @@ class RobosimEnv(Environment):
                 res.append(recv_packet(self.sock))
         return res
 
-    def _init_connection_to_robot(self, host: str, port: int, robot_id: int):
+    def _init_connection_to_robot(self, host: str, port: int):
         self.sock.connect((host, port))
         self.sock.settimeout(SOCKET_TIMEOUT_S)
         msg = {"cmd": "connect"}
