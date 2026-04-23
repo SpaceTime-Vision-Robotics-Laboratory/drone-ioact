@@ -2,17 +2,15 @@
 """A simple TCP client to connect to the simulator server and interact with the robot/UAV"""
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-import sys
-import numpy as np
 import json
+import numpy as np
 from loggez import make_logger
 
 from robobase import Robot, DataChannel, ActionsQueue, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.controllers.keyboard_controller import KeyboardController
 
-from robosim.robosim_env import RobosimEnv
-sys.path.append(str(Path(__file__).parent))
+from robosim_env import RobosimEnv
 from trajectory import TrajectoryController
 
 logger = make_logger("CLIENT", exists_ok=True)
@@ -57,8 +55,8 @@ def actions_fn(env: RobosimEnv, actions: list[Act]) -> bool:
                 MAXES = env.get_maxes()
         if {"robots", "state"}.issubset(resp.keys()):
             with open(pth := Path(__file__).parent / "state.json", "w") as fp:
-               logger.log_every_s(f"Saved state at: '{pth}'")
-               json.dump(resp, fp)
+                logger.log_every_s(f"Saved state at: '{pth}'")
+                json.dump(resp, fp)
     return not had_errors
 
 def keyboard_fn(pressed: set[Key]) -> list[Act]:
