@@ -1,43 +1,21 @@
 #!/usr/bin/env python3
 """A simple TCP client to connect to the simulator server and interact with the robot/UAV"""
 import time
+from datetime import datetime
 import numpy as np
-import threading
 from loggez import make_logger
-from pynput import keyboard
 from robosim.utils import Point6D, Pose4x4, fmt, pose_to_trans_euler, relative_velocity_from_poses # noqa # pylint: disable=all
-from robosim.robosim_env import RobosimEnv
-
 
 from robobase import DataChannel, ActionsQueue
+from robobase.utils import freq_barrier
 from robobase.controller import BaseController
+from roboimpl.controllers import DisplayerBackend, Key
+
+from robosim_env import RobosimEnv
 
 logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
-
-# utilities
-
-def make_keyboard_listener() -> tuple[set[str | keyboard.Key], threading.Event]:
-    """starts a keyboard listener thread and returns a set attached to this listener"""
-    pressed = set()
-    event = threading.Event()
-    def on_press(k):
-        try:
-            pressed.add(k.char)
-        except AttributeError:
-            pressed.add(k)
-        event.set()
-
-    def on_release(k):
-        try:
-            pressed.discard(k.char)
-        except AttributeError:
-            pressed.discard(k)
-        event.set()
-
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.start()
-    return pressed, event
+FREQ = 10
 
 def _get_maxes(state: dict) -> Point6D:
     try:
@@ -132,21 +110,24 @@ def create_traj_level2(current_pose: Pose4x4, via_points: list[Pose4x4], max_acc
 
 class TrajectoryController(BaseController):
     """Trajectory controller: interface between the controller and robosim"""
-    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue, env: RobosimEnv):
+    def __init__(self, data_channel: DataChannel, actions_queue: ActionsQueue,
+                 env: RobosimEnv, displayer_backend: DisplayerBackend):
         super().__init__(data_channel, actions_queue)
         self.env = env
+        self.backend = displayer_backend
 
     def run(self):
         """the controller managing the trajectories (mission)"""
         recv = self.env.send_recv_packet({"cmd": "sim_get_info"})
         assert "control_loop_rate_hz" in recv, recv
-        pressed, event = make_keyboard_listener()
         mission_started = False
+        prev = datetime.now()
         while True:
+            prev = freq_barrier(FREQ, prev)
+            pressed = self.backend.get_pressed_keys()
             if mission_started: # cannot do anything while mission is running
                 if len(pressed) != 0:
                     logger.error("Cannot do any actions while mission is running")
-                    pressed.clear()
                 time.sleep(0.1)
                 msg = self.env.send_recv_packet({"cmd": "mission_get_state"})
                 if msg["mission_state"] != "running":
@@ -154,16 +135,13 @@ class TrajectoryController(BaseController):
                     mission_started = False
                 continue
 
-            event.wait()
-            event.clear()
-
-            if "y" in pressed:
+            if Key.y in pressed:
                 self.env.send_recv_packet({"cmd": "mission_add_via_point"})
 
-            if "i" in pressed:
+            if Key.i in pressed:
                 self.env.send_recv_packet({"cmd": "mission_clear_via_points"})
 
-            if "u" in pressed:
+            if Key.u in pressed:
                 state = self.env.send_recv_packet({"cmd": "robot_get_state"})
                 msg = self.env.send_recv_packet({"cmd": "mission_get_state"})
                 if len(via_points := msg["via_points"]) == 0:

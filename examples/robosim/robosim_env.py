@@ -5,9 +5,10 @@ import threading
 import numpy as np
 from overrides import overrides
 from loggez import make_logger
-from robosim.network import send_packet, recv_packet # noqa pylint: disable=all
 
 from robobase import Environment
+from robosim.network import send_packet, recv_packet
+from robosim.constants import SOCKET_TIMEOUT_S
 
 logger = make_logger("ROBOSIM_ENV")
 
@@ -15,7 +16,6 @@ class RobosimEnv(Environment):
     """wrapper for thread-safe client->server conn"""
     def __init__(self, host: str, port: int, robot_id: int):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((host, port))
         self.sock_lock = threading.Lock()
         self.robot_id = robot_id
         self._init_connection_to_robot(host, port, robot_id)
@@ -56,6 +56,8 @@ class RobosimEnv(Environment):
             res = recv_packet(self.sock)
             if "fpv_compressed" not in res:
                 logger.debug(f"Received: {res}")
+            if "error" in res:
+                logger.error(res)
             return res
 
     def send_recv_packets(self, data: list[dict]) -> list[dict]:
@@ -72,9 +74,12 @@ class RobosimEnv(Environment):
         return res
 
     def _init_connection_to_robot(self, host: str, port: int, robot_id: int):
-        msg = {"cmd": "robot_claim_control", "robot_id": robot_id}
-        assert (recv := self.send_recv_packet(msg)) == {"status": "connected"}, recv
-        logger.info(f"Connected to '{host}:{port}'")
+        self.sock.connect((host, port))
+        self.sock.settimeout(SOCKET_TIMEOUT_S)
+        msg = {"cmd": "connect"}
+        recv = self.send_recv_packet(msg)
+        assert "status" in recv and recv["status"] == "connected", recv
+        logger.info(f"Connected to '{host}:{port}' (robot id: {recv['id']})")
 
     def get_maxes(self) -> np.ndarray:
         """return the max allowed by this uav"""

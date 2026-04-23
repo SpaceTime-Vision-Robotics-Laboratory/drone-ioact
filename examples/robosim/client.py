@@ -2,16 +2,19 @@
 """A simple TCP client to connect to the simulator server and interact with the robot/UAV"""
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+import sys
 import json
 import numpy as np
 from loggez import make_logger
 
-from robosim_env import RobosimEnv # noqa
-from trajectory import TrajectoryController # noqa
-
 from robobase import Robot, DataChannel, ActionsQueue, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.controllers.keyboard_controller import KeyboardController
+
+CWD = Path(__file__).resolve().parent
+sys.path.append(str(CWD))
+from robosim_env import RobosimEnv
+from trajectory import TrajectoryController
 
 logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
@@ -36,7 +39,7 @@ def actions_fn(env: RobosimEnv, actions: list[Act]) -> bool:
             msgs.append({"cmd": "sim_reset"})
 
         if action.name == "LOAD_STATE":
-            assert (pth := Path(__file__).parent / "state.json").exists(), pth
+            assert (pth := CWD / "state.json").exists(), pth
             with open(pth, "r") as fp:
                 state = json.load(fp)
             msgs.append({"cmd": "sim_load_state", "state": state})
@@ -54,9 +57,9 @@ def actions_fn(env: RobosimEnv, actions: list[Act]) -> bool:
             if "robot" in resp:
                 MAXES = env.get_maxes()
         if {"robots", "state"}.issubset(resp.keys()):
-            with open(pth := Path(__file__).parent / "state.json", "w") as fp:
-                logger.log_every_s(f"Saved state at: '{pth}'")
-                json.dump(resp, fp)
+            with open(pth := CWD / "state.json", "w") as fp:
+               logger.log_every_s(f"Saved state at: '{pth}'")
+               json.dump(resp, fp)
     return not had_errors
 
 def keyboard_fn(pressed: set[Key]) -> list[Act]:
@@ -70,16 +73,13 @@ def keyboard_fn(pressed: set[Key]) -> list[Act]:
     acts: list[Act] = []
     if Key.r in pressed:
         acts.append(Act("RESET"))
-        pressed.discard(Key.r)
     elif Key.F5 in pressed:
         acts.append(Act("GET_STATE"))
-        pressed.discard(Key.F5)
     elif Key.F6 in pressed:
-        if not (Path(__file__).parent / "state.json").exists():
+        if not (CWD / "state.json").exists():
             logger.error("Cannot load state before saving one.")
         else:
             acts.append(Act("LOAD_STATE"))
-        pressed.discard(Key.F6)
 
     move_vec = np.zeros((6,), dtype="float32")
     move_vec[0] += (Key.a in pressed) - (Key.d in pressed)                # left/right (x)
@@ -114,7 +114,7 @@ def main(args: Namespace):
 
     robot.add_controller(sd := ScreenDisplayer(data_channel, actions_queue))
     robot.add_controller(KeyboardController(data_channel, actions_queue, sd.backend, keyboard_fn))
-    robot.add_controller(TrajectoryController(data_channel, actions_queue, env))
+    robot.add_controller(TrajectoryController(data_channel, actions_queue, env, sd.backend))
 
     robot.run()
     env.close()
