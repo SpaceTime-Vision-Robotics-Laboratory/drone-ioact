@@ -6,12 +6,12 @@ import json
 import numpy as np
 from loggez import make_logger
 
+from robosim_env import RobosimEnv # noqa
+from trajectory import TrajectoryController # noqa
+
 from robobase import Robot, DataChannel, ActionsQueue, Action as Act
 from roboimpl.controllers import ScreenDisplayer, Key
 from roboimpl.controllers.keyboard_controller import KeyboardController
-
-from robosim_env import RobosimEnv
-from trajectory import TrajectoryController
 
 logger = make_logger("CLIENT", exists_ok=True)
 np.set_printoptions(precision=3, linewidth=120)
