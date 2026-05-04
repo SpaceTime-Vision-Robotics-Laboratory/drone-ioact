@@ -1,13 +1,14 @@
 """keyboard_controller.py - Generic multi-key keyboard controller for robobase"""
+import os
 from typing import Callable
 from datetime import datetime
-import time
 from robobase import BaseController, Action, ActionsQueue, DataChannel
+from robobase.utils import freq_barrier
 from robobase.controller import INITIAL_DATA_MAX_DURATION_S
 from roboimpl.utils import logger
 from roboimpl.controllers.screen_displayer.screen_displayer_utils import DisplayerBackend, Key
 
-FREQ = 30 # poll keyboard events 30 times per second.
+FREQ = int(os.getenv("ROBOIMPL_KEYBOARD_CONTROLLER_FREQ", "30")) # poll keyboard events 30 times per second.
 
 # pylint: disable=invalid-name
 KeyboardFn = Callable[[set[Key]], list[Action]] # keys -> (generic) actions
@@ -28,16 +29,12 @@ class KeyboardController(BaseController):
         self.data_channel_event.wait(INITIAL_DATA_MAX_DURATION_S) # wait for initial data
         prev = datetime.now()
         while self.data_channel.has_data():
-            now = datetime.now()
-            diff = (now - prev).total_seconds()
-            prev = now
+            prev = freq_barrier(FREQ, prev)
 
             pressed = self.backend.get_pressed_keys()
             actions: list[Action] = self.keyboard_fn(pressed)
             for action in actions:
                 self.actions_queue.put(action, data_ts=None)
-
-            time.sleep(max(0, (1 / FREQ) - diff))
 
     def _keyboard_fn(self, pressed: set[Key]) -> list[Action]:
         res: list[Action] = []
